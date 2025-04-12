@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://bl8qcy5u1yua6"]
+[gd_scene load_steps=9 format=3 uid="uid://bl8qcy5u1yua6"]
 
 [ext_resource type="Script" uid="uid://rn4h4pbvc6e3" path="res://main.gd" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://bgg8x1gfr8iq3" path="res://button_home.gd" id="1_ig7tw"]
@@ -6,6 +6,7 @@
 [ext_resource type="AudioStream" uid="uid://r8t57ckbbncu" path="res://assets/change.mp3" id="3_h2yge"]
 [ext_resource type="Script" uid="uid://d2kbc3lqsoti4" path="res://button_installed.gd" id="4_272bh"]
 [ext_resource type="Script" uid="uid://bnjsi5ro1w5k5" path="res://button_tweaks.gd" id="5_5vw27"]
+[ext_resource type="PackedScene" uid="uid://b8fwocgf5txps" path="res://product_list.tscn" id="6_kek77"]
 [ext_resource type="AudioStream" uid="uid://cb3j1gqxupbrs" path="res://assets/select.mp3" id="7_272bh"]
 
 [node name="App" type="Control"]
@@ -26,8 +27,12 @@ script = ExtResource("1_0xm2m")
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_right = 4.0
+offset_bottom = -6.0
 grow_horizontal = 2
 grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 50
 
 [node name="HBoxContainer" type="HBoxContainer" parent="CanvasLayer/VBoxContainer"]
@@ -59,21 +64,31 @@ script = ExtResource("5_5vw27")
 [node name="TextureButton" type="TextureButton" parent="CanvasLayer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 
-[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/VBoxContainer"]
+[node name="ContentScrollContainer" type="ScrollContainer" parent="CanvasLayer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 follow_focus = true
-vertical_scroll_mode = 2
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
 
-[node name="ProductFlowContainer" type="HFlowContainer" parent="CanvasLayer/VBoxContainer/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/VBoxContainer/ContentScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
+
+[node name="PopularProductList" parent="CanvasLayer/VBoxContainer/ContentScrollContainer/VBoxContainer" instance=ExtResource("6_kek77")]
+layout_mode = 2
+size_flags_vertical = 1
+display_mode = 1
+title = "Popular"
+
+[node name="TrendingProductList" parent="CanvasLayer/VBoxContainer/ContentScrollContainer/VBoxContainer" instance=ExtResource("6_kek77")]
+layout_mode = 2
+size_flags_vertical = 1
+title = "Trending"
+min_rows = 3
 
 [node name="FocusSoundPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("3_h2yge")
 
 [node name="SelectSoundPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("7_272bh")
-
-[connection signal="resized" from="." to="." method="_update_columns"]

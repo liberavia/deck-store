@@ -10,10 +10,15 @@ config_version=5
 
 [application]
 
-config/name="Deck Mate"
+config/name="Deck Store"
 run/main_scene="uid://bl8qcy5u1yua6"
 config/features=PackedStringArray("4.4", "GL Compatibility")
 config/icon="res://icon.svg"
+
+[editor]
+
+version_control/plugin_name="GitPlugin"
+version_control/autoload_on_startup=true
 
 [input]
 

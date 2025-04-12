@@ -6,6 +6,9 @@
 custom_minimum_size = Vector2(210, 350)
 layout_mode = 3
 anchors_preset = 0
+offset_top = 1.0
+offset_right = 210.0
+offset_bottom = 351.0
 size_flags_vertical = 3
 script = ExtResource("1_pn8qf")
 
