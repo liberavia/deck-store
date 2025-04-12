@@ -10,11 +10,25 @@ extends Control
 @onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/HBoxContainer
 @onready var global_scroll_container: ScrollContainer = $CanvasLayer/VBoxContainer/ContentScrollContainer
 
+# --- Cache-Konstanten ---
+const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 Stunde
+const API_CACHE_DIR = "user://cache/api/"
+
 # =============================================================================
 # LIFECYCLE METHODS
 # =============================================================================
 
 func _ready():
+	var dir_access = DirAccess.open("user://")
+	if dir_access:
+		var absolute_cache_dir = ProjectSettings.globalize_path(API_CACHE_DIR)
+		print("INFO: Cache-Verzeichnis (absoluter Pfad): ", absolute_cache_dir)
+		var err = DirAccess.make_dir_recursive_absolute(API_CACHE_DIR)
+		if err != OK and err != ERR_ALREADY_EXISTS:
+			printerr("Konnte Cache-Verzeichnis nicht erstellen: ", API_CACHE_DIR, ", Fehlercode: ", err)
+	else:
+		printerr("Konnte user:// Verzeichnis nicht öffnen.")
+			
 	# Konfiguriere die Produktlisten-Instanz (falls Exports nicht im Editor gesetzt)
 	if not popular_product_list.product_box_scene:
 		popular_product_list.product_box_scene = product_box
@@ -73,14 +87,13 @@ func _unhandled_input(event: InputEvent):
 	
 
 # =============================================================================
-# CORE NAVIGATION LOGIC (Unverändert von vorheriger sauberer Version)
+# HELPER FUNCTIONS
 # =============================================================================
 
-
-
-# =============================================================================
-# HELPER FUNCTIONS (Unverändert)
-# =============================================================================
+# Erstellt den Dateipfad für eine gegebene URL im Cache
+func _get_api_cache_filepath(url: String) -> String:
+	var hash = url.md5_text() 
+	return API_CACHE_DIR.path_join(hash + ".json")
 
 # --- NEU: Signal-Handler für Bildanfragen von ProductList ---
 func _on_product_list_image_load_requested(url: String, texture_rect: TextureRect):
@@ -118,7 +131,7 @@ func _on_product_list_focus_exited_up():
 			printerr("Main: GlobalScrollContainer nicht gefunden zum Zurücksetzen!")
 
 # =============================================================================
-# PRODUCT LOADING & CALLBACKS (Unverändert)
+# PRODUCT LOADING & CALLBACKS 
 # =============================================================================
 
 func _on_image_request_completed(result, response_code, headers, body, texture_rect: TextureRect, image_url: String, http_request_node: HTTPRequest):
@@ -149,22 +162,129 @@ func process_home_trending_products_result(result, response_code, headers, body,
 				printerr("TrendingProductList is invalid!")
 	if is_instance_valid(http_request_list): http_request_list.queue_free()
 
+# =============================================================================
+# DATA LOADING (Mit File Cache Logik)
+# =============================================================================
+
+# Lädt Daten für eine spezifische Liste/URL
+func _load_product_list(url: String, target_list: ProductList):
+	if not is_instance_valid(target_list):
+		printerr("Versuche Daten für ungültige Zielliste zu laden, URL: ", url)
+		return
+	print("Anfrage für '%s': %s" % [target_list.title, url])
+
+	# --- File Cache Check ---
+	var cache_filepath = _get_api_cache_filepath(url)
+	if FileAccess.file_exists(cache_filepath):
+		print("-> Cache-Datei gefunden: ", cache_filepath.get_file())
+		var file = FileAccess.open(cache_filepath, FileAccess.READ)
+		var open_error = FileAccess.get_open_error()
+
+		if open_error == OK:
+			var json_string = file.get_as_text()
+			file.close() # Datei sofort schließen
+			var cache_content = JSON.parse_string(json_string)
+
+			if cache_content is Dictionary:
+				var timestamp = cache_content.get("timestamp", 0)
+				var api_data = cache_content.get("api_data")
+				var current_time = Time.get_ticks_msec()
+				var cache_age = current_time - timestamp
+
+				if cache_age < CACHE_DURATION_MSEC and api_data != null:
+					print("--> Cache HIT für %s (Alter: %d ms)" % [target_list.title, cache_age])
+					# Verwende Daten aus dem Cache direkt
+					_process_product_list_data(api_data, target_list)
+					return # Kein HTTP-Request nötig
+				else:
+					print("--> Cache EXPIRED oder ungültig für %s (Alter: %d ms)" % [target_list.title, cache_age])
+					# Optional: Lösche abgelaufene Datei (Fehler ignorieren, falls nicht existent)
+					DirAccess.remove_absolute(cache_filepath)
+			else:
+				print("--> Cache-Datei-Inhalt ungültig (kein Dictionary) für %s: %s" % [target_list.title, cache_filepath.get_file()])
+				# Optional: Lösche ungültige Datei
+				DirAccess.remove_absolute(cache_filepath)
+		else:
+			printerr("--> Fehler beim Öffnen der Cache-Datei %s: %s" % [cache_filepath.get_file(), open_error])
+			if is_instance_valid(file): file.close() # Sicherstellen, dass Handle geschlossen wird
+	else:
+		print("-> Cache MISS für %s" % target_list.title)
+	# --- End File Cache Check ---
+
+	# Kein gültiger Cache -> HTTP Request starten
+	var http_request = HTTPRequest.new()
+	add_child(http_request) # Node muss im Baum sein
+	http_request.request_completed.connect(
+		_on_product_list_request_completed.bind(http_request, url, target_list) # URL und Ziel binden
+	)
+	var error = http_request.request(url)
+	if error != OK:
+		printerr("Fehler beim Starten des Requests für '%s' (%s): %s" % [target_list.title, url, error])
+		if is_instance_valid(http_request): http_request.queue_free()
+
+# --- Callback für HTTP-Requests der Produktlisten ---
+func _on_product_list_request_completed(result, response_code, headers, body, http_request_list: HTTPRequest, url: String, target_list: ProductList):
+	if not is_instance_valid(target_list):
+		printerr("Ziel-ProductList ungültig im Callback für URL: ", url)
+		if is_instance_valid(http_request_list): http_request_list.queue_free(); return
+
+	if response_code == 200:
+		var response_string = body.get_string_from_utf8()
+		var api_json = JSON.parse_string(response_string)
+
+		if api_json != null:
+			 # Hier könnte man noch prüfen, ob api_json wirklich Dictionary/Array ist
+			 # if api_json is Dictionary or api_json is Array: # Je nachdem was die API liefert
+
+				# --- NEU: Im Datei-Cache speichern ---
+				var data_to_cache = {
+					"timestamp": Time.get_ticks_msec(),
+					"api_data": api_json # Speichere das geparste JSON-Objekt
+				}
+				var json_string_to_cache = JSON.stringify(data_to_cache, "  ") # Mit Einrückung für Lesbarkeit
+				var cache_filepath = _get_api_cache_filepath(url)
+
+				var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
+				var open_error = FileAccess.get_open_error()
+				if open_error == OK:
+					file.store_string(json_string_to_cache)
+					# Kein flush nötig für store_string, close reicht
+					file.close()
+					print("-> Daten für '%s' in Datei-Cache gespeichert: %s" % [url.get_file(), cache_filepath.get_file()])
+				else:
+					printerr("--> Fehler beim Schreiben der Cache-Datei %s: %s" % [cache_filepath.get_file(), open_error])
+					if is_instance_valid(file): file.close()
+				# -------------------------------
+
+				# Verarbeite die frisch geladenen Daten
+				_process_product_list_data(api_json, target_list)
+			 # else: printerr(...) # Ggf. Typ-Fehler loggen
+		else:
+			printerr("JSON Parse Fehler für URL '%s'." % url)
+	else:
+		printerr("HTTP Fehler %d beim Laden von '%s'." % [response_code, url])
+
+	# Request Node freigeben
+	if is_instance_valid(http_request_list):
+		http_request_list.queue_free()
+		
+# --- Verarbeitung der Daten (unverändert) ---
+func _process_product_list_data(json_data, target_list: ProductList):
+	if not is_instance_valid(target_list): printerr("Ungültige Ziel-Liste in _process_product_list_data"); return
+	if json_data is Dictionary and json_data.has('hits') and json_data['hits'] is Array:
+		target_list.set_products(json_data['hits'])
+		print("Produktliste '%s' aktualisiert." % target_list.title)
+	else: printerr("Unerwartete Datenstruktur für Liste '%s'." % target_list.title)
+
+# Wrapper-Funktionen für spezifische Listen
 func load_popular_products():
-	var http_request_list = HTTPRequest.new(); add_child(http_request_list)
-	http_request_list.request_completed.connect(process_home_popular_products_result.bind(http_request_list))
-	var url_popular = "https://flathub.org/api/v2/collection/popular?page=1&per_page=15&locale=en"
-	if http_request_list.request(url_popular) != OK:
-		if is_instance_valid(http_request_list): http_request_list.queue_free()
-	
+	_load_product_list("https://flathub.org/api/v2/collection/popular?page=1&per_page=10&locale=en", popular_product_list)
+
 func load_trending_products():
-	var http_request_list = HTTPRequest.new(); add_child(http_request_list)
-	http_request_list.request_completed.connect(process_home_trending_products_result.bind(http_request_list))
-	var url_trending = "https://flathub.org/api/v2/collection/trending?page=1&per_page=15&locale=en"
-	if http_request_list.request(url_trending) != OK:
-		if is_instance_valid(http_request_list): http_request_list.queue_free()
+	_load_product_list("https://flathub.org/api/v2/collection/trending?page=1&per_page=10&locale=en", trending_product_list)
 
 # =============================================================================
-# JOY CONNECTION CALLBACKS (Unverändert)
+# JOY CONNECTION CALLBACKS
 # =============================================================================
 func _check_connected_controllers():
 	var connected_joypads = Input.get_connected_joypads()
