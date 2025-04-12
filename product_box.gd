@@ -31,7 +31,7 @@ func _on_focus_entered_visual():
 	if not is_instance_valid(panel): return
 	if _original_panel_style is StyleBoxFlat:
 		var focused_style = _original_panel_style.duplicate() as StyleBoxFlat
-		focused_style.border_color = Color.REBECCA_PURPLE
+		focused_style.border_color = Color.PURPLE
 		focused_style.border_width_top = 3 
 		focused_style.border_width_left = 3 
 		focused_style.border_width_right = 3 
