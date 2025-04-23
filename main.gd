@@ -235,13 +235,12 @@ func _on_product_list_request_completed(result, response_code, headers, body, ht
 		http_request_list.queue_free()
 		
 func _process_product_list_data(json_data, target_list: ProductList):
-	if not is_instance_valid(target_list): printerr("Ungültige Ziel-Liste in _process_product_list_data"); return
+	if not is_instance_valid(target_list): printerr("Invalid target list in _process_product_list_data"); return
 	if json_data is Dictionary and json_data.has('hits') and json_data['hits'] is Array:
 		target_list.set_products(json_data['hits'])
-		print("Produktliste '%s' aktualisiert." % target_list.title)
-	else: printerr("Unerwartete Datenstruktur für Liste '%s'." % target_list.title)
+		print("Productlist '%s' updated." % target_list.title)
+	else: printerr("Unexpected data structure for list '%s'." % target_list.title)
 
-# Wrapper-Funktionen für spezifische Listen
 func load_popular_products():
 	_load_product_list("https://flathub.org/api/v2/collection/popular?page=1&per_page=10&locale=en", popular_product_list)
 
@@ -251,16 +250,17 @@ func load_trending_products():
 # =============================================================================
 # JOY CONNECTION CALLBACKS
 # =============================================================================
+
 func _check_connected_controllers():
 	var connected_joypads = Input.get_connected_joypads()
 	if connected_joypads.size() > 0:
-		print("Beim Start erkannte Controller:")
+		print("Controllers at start:")
 		for device_id in connected_joypads: print("  Device ID: ", device_id, ", Name: ", Input.get_joy_name(device_id))
-	else: print("Keine Controller beim Start von Godot erkannt.")
+	else: print("no controllers detected at start.")
 
 func _on_joy_connection_changed(device_id: int, connected: bool):
-	if connected: print("CONTROLLER VERBUNDEN:\n  Device ID: ", device_id, ", Name: ", Input.get_joy_name(device_id))
-	else: print("CONTROLLER GETRENNT:\n  Device ID: ", device_id)
+	if connected: print("CONTROLLER CONNECTED:\n  Device ID: ", device_id, ", Name: ", Input.get_joy_name(device_id))
+	else: print("CONTROLLER DISCONNECTED:\n  Device ID: ", device_id)
 	print("-----------------------------------------")
 
 # =============================================================================
@@ -288,12 +288,11 @@ func _execute_flatpak_in_thread():
 	print("INFO: Thread: Execute '%s %s' ..." % [spawn_cmd, " ".join(spawn_args)])
 
 	if not FileAccess.file_exists(spawn_cmd):
-		printerr("FEHLER: Das Kommando '%s' wurde nicht gefunden. Kann Host-Befehl nicht ausführen." % spawn_cmd)
-		Callable(self, "_process_flatpak_result").call_deferred("", -1) # Leerer Output, Fehlercode -1
+		printerr("ERROR: Command '%s' was not found. Cannot execute host command." % spawn_cmd)
+		Callable(self, "_process_flatpak_result").call_deferred("", -1)
 		return
 
 	var exit_code = OS.execute(spawn_cmd, spawn_args, output_array)
-	# -----------------------------------------
 
 	var output_string = ""
 	if output_array.size() > 0:
