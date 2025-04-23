@@ -1,18 +1,16 @@
 # product_list.gd
-class_name ProductList # Ermöglicht Typ-Hinting in main.gd
+class_name ProductList
 extends Control
 
-# --- Konfiguration ---
+# --- Configuraton ---
 enum DisplayMode { MULTI_LINE_WRAP, SINGLE_LINE_SCROLL }
 @export var display_mode: DisplayMode = DisplayMode.MULTI_LINE_WRAP
 @export var product_box_scene: PackedScene
 @export var title: String
 @export var min_rows: int = 2
 
-# --- Signale ---
-# Wird gesendet, wenn von der obersten Reihe nach oben navigiert wird
+# --- Signals ---
 signal focus_exited_up
-# Wird gesendet, wenn ein Bild geladen werden soll
 signal image_load_requested(url: String, texture_rect: TextureRect)
 
 # --- Nodes ---
@@ -23,18 +21,17 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @onready var title_label: Label = $VBoxContainer/TitleLabel
 @onready var inner_vbox: VBoxContainer = $VBoxContainer
 
-# --- Interne Variablen ---
-var _active_content_container: Container # Hält den aktuell genutzten Container
-var _product_box_min_width: float = 210.0 # Wird aus Instanz geholt
+# --- Internal Variables ---
+var _active_content_container: Container 
+var _product_box_min_width: float = 210.0 
 var _product_box_min_height: float = 350.0
+var installed_ids: Dictionary = {}
 
-# --- Cooldown Variablen (hierher verschoben) ---
+# --- Cooldown Variables ---
 const NAV_COOLDOWN_MS = 250
 var last_nav_time = { "up": 0, "down": 0, "left": 0, "right": 0 }
-# ----------------------------------------------
 
 func _ready():
-	# Hole Breite UND Höhe der Produktbox
 	if product_box_scene:
 		var temp_box = product_box_scene.instantiate()
 		_product_box_min_width = temp_box.custom_minimum_size.x
@@ -96,23 +93,23 @@ func set_products(product_data: Array):
 		printerr("ProductList: product_box_scene ist nicht zugewiesen!")
 		return
 
-	# Neue Produkte erstellen
 	for product in product_data:
 		var product_box_instance = product_box_scene.instantiate()
-		product_box_instance.focus_mode = Control.FOCUS_ALL # Wichtig!
+		product_box_instance.focus_mode = Control.FOCUS_ALL
 
-		# Name setzen
-		product_box_instance.get_node("Panel/ProductName").text = product.get("name", "N/A")
+		var product_app_id = product.get("app_id")
+		if product_box_instance.has_method("set_app_id"):
+			product_box_instance.set_app_id(product_app_id)
+		
+		var node_product_name = product_box_instance.get_node("Panel/ProductName")
+		node_product_name.text = product.get("name", "N/A")
 
-		# Bild laden anfordern (via Signal)
 		var image_url = product.get("icon")
 		if image_url and not image_url.is_empty():
 			var product_logo_rect = product_box_instance.get_node_or_null("Panel/ProductLogo") as TextureRect
 			if product_logo_rect:
 				emit_signal("image_load_requested", image_url, product_logo_rect)
-			# else: print("Panel/ProductLogo nicht gefunden in Instanz.")
 
-		# Zum aktiven Container hinzufügen
 		_active_content_container.add_child(product_box_instance)
 
 	var final_child_count = 0
@@ -120,9 +117,16 @@ func set_products(product_data: Array):
 		final_child_count = _active_content_container.get_child_count()
 	print("--- ProductList set_products END ---")
 	print("Final child count in active container: ", final_child_count)
-	
-	# Optional: Fokus auf das erste Element setzen, wenn die Liste gefüllt wird?
-	# call_deferred("focus_first_product")
+
+func update_installed_status(new_ids: Dictionary):
+	installed_ids = new_ids
+	if not is_instance_valid(_active_content_container): return
+	for child in _active_content_container.get_children():
+		if child.has_method("set_installed_status"):
+			var app_id = child.get("app_id") 
+			if app_id != null and app_id is String and not app_id.is_empty():
+				var is_installed = installed_ids.has(app_id)
+				child.set_installed_status(is_installed)
 
 func _update_minimum_height():
 	# Stelle sicher, dass Nodes gültig sind
