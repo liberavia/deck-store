@@ -1,4 +1,6 @@
-[gd_scene format=3 uid="uid://1ykejd4mf2v4"]
+[gd_scene load_steps=2 format=3 uid="uid://1ykejd4mf2v4"]
+
+[ext_resource type="Script" uid="uid://c8geld0qvks6h" path="res://product_screenshot.gd" id="1_sgn36"]
 
 [node name="Control" type="Control"]
 custom_minimum_size = Vector2(454, 261)
@@ -9,6 +11,7 @@ offset_right = 63.68
 offset_bottom = 40.16
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_sgn36")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -26,6 +29,7 @@ theme_override_constants/margin_bottom = 10
 layout_mode = 2
 
 [node name="Screenshot" type="TextureRect" parent="MarginContainer/Panel"]
+clip_contents = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

@@ -12,6 +12,7 @@ extends Control
 @onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/HBoxContainer
 @onready var global_scroll_container: ScrollContainer = $CanvasLayer/VBoxContainer/ContentScrollContainer
 @onready var select_sound: AudioStreamPlayer = $SelectSoundPlayer
+@onready var back_sound: AudioStreamPlayer = $BackSoundPlayer
 
 var _installed_flatpak_ids: Dictionary = {}
 var _flatpak_list_output: String = ""
@@ -128,21 +129,22 @@ func _on_move_to_details_view(app_id: String, installed: bool):
 	select_sound.play()
 	var tween = create_tween()
 	var main_view_height = main_view.size.y
-	print("Main view height: ", main_view_height)
 	var target_y = main_view_height
 	tween.tween_property(main_view, "position:y", target_y, transition_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	await tween.finished
 	details_view.visible = true
 	
 func _on_move_back_to_main_view():
+	back_sound.play()
 	var tween = create_tween()
 	var main_view_height = main_view.size.y
 	print("Main view height back: ", main_view_height)
 	var target_y = 0
 	tween.tween_property(main_view, "position:y", target_y, transition_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	details_view.visible = false
 	await tween.finished
 	details_view.clear_data()
-	details_view.visible = false
+	home_button.grab_focus()
 	
 # =============================================================================
 # PRODUCT LOADING & CALLBACKS 
@@ -161,15 +163,12 @@ func _on_image_request_completed(result, response_code, headers, body, texture_r
 		for header in headers:
 			if header.findn("Content-Type:") == 0:
 				content_type = header.get_slice(":", 1).strip_edges().to_lower()
-				print("Image-URL [", image_url, "] Content-Type: ", content_type)
 				break 
 
 		if content_type == "image/png":
 			error = image.load_png_from_buffer(body)
-			print("-> Loading PNG...")
 		elif content_type == "image/webp":
 			error = image.load_webp_from_buffer(body)
-			print("-> Loading WEBP...")
 		# elif content_type == "image/jpeg":
 		#     error = image.load_jpg_from_buffer(body)
 		else:
@@ -214,9 +213,8 @@ func process_home_trending_products_result(result, response_code, headers, body,
 
 func _load_product_list(url: String, target_list: ProductList):
 	if not is_instance_valid(target_list):
-		printerr("Versuche Daten für ungültige Zielliste zu laden, URL: ", url)
+		printerr("ERROR Invalid target list, URL: ", url)
 		return
-	print("Anfrage für '%s': %s" % [target_list.title, url])
 
 	# --- File Cache Check ---
 	var cache_filepath = _get_api_cache_filepath(url)
