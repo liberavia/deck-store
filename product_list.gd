@@ -12,6 +12,8 @@ enum DisplayMode { MULTI_LINE_WRAP, SINGLE_LINE_SCROLL }
 # --- Signals ---
 signal focus_exited_up
 signal image_load_requested(url: String, texture_rect: TextureRect)
+signal move_to_details_view(app_id: String, installed: bool)
+
 
 # --- Nodes ---
 @onready var multi_line_scroll: ScrollContainer = $VBoxContainer/MultiLineScroll
@@ -26,22 +28,26 @@ var _active_content_container: Container
 var _product_box_min_width: float = 210.0 
 var _product_box_min_height: float = 350.0
 var installed_ids: Dictionary = {}
+var origin_position := Vector2.ZERO
+var origin_size := Vector2.ZERO
 
 # --- Cooldown Variables ---
 const NAV_COOLDOWN_MS = 250
 var last_nav_time = { "up": 0, "down": 0, "left": 0, "right": 0 }
 
 func _ready():
+	origin_position = Vector2(0, 0)
+	origin_size = get_viewport_rect().size
+	
 	if product_box_scene:
 		var temp_box = product_box_scene.instantiate()
 		_product_box_min_width = temp_box.custom_minimum_size.x
-		_product_box_min_height = temp_box.custom_minimum_size.y # <<< NEU
+		_product_box_min_height = temp_box.custom_minimum_size.y
 		temp_box.queue_free()
 		if _product_box_min_width <= 0: _product_box_min_width = 210.0
-		if _product_box_min_height <= 0: _product_box_min_height = 350.0 # <<< NEU Fallback
+		if _product_box_min_height <= 0: _product_box_min_height = 350.0
 	else:
 		printerr("ProductList: product_box_scene is not assigned!")
-		# Fallback
 		_product_box_min_width = 210.0
 		_product_box_min_height = 350.0
 			
@@ -104,7 +110,7 @@ func set_products(product_data: Array):
 			var product_logo_rect = product_box_instance.get_node_or_null("Panel/ProductLogo") as TextureRect
 			if product_logo_rect:
 				emit_signal("image_load_requested", image_url, product_logo_rect)
-
+		product_box_instance.move_to_details_view.connect(_on_emit_move_to_details_view)
 		_active_content_container.add_child(product_box_instance)
 
 	var final_child_count = 0
@@ -112,6 +118,9 @@ func set_products(product_data: Array):
 		final_child_count = _active_content_container.get_child_count()
 	print("--- ProductList set_products END ---")
 	print("Final child count in active container: ", final_child_count)
+
+func _on_emit_move_to_details_view(app_id: String, installed: bool):
+	emit_signal("move_to_details_view", app_id, installed)
 
 func update_installed_status(new_ids: Dictionary):
 	installed_ids = new_ids
@@ -169,7 +178,7 @@ func focus_first_product():
 
 
 func _unhandled_input(event: InputEvent):
-	if not has_focus() and not get_viewport().gui_get_focus_owner(): # Prüft, ob Fokus innerhalb dieses Controls liegt
+	if not has_focus() and not get_viewport().gui_get_focus_owner():
 		return
 
 	var action_string = ""

@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://bl8qcy5u1yua6"]
+[gd_scene load_steps=10 format=3 uid="uid://bl8qcy5u1yua6"]
 
 [ext_resource type="Script" uid="uid://rn4h4pbvc6e3" path="res://main.gd" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://bgg8x1gfr8iq3" path="res://button_home.gd" id="1_ig7tw"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" uid="uid://bnjsi5ro1w5k5" path="res://button_tweaks.gd" id="5_5vw27"]
 [ext_resource type="PackedScene" uid="uid://b8fwocgf5txps" path="res://product_list.tscn" id="6_kek77"]
 [ext_resource type="AudioStream" uid="uid://cb3j1gqxupbrs" path="res://assets/select.mp3" id="7_272bh"]
+[ext_resource type="PackedScene" uid="uid://cauevp0c1nuys" path="res://details_view.tscn" id="9_kek77"]
 
 [node name="App" type="Control"]
 light_mask = 8
@@ -20,6 +21,10 @@ grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("1_0xm2m")
+
+[node name="DetailsView" parent="." instance=ExtResource("9_kek77")]
+visible = false
+layout_mode = 1
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 

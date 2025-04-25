@@ -1,0 +1,113 @@
+[gd_scene load_steps=5 format=3 uid="uid://cauevp0c1nuys"]
+
+[ext_resource type="Script" uid="uid://bggmpdvub3pb" path="res://details_view.gd" id="1_wsyjd"]
+
+[sub_resource type="SystemFont" id="SystemFont_wsyjd"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wsyjd"]
+bg_color = Color(0.319272, 0.698451, 0.306331, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_52l82"]
+bg_color = Color(1, 0.342699, 0.281945, 1)
+
+[node name="DetailsView" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+script = ExtResource("1_wsyjd")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DetailsNavbar" type="HBoxContainer" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_vertical = 2
+
+[node name="AppIcon" type="TextureRect" parent="Panel/VBoxContainer/DetailsNavbar"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+expand_mode = 4
+
+[node name="AppTitle" type="RichTextLabel" parent="Panel/VBoxContainer/DetailsNavbar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/normal_font = SubResource("SystemFont_wsyjd")
+theme_override_font_sizes/normal_font_size = 36
+vertical_alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel/VBoxContainer/DetailsNavbar"]
+layout_mode = 2
+size_flags_horizontal = 8
+
+[node name="ButtonInstall" type="Button" parent="Panel/VBoxContainer/DetailsNavbar/HBoxContainer"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 25
+theme_override_styles/normal = SubResource("StyleBoxFlat_wsyjd")
+text = "Install"
+
+[node name="ButtonRemove" type="Button" parent="Panel/VBoxContainer/DetailsNavbar/HBoxContainer"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 25
+theme_override_styles/normal = SubResource("StyleBoxFlat_52l82")
+text = "Remove"
+
+[node name="ContainerScreenshots" type="HBoxContainer" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 250)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 50
+
+[node name="ContainerDetailsMain" type="HBoxContainer" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 400)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Panel/VBoxContainer/ContainerDetailsMain"]
+custom_minimum_size = Vector2(800, 0)
+layout_mode = 2
+size_flags_horizontal = 2
+
+[node name="AppDescription" type="RichTextLabel" parent="Panel/VBoxContainer/ContainerDetailsMain/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+fit_content = true
+scroll_following = true
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/VBoxContainer/ContainerDetailsMain"]
+custom_minimum_size = Vector2(480, 0)
+layout_mode = 2
+size_flags_horizontal = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel/VBoxContainer/ContainerDetailsMain/VBoxContainer"]
+layout_mode = 2
+
+[node name="LabelCurrentVersion" type="Label" parent="Panel/VBoxContainer/ContainerDetailsMain/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(240, 0)
+layout_mode = 2
+text = "Current Version"
+
+[node name="CurrentVersion" type="Label" parent="Panel/VBoxContainer/ContainerDetailsMain/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(240, 0)
+layout_mode = 2

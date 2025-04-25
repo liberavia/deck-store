@@ -3,12 +3,15 @@ extends Control
 @export var product_box: PackedScene = preload("res://product_box.tscn")
 @export var product_list_scene: PackedScene = preload("res://product_list.tscn")
 
+@onready var details_view: Control = $DetailsView
+@onready var main_view: VBoxContainer = $CanvasLayer/VBoxContainer
 @onready var popular_product_list: ProductList = $CanvasLayer/VBoxContainer/ContentScrollContainer/VBoxContainer/PopularProductList
 @onready var trending_product_list: ProductList = $CanvasLayer/VBoxContainer/ContentScrollContainer/VBoxContainer/TrendingProductList
 
 @onready var home_button: Button = $CanvasLayer/VBoxContainer/HBoxContainer/ButtonHome
 @onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/HBoxContainer
 @onready var global_scroll_container: ScrollContainer = $CanvasLayer/VBoxContainer/ContentScrollContainer
+@onready var select_sound: AudioStreamPlayer = $SelectSoundPlayer
 
 var _installed_flatpak_ids: Dictionary = {}
 var _flatpak_list_output: String = ""
@@ -17,6 +20,8 @@ var _flatpak_thread: Thread = null
 # --- Cache-Constants ---
 const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 Stunde
 const API_CACHE_DIR = "user://cache/api/"
+var transition_time := 0.5
+
 
 # =============================================================================
 # LIFECYCLE METHODS
@@ -46,6 +51,10 @@ func _ready():
 	home_button.pressed.connect(load_trending_products)
 	Input.joy_connection_changed.connect(_on_joy_connection_changed) # Beibehalten
 
+	details_view.move_back_to_main_view.connect(_on_move_back_to_main_view)
+	details_view.image_load_requested.connect(_on_product_list_image_load_requested)
+	popular_product_list.move_to_details_view.connect(_on_move_to_details_view)
+	trending_product_list.move_to_details_view.connect(_on_move_to_details_view)
 	popular_product_list.image_load_requested.connect(_on_product_list_image_load_requested)
 	popular_product_list.focus_exited_up.connect(_on_product_list_focus_exited_up)
 	trending_product_list.image_load_requested.connect(_on_product_list_image_load_requested)
@@ -112,6 +121,29 @@ func _on_product_list_focus_exited_up():
 		else:
 			printerr("Main: GlobalScrollContainer nicht gefunden zum Zurücksetzen!")
 
+func _on_move_to_details_view(app_id: String, installed: bool):
+	details_view.set_app_id(app_id)
+	details_view.set_installed(installed)
+	details_view.load_details()
+	select_sound.play()
+	var tween = create_tween()
+	var main_view_height = main_view.size.y
+	print("Main view height: ", main_view_height)
+	var target_y = main_view_height
+	tween.tween_property(main_view, "position:y", target_y, transition_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	await tween.finished
+	details_view.visible = true
+	
+func _on_move_back_to_main_view():
+	var tween = create_tween()
+	var main_view_height = main_view.size.y
+	print("Main view height back: ", main_view_height)
+	var target_y = 0
+	tween.tween_property(main_view, "position:y", target_y, transition_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	await tween.finished
+	details_view.clear_data()
+	details_view.visible = false
+	
 # =============================================================================
 # PRODUCT LOADING & CALLBACKS 
 # =============================================================================
