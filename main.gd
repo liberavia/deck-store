@@ -150,12 +150,44 @@ func _on_move_back_to_main_view():
 
 func _on_image_request_completed(result, response_code, headers, body, texture_rect: TextureRect, image_url: String, http_request_node: HTTPRequest):
 	if not is_instance_valid(texture_rect):
-		if is_instance_valid(http_request_node): http_request_node.queue_free(); return
-	if response_code == 200:
-		var image = Image.new(); var error = image.load_png_from_buffer(body)
-		if error == OK: texture_rect.texture = ImageTexture.create_from_image(image)
-	if is_instance_valid(http_request_node): http_request_node.queue_free()
+		printerr("TextureRect is invalid in Image-Callback for URL: ", image_url)
+		if is_instance_valid(http_request_node): http_request_node.queue_free(); 
+		return 
 
+	if response_code == 200 and result == HTTPRequest.RESULT_SUCCESS:
+		var image = Image.new()
+		var error = ERR_FILE_UNRECOGNIZED 
+		var content_type = ""
+		for header in headers:
+			if header.findn("Content-Type:") == 0:
+				content_type = header.get_slice(":", 1).strip_edges().to_lower()
+				print("Image-URL [", image_url, "] Content-Type: ", content_type)
+				break 
+
+		if content_type == "image/png":
+			error = image.load_png_from_buffer(body)
+			print("-> Loading PNG...")
+		elif content_type == "image/webp":
+			error = image.load_webp_from_buffer(body)
+			print("-> Loading WEBP...")
+		# elif content_type == "image/jpeg":
+		#     error = image.load_jpg_from_buffer(body)
+		else:
+			printerr("-> Unknown or not supportet image type: '", content_type, "' for URL: ", image_url)
+			error = ERR_FILE_UNRECOGNIZED
+
+		if error == OK:
+			texture_rect.texture = ImageTexture.create_from_image(image)
+		else:
+			printerr("Error while loading image from buffer. Type: '", content_type, "', Errorcode: ", error, ", URL: ", image_url)
+			# texture_rect.texture = load("res://placeholder_image.png")
+	else:
+		printerr("HTTP Fehler %d (Result %d) beim Download von Bild: %s" % [response_code, result, image_url])
+		# texture_rect.texture = load("res://placeholder_image.png")
+
+	if is_instance_valid(http_request_node):
+		http_request_node.queue_free()
+		
 func process_home_popular_products_result(result, response_code, headers, body, http_request_list: HTTPRequest):
 	if response_code == 200:
 		var response_string = body.get_string_from_utf8(); var json = JSON.parse_string(response_string)

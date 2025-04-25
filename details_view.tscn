@@ -20,7 +20,22 @@ grow_vertical = 2
 size_flags_vertical = 3
 script = ExtResource("1_wsyjd")
 
-[node name="Panel" type="Panel" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="Panel" type="Panel" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="DetailsContents" type="VBoxContainer" parent="MarginContainer/Panel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -28,86 +43,95 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="DetailsNavbar" type="HBoxContainer" parent="Panel/VBoxContainer"]
+[node name="DetailsNavbar" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents"]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 size_flags_vertical = 2
 
-[node name="AppIcon" type="TextureRect" parent="Panel/VBoxContainer/DetailsNavbar"]
+[node name="AppIcon" type="TextureRect" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 expand_mode = 4
 
-[node name="AppTitle" type="RichTextLabel" parent="Panel/VBoxContainer/DetailsNavbar"]
+[node name="AppTitle" type="RichTextLabel" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = SubResource("SystemFont_wsyjd")
 theme_override_font_sizes/normal_font_size = 36
 vertical_alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Panel/VBoxContainer/DetailsNavbar"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
 layout_mode = 2
 size_flags_horizontal = 8
 
-[node name="ButtonInstall" type="Button" parent="Panel/VBoxContainer/DetailsNavbar/HBoxContainer"]
+[node name="ButtonInstall" type="Button" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 25
 theme_override_styles/normal = SubResource("StyleBoxFlat_wsyjd")
 text = "Install"
 
-[node name="ButtonRemove" type="Button" parent="Panel/VBoxContainer/DetailsNavbar/HBoxContainer"]
+[node name="ButtonRemove" type="Button" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 25
 theme_override_styles/normal = SubResource("StyleBoxFlat_52l82")
 text = "Remove"
 
-[node name="ContainerScreenshots" type="HBoxContainer" parent="Panel/VBoxContainer"]
-custom_minimum_size = Vector2(0, 250)
+[node name="ScreenshotClipContainer" type="Control" parent="MarginContainer/Panel/DetailsContents"]
+clip_contents = true
+custom_minimum_size = Vector2(0, 300)
 layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
+size_flags_vertical = 0
+
+[node name="ContainerScreenshots" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ScreenshotClipContainer"]
+clip_contents = true
+custom_minimum_size = Vector2(0, 250)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_constants/separation = 50
 
-[node name="ContainerDetailsMain" type="HBoxContainer" parent="Panel/VBoxContainer"]
-custom_minimum_size = Vector2(0, 400)
+[node name="ContainerDetailsMain" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents"]
+custom_minimum_size = Vector2(0, 350)
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_vertical = 10
 
-[node name="ScrollContainer" type="ScrollContainer" parent="Panel/VBoxContainer/ContainerDetailsMain"]
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain"]
 custom_minimum_size = Vector2(800, 0)
 layout_mode = 2
-size_flags_horizontal = 2
+size_flags_horizontal = 0
+size_flags_vertical = 3
 
-[node name="AppDescription" type="RichTextLabel" parent="Panel/VBoxContainer/ContainerDetailsMain/ScrollContainer"]
+[node name="AppDescription" type="RichTextLabel" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-fit_content = true
-scroll_following = true
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Panel/VBoxContainer/ContainerDetailsMain"]
-custom_minimum_size = Vector2(480, 0)
+[node name="ContainerAppDetails" type="VBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain"]
+custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_horizontal = 10
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Panel/VBoxContainer/ContainerDetailsMain/VBoxContainer"]
+[node name="ContainerVersion" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/ContainerAppDetails"]
 layout_mode = 2
 
-[node name="LabelCurrentVersion" type="Label" parent="Panel/VBoxContainer/ContainerDetailsMain/VBoxContainer/HBoxContainer"]
-custom_minimum_size = Vector2(240, 0)
+[node name="LabelCurrentVersion" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/ContainerAppDetails/ContainerVersion"]
 layout_mode = 2
-text = "Current Version"
+text = "Current Version:"
 
-[node name="CurrentVersion" type="Label" parent="Panel/VBoxContainer/ContainerDetailsMain/VBoxContainer/HBoxContainer"]
-custom_minimum_size = Vector2(240, 0)
+[node name="CurrentVersion" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/ContainerAppDetails/ContainerVersion"]
+layout_mode = 2
+
+[node name="ContainerReleaseDate" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/ContainerAppDetails"]
+layout_mode = 2
+
+[node name="LabelReleaseDate" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/ContainerAppDetails/ContainerReleaseDate"]
+layout_mode = 2
+text = "Release-Date:"
+
+[node name="ReleaseDate" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/ContainerAppDetails/ContainerReleaseDate"]
 layout_mode = 2
