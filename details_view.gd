@@ -1,3 +1,4 @@
+# details_view.gd
 extends Control
 
 signal move_back_to_main_view
@@ -5,6 +6,7 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 
 @export var product_screenshot_scene: PackedScene = preload("res://product_screenshot.tscn")
 
+# --- @onready vars for UI elements ---
 @onready var app_icon: TextureRect = $MarginContainer/Panel/DetailsContents/DetailsNavbar/AppIcon
 @onready var app_title: RichTextLabel = $MarginContainer/Panel/DetailsContents/DetailsNavbar/AppTitle
 @onready var app_desc: RichTextLabel = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/DetailsDescriptionScroller/AppDescription
@@ -14,180 +16,305 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @onready var button_install: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ButtonInstall
 @onready var button_remove: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ButtonRemove
 @onready var screenshot_scroll_container: ScrollContainer = $MarginContainer/Panel/DetailsContents/ScreenshotClipContainer/ScrollContainer
-@onready var description_scroll_container: ScrollContainer = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/ScrollContainer
+@onready var description_scroll_container: ScrollContainer = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/DetailsDescriptionScroller # Corrected path based on scene
 
-var app_id: String = ""
-var installed: bool = false
+# --- Internal State ---
+var current_app_id: String = ""
+var is_currently_installed: bool = false
+
+# --- Constants ---
+# Using constants directly here as requested. Consider Autoload for sharing with main.gd
+const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 hour
+const API_CACHE_DIR = "user://cache/api/"
+
+# =============================================================================
+# BUILT-IN GODOT METHODS
+# =============================================================================
+
+func _ready():
+	# Ensure cache directory exists (good practice to have it here too)
+	var dir_access = DirAccess.open("user://")
+	if dir_access:
+		DirAccess.make_dir_recursive_absolute(API_CACHE_DIR)
 
 func _unhandled_input(event: InputEvent):
-	if event.is_action_pressed("ui_cancel"): 
+	# Only handle back button if this view is visible
+	if not self.visible:
+		return
+	if event.is_action_pressed("ui_cancel"):
 		emit_signal("move_back_to_main_view")
-	
+		get_viewport().set_input_as_handled() # Handle it here
+
+# =============================================================================
+# PUBLIC METHODS (called from main.gd or elsewhere)
+# =============================================================================
+
 func set_app_id(assigned_id: String):
-	app_id = assigned_id
+	current_app_id = assigned_id
 
 func set_installed(is_installed: bool):
-	installed = is_installed
-	
+	is_currently_installed = is_installed
+	_update_install_buttons() # Update buttons based on passed status
+
 func clear_data():
-	app_id = ""
-	installed = false
-	app_title.text = ""
+	# Reset UI elements to default/loading state
+	current_app_id = "" # Also clear internal app_id maybe? Depends on logic flow
+	# installed = false # Keep installed state potentially? Depends on flow
+	app_title.text = "Loading..."
 	app_desc.text = ""
 	app_icon.texture = null
+	app_current_version.text = "N/A"
+	app_release_date.text = "N/A"
 	for screenshot in screenshot_container.get_children():
 		screenshot_container.remove_child(screenshot)
-	
+		screenshot.queue_free() # Important to free instances
+
+# Main entry point to load data for the current_app_id
+func load_details():
+	if current_app_id.is_empty():
+		printerr("ERROR: Cannot load details, app_id is empty.")
+		app_title.text = "Error: No App ID" # Show error in UI
+		return
+
+	# Update button visibility based on known installed state BEFORE loading
+	_update_install_buttons()
+
+	# --- Start loading process (checks cache first) ---
+	# show_loading_indicator() # Optional: Show visual indicator
+	_load_details_data(current_app_id)
+
+
+# =============================================================================
+# INTERNAL DATA LOADING & CACHING
+# =============================================================================
+
+# --- Helper function to get cache file path ---
+func _get_api_cache_filepath(url: String) -> String:
+	var request_hash = url.md5_text()
+	return API_CACHE_DIR.path_join(request_hash + ".json")
+
+# --- Load details: Check cache or start request ---
+func _load_details_data(app_id_to_load: String):
+	var detail_api_url = "https://flathub.org/api/v2/appstream/%s?locale=en" % app_id_to_load
+	# print("INFO: Requesting details for '%s': %s" % [app_id_to_load, detail_api_url]) # Debug
+
+	# --- File Cache Check ---
+	var cache_filepath = _get_api_cache_filepath(detail_api_url)
+	if FileAccess.file_exists(cache_filepath):
+		# print("INFO: Cache file found: ", cache_filepath.get_file()) # Debug
+		var file = FileAccess.open(cache_filepath, FileAccess.READ)
+		var open_error = FileAccess.get_open_error()
+
+		if open_error == OK:
+			var json_string = file.get_as_text()
+			file.close()
+			var cache_content = JSON.parse_string(json_string)
+
+			if cache_content is Dictionary:
+				var timestamp = cache_content.get("timestamp", 0)
+				var api_data = cache_content.get("api_data")
+				var current_time = Time.get_ticks_msec()
+				var cache_age = current_time - timestamp
+
+				if cache_age < CACHE_DURATION_MSEC and api_data != null:
+					# print("INFO: Cache HIT for details '%s' (Age: %d ms)" % [app_id_to_load, cache_age]) # Debug
+					_display_details(api_data) # Use cached data
+					call_deferred("set_initial_focus")
+					# hide_loading_indicator() # Optional
+					return # Data loaded from cache, exit
+				else:
+					# print("INFO: Cache EXPIRED or invalid for details '%s' (Age: %d ms)" % [app_id_to_load, cache_age]) # Debug
+					DirAccess.remove_absolute(cache_filepath)
+			else:
+				# print("WARN: Cache file corrupt (No Dictionary) for details '%s': %s" % [app_id_to_load, cache_filepath.get_file()]) # Debug
+				DirAccess.remove_absolute(cache_filepath)
+		else:
+			printerr("ERROR: Opening cache file %s failed: %s" % [cache_filepath.get_file(), open_error])
+			if is_instance_valid(file): file.close()
+	# else:
+		# print("INFO: Cache MISS for details '%s'" % app_id_to_load) # Debug
+
+	# --- Cache MISS or expired: Start HTTP Request ---
+	var http_request = HTTPRequest.new()
+	add_child(http_request)
+	http_request.request_completed.connect(
+		_on_product_details_request_completed.bind(http_request, detail_api_url) # Bind URL
+	)
+	var error = http_request.request(detail_api_url)
+	if error != OK:
+		printerr("ERROR: Starting details request failed for '%s' (%s): %s" % [app_id_to_load, detail_api_url, error])
+		# hide_loading_indicator() # Optional
+		app_title.text = "Error: Request Failed" # Show error in UI
+		if is_instance_valid(http_request): http_request.queue_free()
+
+# --- Handle request completion: Save to cache and display ---
+func _on_product_details_request_completed(result, response_code, headers, body, http_request: HTTPRequest, url: String):
+	if response_code == 200 and result == HTTPRequest.RESULT_SUCCESS:
+		var response_string = body.get_string_from_utf8()
+		var api_json = JSON.parse_string(response_string)
+
+		if api_json != null:
+			# --- Save to Cache ---
+			var data_to_cache = {
+				"timestamp": Time.get_ticks_msec(),
+				"api_data": api_json
+			}
+			var json_string_to_cache = JSON.stringify(data_to_cache) # No need for pretty print in cache
+			var cache_filepath = _get_api_cache_filepath(url)
+			var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
+			var open_error = FileAccess.get_open_error()
+			if open_error == OK:
+				file.store_string(json_string_to_cache)
+				file.close()
+				# print("INFO: Details saved to cache: %s" % cache_filepath.get_file()) # Debug
+			else:
+				printerr("ERROR: Writing cache file %s failed: %s" % [cache_filepath.get_file(), open_error])
+				if is_instance_valid(file): file.close()
+
+			# --- Process and Display ---
+			_display_details(api_json)
+			call_deferred("set_initial_focus")
+		else:
+			printerr("ERROR: JSON parse error for URL '%s'." % url)
+			app_title.text = "Error: Invalid Data" # Show error in UI
+	else:
+		printerr("ERROR: HTTP Error %d (Result %d) requesting details from '%s'." % [response_code, result, url])
+		app_title.text = "Error: Download Failed" # Show error in UI
+
+	# --- Cleanup ---
+	# hide_loading_indicator() # Optional
+	if is_instance_valid(http_request):
+		http_request.queue_free()
+
+
+# =============================================================================
+# UI DISPLAY & HELPERS
+# =============================================================================
+
+# --- Display the fetched/cached details ---
+func _display_details(product: Dictionary):
+	if not product is Dictionary:
+		printerr("ERROR: Invalid data passed to _display_details.")
+		app_title.text = "Error: Invalid Data"
+		return
+
+	# navbar
+	app_title.text = product.get("name", "N/A")
+	var icon_url = product.get("icon")
+	if icon_url and not icon_url.is_empty():
+		emit_signal("image_load_requested", icon_url, app_icon)
+	else:
+		app_icon.texture = null # Clear old icon if none provided
+
+	# description
+	var description_html = product.get("description", "")
+	app_desc.text = limited_html_to_bbcode(description_html) if not description_html.is_empty() else "No description available."
+
+	# screenshots
+	# Clear old ones first
+	for child in screenshot_container.get_children():
+		screenshot_container.remove_child(child)
+		child.queue_free()
+	# Add new ones
+	var screenshots_data = product.get("screenshots", []) # Default to empty array
+	if screenshots_data is Array:
+		for screenshot_collection in screenshots_data:
+			if screenshot_collection is Dictionary and screenshot_collection.has("sizes"):
+				var screenshot_sizes = screenshot_collection.get("sizes", []) # Default to empty array
+				if screenshot_sizes is Array and not screenshot_sizes.is_empty():
+					var screenshot = screenshot_sizes[0] # Take the first size available
+					if screenshot is Dictionary:
+						var screenshot_url = screenshot.get("src", "")
+						if not screenshot_url.is_empty():
+							var screenshot_instance = product_screenshot_scene.instantiate()
+							if screenshot_instance:
+								# Add before trying to find child? Safer.
+								screenshot_container.add_child(screenshot_instance)
+								# Find the TextureRect node within the instance
+								var screenshot_rect = screenshot_instance.find_child("Screenshot", true, false) as TextureRect # Use find_child with name
+								if screenshot_rect:
+									emit_signal("image_load_requested", screenshot_url, screenshot_rect)
+								else:
+									printerr("ERROR: TextureRect 'Screenshot' not found in instantiated product_screenshot.tscn")
+							else:
+								printerr("ERROR: Failed to instantiate product_screenshot.tscn")
+
+	# app details (version, release date)
+	var releases = product.get("releases", []) # Default to empty array
+	if releases is Array and not releases.is_empty():
+		var latest_release = releases[0]
+		if latest_release is Dictionary:
+			app_current_version.text = latest_release.get("version", "N/A")
+			var timestamp_str = str(latest_release.get("timestamp", ""))
+			if not timestamp_str.is_empty() and timestamp_str.is_valid_int():
+				var timestamp_int = int(timestamp_str)
+				var datetime_dict: Dictionary = Time.get_datetime_dict_from_unix_time(timestamp_int)
+				var day = str(datetime_dict["day"]).pad_zeros(2)
+				var month = str(datetime_dict["month"]).pad_zeros(2)
+				var year = str(datetime_dict["year"])
+				app_release_date.text = "%s-%s-%s" % [year, month, day] # ISO format
+			else:
+				app_release_date.text = "N/A"
+		else:
+			app_current_version.text = "N/A"
+			app_release_date.text = "N/A"
+	else:
+		app_current_version.text = "N/A"
+		app_release_date.text = "N/A"
+
+	# Set initial focus after UI is populated
+	# call_deferred("set_initial_focus")
+
+# --- Set initial focus when view becomes active ---
 func set_initial_focus():
 	if button_install.visible:
 		button_install.grab_focus()
 	elif button_remove.visible:
 		button_remove.grab_focus()
 	else:
-		screenshot_scroll_container.grab_focus()
-	
-func load_details():
-	if installed:
-		button_install.visible = false
-		button_remove.visible = true
-	else:
-		button_install.visible = true
-		button_remove.visible = false
-		
-	if app_id == "":
-		printerr("ERROR: Cannot load details if no app_id is available")
-	var url = "https://flathub.org/api/v2/appstream/%s?locale=en" % app_id
-	var http_request = HTTPRequest.new()
-	add_child(http_request)
-	http_request.request_completed.connect(
-		_on_product_details_request_completed.bind(http_request, url)
-	)
-	var error = http_request.request(url)
-	if error != OK:
-		printerr("Error starting request for '%s' : %s" % [url, error])
-		if is_instance_valid(http_request): http_request.queue_free()
-	
-func _on_product_details_request_completed(result, response_code, headers, body, http_request_list: HTTPRequest, url: String):
-	if response_code == 200:
-		var response_string = body.get_string_from_utf8()
-		var api_json = JSON.parse_string(response_string)
-		_display_details(api_json)
-		
-	if is_instance_valid(http_request_list):
-		http_request_list.queue_free()	
+		# Fallback focus if buttons aren't visible for some reason
+		if is_instance_valid(screenshot_scroll_container):
+			screenshot_scroll_container.grab_focus()
 
-func _display_details(product):
-	# navbar
-	app_title.text = product.get("name")
-	var image_url = product.get("icon")
-	if image_url and not image_url.is_empty():
-		emit_signal("image_load_requested", image_url, app_icon)
+# --- Update Install/Remove buttons visibility ---
+func _update_install_buttons():
+	button_install.visible = not is_currently_installed
+	button_remove.visible = is_currently_installed
+	# TODO: Connect pressed signals dynamically or ensure they are connected elsewhere
 
-	# description
-	app_desc.text = limited_html_to_bbcode(product.get("description"))
-
-	# screenshots
-	var screenshots = product.get("screenshots")
-	for screenshot_collection in screenshots:
-		var screenshot_sizes = screenshot_collection.get("sizes")
-		var screenshot = screenshot_sizes[0] 
-		var screenshot_url = screenshot.get("src")
-		var screenshot_instance = product_screenshot_scene.instantiate()
-		screenshot_instance.focus_mode = Control.FOCUS_ALL
-		var screenshot_rect = screenshot_instance.get_node_or_null("MarginContainer/Panel/MarginContainer/Screenshot") as TextureRect
-		if screenshot_rect:
-			emit_signal("image_load_requested", screenshot_url, screenshot_rect)
-		else:
-			printerr("Screenshot Element not found")
-		screenshot_container.add_child(screenshot_instance)
-		
-	# app details
-	
-	# releases -> current version and release date
-	var releases = product.get("releases")
-	var latest_release = releases[0]
-	var timestamp_released = int(latest_release.get("timestamp"))
-	app_current_version.text = latest_release.get("version")
-	var datetime_dict: Dictionary = Time.get_datetime_dict_from_unix_time(timestamp_released)
-	var day = str(datetime_dict["day"]).pad_zeros(2)
-	var month = str(datetime_dict["month"]).pad_zeros(2)
-	var year = str(datetime_dict["year"])
-	app_release_date.text = "%s-%s-%s" % [year, month, day]
-	
-	set_initial_focus()
-	
-	
-# Function to convert a limited subset of HTML to Godot-compatible BBCode
+# --- BBCode Converter ---
+# NOTE: Assuming this function is correct from previous steps
 func limited_html_to_bbcode(html_string: String) -> String:
-	# print("--- Incoming HTML ---")
-	# print(html_string)
-	# print("-------------------------")
-
-	# Make a mutable copy
 	var bbcode: String = html_string
-
-	# --- Basic Tag Replacements (Order can matter!) ---
-	# Paragraphs (replace with double newlines for separation)
 	var regex_p_open = RegEx.new(); regex_p_open.compile("\\s*<p>\\s*")
-	bbcode = regex_p_open.sub(bbcode, "\n", true) # Start with one newline
+	bbcode = regex_p_open.sub(bbcode, "\n", true)
 	var regex_p_close = RegEx.new(); regex_p_close.compile("\\s*</p>\\s*")
-	bbcode = regex_p_close.sub(bbcode, "\n", true) # Add the second newline
-
-	# Bold
+	bbcode = regex_p_close.sub(bbcode, "\n", true)
 	bbcode = bbcode.replace("<b>", "[b]").replace("</b>", "[/b]")
 	bbcode = bbcode.replace("<strong>", "[b]").replace("</strong>", "[/b]")
-	# Italics
 	bbcode = bbcode.replace("<i>", "[i]").replace("</i>", "[/i]")
 	bbcode = bbcode.replace("<em>", "[i]").replace("</em>", "[/i]")
-
-	# --- Lists (Godot 4 Syntax: Items separated by newlines) ---
-	# Use Regex to replace list tags AND surrounding whitespace (\s*)
-	# Adding extra newlines before opening and after closing tags for spacing
 	var regex_ul_open = RegEx.new(); regex_ul_open.compile("\\s*<ul>\\s*")
-	bbcode = regex_ul_open.sub(bbcode, "\n\n[ul]\n", true) # Two \n before
+	bbcode = regex_ul_open.sub(bbcode, "\n\n[ul]\n", true)
 	var regex_ol_open = RegEx.new(); regex_ol_open.compile("\\s*<ol>\\s*")
-	bbcode = regex_ol_open.sub(bbcode, "\n\n[ol]\n", true) # Two \n before
-
+	bbcode = regex_ol_open.sub(bbcode, "\n\n[ol]\n", true)
 	var regex_ul_close = RegEx.new(); regex_ul_close.compile("\\s*</ul>\\s*")
-	bbcode = regex_ul_close.sub(bbcode, "\n[/ul]\n\n", true) # Two \n after
+	bbcode = regex_ul_close.sub(bbcode, "\n[/ul]\n\n", true)
 	var regex_ol_close = RegEx.new(); regex_ol_close.compile("\\s*</ol>\\s*")
-	bbcode = regex_ol_close.sub(bbcode, "\n[/ol]\n\n", true) # Two \n after
-
-	# Replace <li> opening tag and surrounding whitespace WITH a single space
+	bbcode = regex_ol_close.sub(bbcode, "\n[/ol]\n\n", true)
 	var regex_li_open = RegEx.new(); regex_li_open.compile("\\s*<li>\\s*")
-	bbcode = regex_li_open.sub(bbcode, " ", true) # CHANGED: Replace with space
-	# Replace </li> closing tag and surrounding whitespace with just a newline
+	bbcode = regex_li_open.sub(bbcode, " ", true)
 	var regex_li_close = RegEx.new(); regex_li_close.compile("\\s*</li>\\s*")
 	bbcode = regex_li_close.sub(bbcode, "\n", true)
-
-
-	# --- Links ---
-	# Convert <a href="URL">TEXT</a> to [url=URL]TEXT[/url]
 	var regex_a = RegEx.new()
 	regex_a.compile("<a\\s+[^>]*?href\\s*=\\s*[\"']?([^\"'\\s>]+)[\"']?[^>]*>(.*?)</a>")
 	bbcode = regex_a.sub(bbcode, "[url=$1]$2[/url]", true)
-
-
-	# --- Cleanup ---
-	# Remove any remaining HTML tags that weren't handled
 	var regex_tags = RegEx.new()
 	regex_tags.compile("<[^>]*>")
 	bbcode = regex_tags.sub(bbcode, "", true)
-
-	# Decode HTML/XML entities (e.g., &amp; -> &) using the built-in method
 	bbcode = bbcode.xml_unescape()
-
-	# Reduce multiple consecutive newlines (more than 2) down to 2
 	var regex_newlines = RegEx.new()
 	regex_newlines.compile("\n{3,}")
 	bbcode = regex_newlines.sub(bbcode, "\n\n", true)
-
-	# Trim leading/trailing whitespace and newlines from the final result
 	bbcode = bbcode.strip_edges()
-
-	# --- Debug Output (Optional) ---
-	# print("--- Generated BBCode ---")
-	# print(bbcode)
-	# print("-------------------------")
-
 	return bbcode

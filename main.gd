@@ -19,8 +19,10 @@ var _flatpak_list_output: String = ""
 var _flatpak_thread: Thread = null
 
 # --- Cache-Constants ---
-const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 Stunde
+const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 hour
 const API_CACHE_DIR = "user://cache/api/"
+const IMAGE_CACHE_DIR = "user://cache/images/"
+const IMAGE_CACHE_DURATION_SEC: int = 7 * 24 * 60 * 60 # 1 week in seconds
 var transition_time := 0.5
 
 
@@ -38,6 +40,15 @@ func _ready():
 			printerr("Could not create cache directory: ", API_CACHE_DIR, ", Code: ", err)
 	else:
 		printerr("Could not open user:// directory.")
+		
+	var image_dir_access = DirAccess.open("user://")
+	if image_dir_access:
+		var err = DirAccess.make_dir_recursive_absolute(IMAGE_CACHE_DIR)
+		if err != OK and err != ERR_ALREADY_EXISTS:
+			printerr("ERROR: Could not create image cache directory: ", IMAGE_CACHE_DIR, ", Code: ", err)
+		# Optional: Clean up very old cache files here if needed
+	else:
+		printerr("ERROR: Could not open user:// directory for image cache.")
 			
 	if not popular_product_list.product_box_scene:
 		popular_product_list.product_box_scene = product_box
@@ -97,8 +108,62 @@ func _get_api_cache_filepath(url: String) -> String:
 
 func _on_product_list_image_load_requested(url: String, texture_rect: TextureRect):
 	if not is_instance_valid(texture_rect):
-		printerr("Image request for invalid texture_rect") # Debug
+		printerr("ERROR: Image request for invalid texture_rect, URL: ", url)
 		return
+	if url.is_empty():
+		printerr("ERROR: Empty image URL provided.")
+		return
+
+	var url_hash = url.md5_text()
+	var cache_filepath_png = IMAGE_CACHE_DIR.path_join(url_hash + ".png")
+	var cache_filepath_webp = IMAGE_CACHE_DIR.path_join(url_hash + ".webp")
+
+	var cache_filepath_to_load = ""
+	var file_extension = ""
+
+	if FileAccess.file_exists(cache_filepath_png):
+		cache_filepath_to_load = cache_filepath_png
+		file_extension = ".png"
+	elif FileAccess.file_exists(cache_filepath_webp):
+		cache_filepath_to_load = cache_filepath_webp
+		file_extension = ".webp"
+
+	if not cache_filepath_to_load.is_empty():
+		var modification_time = FileAccess.get_modified_time(cache_filepath_to_load)
+		var current_time = Time.get_unix_time_from_system()
+		var cache_age = current_time - modification_time
+
+		if cache_age < IMAGE_CACHE_DURATION_SEC:
+			var file = FileAccess.open(cache_filepath_to_load, FileAccess.READ)
+			if file:
+				var file_size = file.get_length()
+				if file_size > 0:
+					var buffer = file.get_buffer(file_size)
+					file.close()
+
+					var image = Image.new()
+					var error = ERR_CANT_OPEN
+
+					if file_extension == ".png":
+						error = image.load_png_from_buffer(buffer)
+					elif file_extension == ".webp":
+						error = image.load_webp_from_buffer(buffer)
+
+					if error == OK:
+						var texture = ImageTexture.create_from_image(image)
+						texture_rect.texture = texture
+						return
+					else:
+						printerr("ERROR: Failed to load image from cache buffer: ", cache_filepath_to_load, ", Error: ", error)
+						DirAccess.remove_absolute(cache_filepath_to_load)
+				else:
+					printerr("ERROR: Cache file is empty: ", cache_filepath_to_load)
+					file.close()
+					DirAccess.remove_absolute(cache_filepath_to_load)
+			else:
+				printerr("ERROR: Could not open cache file for reading: ", cache_filepath_to_load, " Error code: ", FileAccess.get_open_error())
+		else:
+			DirAccess.remove_absolute(cache_filepath_to_load)
 
 	var http_request_image = HTTPRequest.new()
 	add_child(http_request_image)
@@ -108,9 +173,11 @@ func _on_product_list_image_load_requested(url: String, texture_rect: TextureRec
 
 	var error = http_request_image.request(url)
 	if error != OK:
-		printerr("Error while starting image request %s: %s" % [url, error])
-		if is_instance_valid(http_request_image): http_request_image.queue_free()
+		printerr("ERROR: Starting image request failed for %s: %s" % [url, error])
+		if is_instance_valid(http_request_image):
+			http_request_image.queue_free()
 
+		
 func _on_product_list_focus_exited_up():
 	if is_instance_valid(home_button):
 		print("Main: Received focus_exited_up, focusing Home button.") # Debug
@@ -150,43 +217,56 @@ func _on_move_back_to_main_view():
 # PRODUCT LOADING & CALLBACKS 
 # =============================================================================
 
-func _on_image_request_completed(result, response_code, headers, body, texture_rect: TextureRect, image_url: String, http_request_node: HTTPRequest):
+func _on_image_request_completed(result, response_code, headers, body: PackedByteArray, texture_rect: TextureRect, image_url: String, http_request_node: HTTPRequest):
 	if not is_instance_valid(texture_rect):
-		printerr("TextureRect is invalid in Image-Callback for URL: ", image_url)
-		if is_instance_valid(http_request_node): http_request_node.queue_free(); 
-		return 
+		printerr("ERROR: TextureRect invalid in image callback for URL: ", image_url)
+		if is_instance_valid(http_request_node): http_request_node.queue_free()
+		return
 
 	if response_code == 200 and result == HTTPRequest.RESULT_SUCCESS:
 		var image = Image.new()
-		var error = ERR_FILE_UNRECOGNIZED 
+		var error = ERR_FILE_UNRECOGNIZED
 		var content_type = ""
+		var file_extension = ""
+
 		for header in headers:
 			if header.findn("Content-Type:") == 0:
 				content_type = header.get_slice(":", 1).strip_edges().to_lower()
-				break 
+				break
 
 		if content_type == "image/png":
 			error = image.load_png_from_buffer(body)
+			file_extension = ".png"
 		elif content_type == "image/webp":
 			error = image.load_webp_from_buffer(body)
-		# elif content_type == "image/jpeg":
-		#     error = image.load_jpg_from_buffer(body)
+			file_extension = ".webp"
 		else:
-			printerr("-> Unknown or not supportet image type: '", content_type, "' for URL: ", image_url)
+			printerr("ERROR: Unknown or unsupported image type '%s' for URL: %s" % [content_type, image_url])
 			error = ERR_FILE_UNRECOGNIZED
 
 		if error == OK:
-			texture_rect.texture = ImageTexture.create_from_image(image)
+			var texture = ImageTexture.create_from_image(image)
+			texture_rect.texture = texture
+
+			if not file_extension.is_empty():
+				var url_hash = image_url.md5_text()
+				var cache_filepath = IMAGE_CACHE_DIR.path_join(url_hash + file_extension)
+				var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
+				var open_error = FileAccess.get_open_error()
+				if open_error == OK:
+					file.store_buffer(body)
+					file.close()
+				else:
+					printerr("ERROR: Could not open cache file for writing: ", cache_filepath, " Code: ", open_error)
+					if is_instance_valid(file): file.close()
 		else:
-			printerr("Error while loading image from buffer. Type: '", content_type, "', Errorcode: ", error, ", URL: ", image_url)
-			# texture_rect.texture = load("res://placeholder_image.png")
+			printerr("ERROR: Failed loading image buffer. Type: '%s', Error: %s, URL: %s" % [content_type, error, image_url])
 	else:
-		printerr("HTTP Fehler %d (Result %d) beim Download von Bild: %s" % [response_code, result, image_url])
-		# texture_rect.texture = load("res://placeholder_image.png")
+		printerr("ERROR: HTTP Error %d (Result %d) downloading image: %s" % [response_code, result, image_url])
 
 	if is_instance_valid(http_request_node):
 		http_request_node.queue_free()
-		
+				
 func process_home_popular_products_result(result, response_code, headers, body, http_request_list: HTTPRequest):
 	if response_code == 200:
 		var response_string = body.get_string_from_utf8(); var json = JSON.parse_string(response_string)
