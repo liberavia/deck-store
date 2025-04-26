@@ -94,7 +94,7 @@ func _display_details(product):
 		var screenshot_url = screenshot.get("src")
 		var screenshot_instance = product_screenshot_scene.instantiate()
 		screenshot_instance.focus_mode = Control.FOCUS_ALL
-		var screenshot_rect = screenshot_instance.get_node_or_null("MarginContainer/Panel/Screenshot") as TextureRect
+		var screenshot_rect = screenshot_instance.get_node_or_null("MarginContainer/Panel/MarginContainer/Screenshot") as TextureRect
 		if screenshot_rect:
 			emit_signal("image_load_requested", screenshot_url, screenshot_rect)
 		else:

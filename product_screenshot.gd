@@ -1,10 +1,11 @@
 extends Control
 
 @onready var panel: Panel = $MarginContainer/Panel
+@onready var screenshot_rect: TextureRect = $MarginContainer/Panel/MarginContainer/Screenshot
 
 var _original_panel_style: StyleBox
 var _focus_sound_player: AudioStreamPlayer
-
+	
 func _ready():
 	if panel: _original_panel_style = panel.get_theme_stylebox("panel")
 	else: printerr("Panel node not found in ProductBox!")
