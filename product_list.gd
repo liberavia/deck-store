@@ -118,6 +118,8 @@ func set_products(product_data: Array):
 		final_child_count = _active_content_container.get_child_count()
 	print("--- ProductList set_products END ---")
 	print("Final child count in active container: ", final_child_count)
+	var main_node = get_node_or_null("/root/App")
+	update_installed_status(main_node.get_installed_ids())
 
 func _on_emit_move_to_details_view(app_id: String, installed: bool):
 	emit_signal("move_to_details_view", app_id, installed)

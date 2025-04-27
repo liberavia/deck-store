@@ -21,6 +21,7 @@ var _last_focused_product_box: Control = null
 
 # --- Cache-Constants ---
 const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 hour
+const CACHE_DURATION_SEC: int = 3600
 const API_CACHE_DIR = "user://cache/api/"
 const IMAGE_CACHE_DIR = "user://cache/images/"
 const IMAGE_CACHE_DURATION_SEC: int = 7 * 24 * 60 * 60 # 1 week in seconds
@@ -102,6 +103,8 @@ func _unhandled_input(event: InputEvent):
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+func get_installed_ids() -> Dictionary:
+	return _installed_flatpak_ids
 
 func _get_api_cache_filepath(url: String) -> String:
 	var hash = url.md5_text() 
@@ -325,17 +328,18 @@ func _load_product_list(url: String, target_list: ProductList):
 			var cache_content = JSON.parse_string(json_string)
 
 			if cache_content is Dictionary:
-				var timestamp = cache_content.get("timestamp", 0)
+				var timestamp = cache_content.get("timestamp", 0) 
 				var api_data = cache_content.get("api_data")
-				var current_time = Time.get_ticks_msec()
+				var current_time = Time.get_unix_time_from_system() 
 				var cache_age = current_time - timestamp
 
-				if cache_age < CACHE_DURATION_MSEC and api_data != null:
-					print("--> Cache HIT for %s (Age: %d ms)" % [target_list.title, cache_age])
+				# Vergleiche mit der Dauer in Sekunden
+				if cache_age < CACHE_DURATION_SEC and api_data != null:
+					print("--> Cache HIT for %s (Age: %d sec)" % [target_list.title, cache_age]) # Ausgabe in Sekunden
 					_process_product_list_data(api_data, target_list)
 					return
 				else:
-					print("--> Cache EXPIRED oder ungültig for %s (Age: %d ms)" % [target_list.title, cache_age])
+					print("--> Cache EXPIRED or invalid for %s (Age: %d sec)" % [target_list.title, cache_age]) # Ausgabe in Sekunden
 					DirAccess.remove_absolute(cache_filepath)
 			else:
 				print("--> Cache-File corrupt (No Dictionary) for %s: %s" % [target_list.title, cache_filepath.get_file()])
@@ -366,24 +370,24 @@ func _on_product_list_request_completed(result, response_code, headers, body, ht
 		var api_json = JSON.parse_string(response_string)
 
 		if api_json != null:
-				var data_to_cache = {
-					"timestamp": Time.get_ticks_msec(),
-					"api_data": api_json
-				}
-				var json_string_to_cache = JSON.stringify(data_to_cache, "  ") # Mit Einrückung für Lesbarkeit
-				var cache_filepath = _get_api_cache_filepath(url)
+			var data_to_cache = {
+				"timestamp": Time.get_unix_time_from_system(),
+				"api_data": api_json
+			}
+			var json_string_to_cache = JSON.stringify(data_to_cache, "  ") # Mit Einrückung für Lesbarkeit
+			var cache_filepath = _get_api_cache_filepath(url)
 
-				var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
-				var open_error = FileAccess.get_open_error()
-				if open_error == OK:
-					file.store_string(json_string_to_cache)
-					file.close()
-					print("-> Data for  '%s' saved in cache file: %s" % [url.get_file(), cache_filepath.get_file()])
-				else:
-					printerr("--> Error writing cache file %s: %s" % [cache_filepath.get_file(), open_error])
-					if is_instance_valid(file): file.close()
+			var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
+			var open_error = FileAccess.get_open_error()
+			if open_error == OK:
+				file.store_string(json_string_to_cache)
+				file.close()
+				print("-> Data for  '%s' saved in cache file: %s" % [url.get_file(), cache_filepath.get_file()])
+			else:
+				printerr("--> Error writing cache file %s: %s" % [cache_filepath.get_file(), open_error])
+				if is_instance_valid(file): file.close()
 
-				_process_product_list_data(api_json, target_list)
+			_process_product_list_data(api_json, target_list)
 		else:
 			printerr("JSON parse error for URL '%s'." % url)
 	else:
