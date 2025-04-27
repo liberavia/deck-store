@@ -57,9 +57,8 @@ func set_installed(is_installed: bool):
 	_update_install_buttons() # Update buttons based on passed status
 
 func clear_data():
-	# Reset UI elements to default/loading state
-	current_app_id = "" # Also clear internal app_id maybe? Depends on logic flow
-	# installed = false # Keep installed state potentially? Depends on flow
+	current_app_id = ""
+	is_currently_installed
 	app_title.text = "Loading..."
 	app_desc.text = ""
 	app_icon.texture = null
@@ -67,7 +66,7 @@ func clear_data():
 	app_release_date.text = "N/A"
 	for screenshot in screenshot_container.get_children():
 		screenshot_container.remove_child(screenshot)
-		screenshot.queue_free() # Important to free instances
+		screenshot.queue_free()
 
 # Main entry point to load data for the current_app_id
 func load_details():
@@ -76,11 +75,8 @@ func load_details():
 		app_title.text = "Error: No App ID" # Show error in UI
 		return
 
-	# Update button visibility based on known installed state BEFORE loading
 	_update_install_buttons()
 
-	# --- Start loading process (checks cache first) ---
-	# show_loading_indicator() # Optional: Show visual indicator
 	_load_details_data(current_app_id)
 
 
@@ -96,12 +92,10 @@ func _get_api_cache_filepath(url: String) -> String:
 # --- Load details: Check cache or start request ---
 func _load_details_data(app_id_to_load: String):
 	var detail_api_url = "https://flathub.org/api/v2/appstream/%s?locale=en" % app_id_to_load
-	# print("INFO: Requesting details for '%s': %s" % [app_id_to_load, detail_api_url]) # Debug
 
 	# --- File Cache Check ---
 	var cache_filepath = _get_api_cache_filepath(detail_api_url)
 	if FileAccess.file_exists(cache_filepath):
-		# print("INFO: Cache file found: ", cache_filepath.get_file()) # Debug
 		var file = FileAccess.open(cache_filepath, FileAccess.READ)
 		var open_error = FileAccess.get_open_error()
 
@@ -117,21 +111,16 @@ func _load_details_data(app_id_to_load: String):
 				var cache_age = current_time - timestamp
 
 				if cache_age < CACHE_DURATION_MSEC and api_data != null:
-					# print("INFO: Cache HIT for details '%s' (Age: %d ms)" % [app_id_to_load, cache_age]) # Debug
 					_display_details(api_data) # Use cached data
 					# hide_loading_indicator() # Optional
 					return # Data loaded from cache, exit
 				else:
-					# print("INFO: Cache EXPIRED or invalid for details '%s' (Age: %d ms)" % [app_id_to_load, cache_age]) # Debug
 					DirAccess.remove_absolute(cache_filepath)
 			else:
-				# print("WARN: Cache file corrupt (No Dictionary) for details '%s': %s" % [app_id_to_load, cache_filepath.get_file()]) # Debug
 				DirAccess.remove_absolute(cache_filepath)
 		else:
 			printerr("ERROR: Opening cache file %s failed: %s" % [cache_filepath.get_file(), open_error])
 			if is_instance_valid(file): file.close()
-	# else:
-		# print("INFO: Cache MISS for details '%s'" % app_id_to_load) # Debug
 
 	# --- Cache MISS or expired: Start HTTP Request ---
 	var http_request = HTTPRequest.new()
@@ -165,7 +154,6 @@ func _on_product_details_request_completed(result, response_code, headers, body,
 			if open_error == OK:
 				file.store_string(json_string_to_cache)
 				file.close()
-				# print("INFO: Details saved to cache: %s" % cache_filepath.get_file()) # Debug
 			else:
 				printerr("ERROR: Writing cache file %s failed: %s" % [cache_filepath.get_file(), open_error])
 				if is_instance_valid(file): file.close()
@@ -260,9 +248,6 @@ func _display_details(product: Dictionary):
 		app_current_version.text = "N/A"
 		app_release_date.text = "N/A"
 
-	# Set initial focus after UI is populated
-	# call_deferred("set_initial_focus")
-
 # --- Set initial focus when view becomes active ---
 func set_initial_focus():
 	print("Call set_initial_focus")
@@ -274,7 +259,6 @@ func set_initial_focus():
 		button_remove.grab_focus()
 	else:
 		print("Nor install or remove button is visible -> Fallback")
-		# Fallback focus if buttons aren't visible for some reason
 		if is_instance_valid(screenshot_scroll_container):
 			screenshot_scroll_container.grab_focus()
 
@@ -285,7 +269,6 @@ func _update_install_buttons():
 	# TODO: Connect pressed signals dynamically or ensure they are connected elsewhere
 
 # --- BBCode Converter ---
-# NOTE: Assuming this function is correct from previous steps
 func limited_html_to_bbcode(html_string: String) -> String:
 	var bbcode: String = html_string
 	var regex_p_open = RegEx.new(); regex_p_open.compile("\\s*<p>\\s*")

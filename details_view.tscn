@@ -1,9 +1,9 @@
 [gd_scene load_steps=11 format=3 uid="uid://cauevp0c1nuys"]
 
 [ext_resource type="Script" uid="uid://bggmpdvub3pb" path="res://details_view.gd" id="1_wsyjd"]
-[ext_resource type="Script" path="res://button_install.gd" id="2_52l82"]
-[ext_resource type="Script" path="res://button_remove.gd" id="3_8dtdw"]
-[ext_resource type="Script" uid="uid://c7ispvo0n3qfy" path="res://details_description_scroller.gd" id="4_8dtdw"]
+[ext_resource type="Script" uid="uid://ch0lgaqmr0n8e" path="res://button_install.gd" id="2_52l82"]
+[ext_resource type="Script" uid="uid://dkwtalyhx756g" path="res://button_remove.gd" id="3_8dtdw"]
+[ext_resource type="Script" path="res://details_description_scroller.gd" id="4_8dtdw"]
 
 [sub_resource type="SystemFont" id="SystemFont_wsyjd"]
 subpixel_positioning = 0
@@ -33,6 +33,11 @@ bg_color = Color(1, 0.342699, 0.281945, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_283hg"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.627451, 0.12549, 0.941176, 1)
 
 [node name="DetailsView" type="Control"]
 layout_mode = 3
