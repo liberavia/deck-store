@@ -119,7 +119,6 @@ func _load_details_data(app_id_to_load: String):
 				if cache_age < CACHE_DURATION_MSEC and api_data != null:
 					# print("INFO: Cache HIT for details '%s' (Age: %d ms)" % [app_id_to_load, cache_age]) # Debug
 					_display_details(api_data) # Use cached data
-					call_deferred("set_initial_focus")
 					# hide_loading_indicator() # Optional
 					return # Data loaded from cache, exit
 				else:
@@ -173,7 +172,6 @@ func _on_product_details_request_completed(result, response_code, headers, body,
 
 			# --- Process and Display ---
 			_display_details(api_json)
-			call_deferred("set_initial_focus")
 		else:
 			printerr("ERROR: JSON parse error for URL '%s'." % url)
 			app_title.text = "Error: Invalid Data" # Show error in UI
@@ -267,11 +265,15 @@ func _display_details(product: Dictionary):
 
 # --- Set initial focus when view becomes active ---
 func set_initial_focus():
+	print("Call set_initial_focus")
 	if button_install.visible:
+		print("Install button is visible")
 		button_install.grab_focus()
 	elif button_remove.visible:
+		print("Remove-Button is visible")
 		button_remove.grab_focus()
 	else:
+		print("Nor install or remove button is visible -> Fallback")
 		# Fallback focus if buttons aren't visible for some reason
 		if is_instance_valid(screenshot_scroll_container):
 			screenshot_scroll_container.grab_focus()

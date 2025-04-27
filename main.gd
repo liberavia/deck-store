@@ -200,6 +200,7 @@ func _on_move_to_details_view(app_id: String, installed: bool):
 	tween.tween_property(main_view, "position:y", target_y, transition_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	await tween.finished
 	details_view.visible = true
+	details_view.set_initial_focus()
 	
 func _on_move_back_to_main_view():
 	back_sound.play()
