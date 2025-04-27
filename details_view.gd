@@ -265,38 +265,86 @@ func _update_install_buttons():
 	button_remove.visible = is_currently_installed
 	# TODO: Connect pressed signals dynamically or ensure they are connected elsewhere
 
-# --- BBCode Converter ---
+# Function to convert a limited subset of HTML to Godot-compatible BBCode
 func limited_html_to_bbcode(html_string: String) -> String:
-	var bbcode: String = html_string
+	# print("--- Incoming HTML ---")
+	# print(html_string)
+	# print("-------------------------")
+
+	# Make a mutable copy
+	var work_string: String = html_string
+
+	# --- Step 1: Basic Tags & List Placeholders ---
+	# Handle paragraphs first to establish basic newlines
 	var regex_p_open = RegEx.new(); regex_p_open.compile("\\s*<p>\\s*")
-	bbcode = regex_p_open.sub(bbcode, "\n", true)
+	work_string = regex_p_open.sub(work_string, "\n", true)
 	var regex_p_close = RegEx.new(); regex_p_close.compile("\\s*</p>\\s*")
-	bbcode = regex_p_close.sub(bbcode, "\n", true)
-	bbcode = bbcode.replace("<b>", "[b]").replace("</b>", "[/b]")
-	bbcode = bbcode.replace("<strong>", "[b]").replace("</strong>", "[/b]")
-	bbcode = bbcode.replace("<i>", "[i]").replace("</i>", "[/i]")
-	bbcode = bbcode.replace("<em>", "[i]").replace("</em>", "[/i]")
-	var regex_ul_open = RegEx.new(); regex_ul_open.compile("\\s*<ul>\\s*")
-	bbcode = regex_ul_open.sub(bbcode, "\n\n[ul]\n", true)
-	var regex_ol_open = RegEx.new(); regex_ol_open.compile("\\s*<ol>\\s*")
-	bbcode = regex_ol_open.sub(bbcode, "\n\n[ol]\n", true)
-	var regex_ul_close = RegEx.new(); regex_ul_close.compile("\\s*</ul>\\s*")
-	bbcode = regex_ul_close.sub(bbcode, "\n[/ul]\n\n", true)
-	var regex_ol_close = RegEx.new(); regex_ol_close.compile("\\s*</ol>\\s*")
-	bbcode = regex_ol_close.sub(bbcode, "\n[/ol]\n\n", true)
-	var regex_li_open = RegEx.new(); regex_li_open.compile("\\s*<li>\\s*")
-	bbcode = regex_li_open.sub(bbcode, " ", true)
-	var regex_li_close = RegEx.new(); regex_li_close.compile("\\s*</li>\\s*")
-	bbcode = regex_li_close.sub(bbcode, "\n", true)
+	work_string = regex_p_close.sub(work_string, "\n", true)
+
+	# Basic inline tags
+	work_string = work_string.replace("<b>", "[b]").replace("</b>", "[/b]")
+	work_string = work_string.replace("<strong>", "[b]").replace("</strong>", "[/b]")
+	work_string = work_string.replace("<i>", "[i]").replace("</i>", "[/i]")
+	work_string = work_string.replace("<em>", "[i]").replace("</em>", "[/i]")
+
+	# Links
 	var regex_a = RegEx.new()
 	regex_a.compile("<a\\s+[^>]*?href\\s*=\\s*[\"']?([^\"'\\s>]+)[\"']?[^>]*>(.*?)</a>")
-	bbcode = regex_a.sub(bbcode, "[url=$1]$2[/url]", true)
+	work_string = regex_a.sub(work_string, "[url=$1]$2[/url]", true)
+
+	# -- Replace HTML list tags with placeholders --
+	# Use regex to consume whitespace around tags
+	var regex_ul_open = RegEx.new(); regex_ul_open.compile("\\s*<ul>\\s*")
+	work_string = regex_ul_open.sub(work_string, "<LIST_START>", true)
+	var regex_ol_open = RegEx.new(); regex_ol_open.compile("\\s*<ol>\\s*")
+	work_string = regex_ol_open.sub(work_string, "<LIST_START>", true) # Treat ol like ul for now
+
+	var regex_ul_close = RegEx.new(); regex_ul_close.compile("\\s*</ul>\\s*")
+	work_string = regex_ul_close.sub(work_string, "<LIST_END>", true)
+	var regex_ol_close = RegEx.new(); regex_ol_close.compile("\\s*</ol>\\s*")
+	work_string = regex_ol_close.sub(work_string, "<LIST_END>", true)
+
+	var regex_li_open = RegEx.new(); regex_li_open.compile("\\s*<li>\\s*")
+	work_string = regex_li_open.sub(work_string, "<ITEM_START>", true)
+	var regex_li_close = RegEx.new(); regex_li_close.compile("\\s*</li>\\s*")
+	work_string = regex_li_close.sub(work_string, "<ITEM_END>", true)
+
+	# --- Step 2: Cleanup remaining HTML Tags & Entities ---
 	var regex_tags = RegEx.new()
-	regex_tags.compile("<[^>]*>")
-	bbcode = regex_tags.sub(bbcode, "", true)
-	bbcode = bbcode.xml_unescape()
+	regex_tags.compile("<(?!LIST_START|LIST_END|ITEM_START|ITEM_END)[^>]*>") # Remove HTML tags EXCEPT our placeholders
+	work_string = regex_tags.sub(work_string, "", true)
+	work_string = work_string.xml_unescape()
+
+
+	# --- Step 3: Convert Placeholders to BBCode with desired spacing ---
+	# Replace list item placeholders
+	# Use regex again to handle potential whitespace introduced around placeholders
+	var regex_item_start = RegEx.new(); regex_item_start.compile("\\s*<ITEM_START>\\s*")
+	work_string = regex_item_start.sub(work_string, "[indent]\u2022  ", true) # Bullet + two spaces
+	var regex_item_end = RegEx.new(); regex_item_end.compile("\\s*<ITEM_END>\\s*")
+	work_string = regex_item_end.sub(work_string, "[/indent]\n", true) # Close indent + newline
+
+	# Replace list container placeholders, adding the definitive spacing HERE
+	var regex_list_start = RegEx.new(); regex_list_start.compile("\\s*<LIST_START>\\s*")
+	work_string = regex_list_start.sub(work_string, "\n\n", true) # Force blank line before list
+	var regex_list_end = RegEx.new(); regex_list_end.compile("\\s*<LIST_END>\\s*")
+	work_string = regex_list_end.sub(work_string, "\n\n", true) # Force blank line after list
+
+
+	# --- Step 4: Final Newline Cleanup ---
+	# Now, reduce sequences of 3 or more newlines down to 2 (one blank line)
+	# This should respect the \n\n we just added around the lists.
 	var regex_newlines = RegEx.new()
 	regex_newlines.compile("\n{3,}")
-	bbcode = regex_newlines.sub(bbcode, "\n\n", true)
-	bbcode = bbcode.strip_edges()
-	return bbcode
+	work_string = regex_newlines.sub(work_string, "\n\n", true)
+
+	# Final trim
+	work_string = work_string.strip_edges()
+
+
+	# --- Debug Output (Optional) ---
+	# print("--- Generated BBCode ---")
+	# print(work_string)
+	# print("-------------------------")
+
+	return work_string
