@@ -17,6 +17,7 @@ extends Control
 var _installed_flatpak_ids: Dictionary = {}
 var _flatpak_list_output: String = ""
 var _flatpak_thread: Thread = null
+var _last_focused_product_box: Control = null
 
 # --- Cache-Constants ---
 const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 hour
@@ -190,6 +191,14 @@ func _on_product_list_focus_exited_up():
 			printerr("Main: GlobalScrollContainer nicht gefunden zum Zurücksetzen!")
 
 func _on_move_to_details_view(app_id: String, installed: bool):
+	var focused_control = get_viewport().gui_get_focus_owner()
+	if is_instance_valid(focused_control) and \
+	   (popular_product_list.is_ancestor_of(focused_control) or \
+		trending_product_list.is_ancestor_of(focused_control)):
+			_last_focused_product_box = focused_control
+	else:
+		_last_focused_product_box = null
+			
 	details_view.set_app_id(app_id)
 	details_view.set_installed(installed)
 	details_view.load_details()
@@ -212,7 +221,13 @@ func _on_move_back_to_main_view():
 	details_view.visible = false
 	await tween.finished
 	details_view.clear_data()
-	home_button.grab_focus()
+	
+	if is_instance_valid(_last_focused_product_box):
+		_last_focused_product_box.grab_focus()
+		_last_focused_product_box = null
+	else:
+		if is_instance_valid(popular_product_list):
+			popular_product_list.focus_first_product()
 	
 # =============================================================================
 # PRODUCT LOADING & CALLBACKS 
