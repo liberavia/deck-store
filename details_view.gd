@@ -76,7 +76,6 @@ func load_details():
 		return
 
 	_update_install_buttons()
-
 	_load_details_data(current_app_id)
 
 
@@ -250,12 +249,10 @@ func _display_details(product: Dictionary):
 
 # --- Set initial focus when view becomes active ---
 func set_initial_focus():
-	print("Call set_initial_focus")
+	description_scroll_container.remove_theme_stylebox_override("panel")
 	if button_install.visible:
-		print("Install button is visible")
 		button_install.grab_focus()
 	elif button_remove.visible:
-		print("Remove-Button is visible")
 		button_remove.grab_focus()
 	else:
 		print("Nor install or remove button is visible -> Fallback")

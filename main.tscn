@@ -111,6 +111,7 @@ title = "Popular"
 [node name="TrendingProductList" parent="CanvasLayer/VBoxContainer/ContentScrollContainer/VBoxContainer" instance=ExtResource("6_kek77")]
 layout_mode = 2
 size_flags_vertical = 1
+display_mode = 1
 title = "Trending"
 min_rows = 3
 

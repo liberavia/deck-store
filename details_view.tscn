@@ -32,7 +32,7 @@ border_color = Color(0.627451, 0.12549, 0.941176, 1)
 bg_color = Color(1, 0.342699, 0.281945, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_283hg"]
-bg_color = Color(0.6, 0.6, 0.6, 0)
+bg_color = Color(0.6, 0.596, 0.6, 0)
 border_width_left = 3
 border_width_top = 3
 border_width_right = 3
