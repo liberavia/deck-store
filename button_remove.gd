@@ -1,5 +1,8 @@
 extends Button
 
+@export var app_id: String = ""
+
+var current_operation_id: String = ""
 var _focus_sound_player: AudioStreamPlayer
 
 func _ready():

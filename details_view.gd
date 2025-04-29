@@ -51,6 +51,8 @@ func _unhandled_input(event: InputEvent):
 
 func set_app_id(assigned_id: String):
 	current_app_id = assigned_id
+	button_install.set_app_id(assigned_id)
+	#button_remove.set_app_id(assigned_id)
 
 func set_installed(is_installed: bool):
 	is_currently_installed = is_installed

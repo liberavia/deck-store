@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://bggmpdvub3pb" path="res://details_view.gd" id="1_wsyjd"]
 [ext_resource type="Script" uid="uid://ch0lgaqmr0n8e" path="res://button_install.gd" id="2_52l82"]
 [ext_resource type="Script" uid="uid://dkwtalyhx756g" path="res://button_remove.gd" id="3_8dtdw"]
-[ext_resource type="Script" path="res://details_description_scroller.gd" id="4_8dtdw"]
+[ext_resource type="Script" uid="uid://c7ispvo0n3qfy" path="res://details_description_scroller.gd" id="4_8dtdw"]
 
 [sub_resource type="SystemFont" id="SystemFont_wsyjd"]
 subpixel_positioning = 0
@@ -99,16 +99,41 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 25
 theme_override_styles/focus = SubResource("StyleBoxFlat_8dtdw")
 theme_override_styles/normal = SubResource("StyleBoxFlat_wsyjd")
+action_mode = 0
 text = "Install"
 script = ExtResource("2_52l82")
 
 [node name="ButtonRemove" type="Button" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
+visible = false
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 25
 theme_override_styles/focus = SubResource("StyleBoxFlat_mufgs")
 theme_override_styles/normal = SubResource("StyleBoxFlat_52l82")
 text = "Remove"
+script = ExtResource("3_8dtdw")
+
+[node name="ProgressInfo" type="VBoxContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
+visible = false
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 2
+
+[node name="ProgressLabel" type="Label" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ProgressInfo"]
+layout_mode = 2
+text = "Preparing...."
+
+[node name="ProgressBar" type="ProgressBar" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ProgressInfo"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ButtonCancel" type="Button" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
+visible = false
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 25
+theme_override_styles/focus = SubResource("StyleBoxFlat_mufgs")
+theme_override_styles/normal = SubResource("StyleBoxFlat_52l82")
+text = "Cancel"
 script = ExtResource("3_8dtdw")
 
 [node name="ScreenshotClipContainer" type="Control" parent="MarginContainer/Panel/DetailsContents"]
