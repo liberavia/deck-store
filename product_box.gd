@@ -4,9 +4,12 @@ extends Control
 @onready var panel: Panel = $Panel
 @onready var status_indicator: Control = $Panel/StatusIndicator
 
+signal move_to_details_view(app_id: String, installed: bool)
+
 var _original_panel_style: StyleBox
 var _focus_sound_player: AudioStreamPlayer
 var app_id: String = ""
+var is_installed: bool = false
 
 func _ready():
 	if panel: _original_panel_style = panel.get_theme_stylebox("panel")
@@ -24,9 +27,17 @@ func _ready():
 func set_app_id(assinged_id: String):
 	app_id = assinged_id
 		
-func set_installed_status(is_installed: bool):
+func set_installed_status(installed_status: bool):
+	is_installed = installed_status
 	if is_instance_valid(status_indicator):
 		status_indicator.visible = is_installed
+
+func _unhandled_input(event: InputEvent):
+	if not has_focus():
+		return
+		
+	if event.is_action_pressed("ui_accept"):
+		emit_signal("move_to_details_view", app_id, is_installed)
 
 func _on_focus_entered_visual():
 	if not is_instance_valid(panel): return

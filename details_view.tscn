@@ -1,0 +1,200 @@
+[gd_scene load_steps=11 format=3 uid="uid://cauevp0c1nuys"]
+
+[ext_resource type="Script" uid="uid://bggmpdvub3pb" path="res://details_view.gd" id="1_wsyjd"]
+[ext_resource type="Script" uid="uid://ch0lgaqmr0n8e" path="res://button_install.gd" id="2_52l82"]
+[ext_resource type="Script" uid="uid://dkwtalyhx756g" path="res://button_remove.gd" id="3_8dtdw"]
+[ext_resource type="Script" path="res://details_description_scroller.gd" id="4_8dtdw"]
+
+[sub_resource type="SystemFont" id="SystemFont_wsyjd"]
+subpixel_positioning = 0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8dtdw"]
+bg_color = Color(0.317647, 0.698039, 0.305882, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.627, 0.125, 0.941, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wsyjd"]
+bg_color = Color(0.319272, 0.698451, 0.306331, 1)
+border_color = Color(0.627, 0.125, 0.941, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mufgs"]
+bg_color = Color(1, 0.341176, 0.282353, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.627451, 0.12549, 0.941176, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_52l82"]
+bg_color = Color(1, 0.342699, 0.281945, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_283hg"]
+bg_color = Color(0.6, 0.596, 0.6, 0)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.627451, 0.12549, 0.941176, 1)
+
+[node name="DetailsView" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+script = ExtResource("1_wsyjd")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="Panel" type="Panel" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="DetailsContents" type="VBoxContainer" parent="MarginContainer/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DetailsNavbar" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_vertical = 2
+
+[node name="AppIcon" type="TextureRect" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+expand_mode = 4
+
+[node name="AppTitle" type="RichTextLabel" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/normal_font = SubResource("SystemFont_wsyjd")
+theme_override_font_sizes/normal_font_size = 36
+vertical_alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
+layout_mode = 2
+size_flags_horizontal = 8
+
+[node name="ButtonInstall" type="Button" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 25
+theme_override_styles/focus = SubResource("StyleBoxFlat_8dtdw")
+theme_override_styles/normal = SubResource("StyleBoxFlat_wsyjd")
+text = "Install"
+script = ExtResource("2_52l82")
+
+[node name="ButtonRemove" type="Button" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 25
+theme_override_styles/focus = SubResource("StyleBoxFlat_mufgs")
+theme_override_styles/normal = SubResource("StyleBoxFlat_52l82")
+text = "Remove"
+script = ExtResource("3_8dtdw")
+
+[node name="ScreenshotClipContainer" type="Control" parent="MarginContainer/Panel/DetailsContents"]
+clip_contents = true
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/Panel/DetailsContents/ScreenshotClipContainer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+follow_focus = true
+
+[node name="ContainerScreenshots" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ScreenshotClipContainer/ScrollContainer"]
+clip_contents = true
+custom_minimum_size = Vector2(0, 250)
+layout_mode = 2
+theme_override_constants/separation = 50
+
+[node name="ContainerDetailsMain" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents"]
+custom_minimum_size = Vector2(0, 350)
+layout_mode = 2
+size_flags_vertical = 10
+
+[node name="MarginContainerAppDescription" type="MarginContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="DetailsDescriptionScroller" type="ScrollContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription"]
+custom_minimum_size = Vector2(800, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 3
+focus_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_283hg")
+script = ExtResource("4_8dtdw")
+
+[node name="AppDescription" type="RichTextLabel" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/DetailsDescriptionScroller"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+bbcode_enabled = true
+text = "Start logging any task's time to completion, with the ability to stop the timer at any moment, with notifications for longer task sessions.
+
+      [ul]
+ Quit anytime with the shortcut Ctrl + Q[/ul]"
+fit_content = true
+scroll_following = true
+
+[node name="MarginContainerAppDetails" type="MarginContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="ContainerAppDetails" type="VBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails"]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+size_flags_horizontal = 10
+
+[node name="ContainerVersion" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails"]
+layout_mode = 2
+
+[node name="LabelCurrentVersion" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerVersion"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+text = "Current Version:"
+
+[node name="CurrentVersion" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerVersion"]
+layout_mode = 2
+
+[node name="ContainerReleaseDate" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails"]
+layout_mode = 2
+
+[node name="LabelReleaseDate" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+text = "Release-Date:"
+
+[node name="ReleaseDate" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate"]
+layout_mode = 2

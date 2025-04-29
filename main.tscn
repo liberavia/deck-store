@@ -1,13 +1,38 @@
-[gd_scene load_steps=9 format=3 uid="uid://bl8qcy5u1yua6"]
+[gd_scene load_steps=13 format=3 uid="uid://bl8qcy5u1yua6"]
 
 [ext_resource type="Script" uid="uid://rn4h4pbvc6e3" path="res://main.gd" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://bgg8x1gfr8iq3" path="res://button_home.gd" id="1_ig7tw"]
 [ext_resource type="Script" uid="uid://c2mu6vd55fxyi" path="res://button_categories.gd" id="3_7mycd"]
 [ext_resource type="AudioStream" uid="uid://r8t57ckbbncu" path="res://assets/change.mp3" id="3_h2yge"]
 [ext_resource type="Script" uid="uid://d2kbc3lqsoti4" path="res://button_installed.gd" id="4_272bh"]
-[ext_resource type="Script" uid="uid://bnjsi5ro1w5k5" path="res://button_tweaks.gd" id="5_5vw27"]
 [ext_resource type="PackedScene" uid="uid://b8fwocgf5txps" path="res://product_list.tscn" id="6_kek77"]
 [ext_resource type="AudioStream" uid="uid://cb3j1gqxupbrs" path="res://assets/select.mp3" id="7_272bh"]
+[ext_resource type="AudioStream" uid="uid://crqv67kcd0gii" path="res://assets/back.wav" id="9_4c57u"]
+[ext_resource type="PackedScene" uid="uid://cauevp0c1nuys" path="res://details_view.tscn" id="9_kek77"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kek77"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.627451, 0.12549, 0.941176, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4c57u"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.627451, 0.12549, 0.941176, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5vw27"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.627451, 0.12549, 0.941176, 1)
 
 [node name="App" type="Control"]
 light_mask = 8
@@ -20,6 +45,10 @@ grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("1_0xm2m")
+
+[node name="DetailsView" parent="." instance=ExtResource("9_kek77")]
+visible = false
+layout_mode = 1
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
@@ -43,23 +72,21 @@ alignment = 1
 
 [node name="ButtonHome" type="Button" parent="CanvasLayer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
+theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 text = "Home"
 script = ExtResource("1_ig7tw")
 
 [node name="ButtonCategories" type="Button" parent="CanvasLayer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
+theme_override_styles/focus = SubResource("StyleBoxFlat_4c57u")
 text = "Categories"
 script = ExtResource("3_7mycd")
 
 [node name="ButtonInstalled" type="Button" parent="CanvasLayer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
+theme_override_styles/focus = SubResource("StyleBoxFlat_5vw27")
 text = "Installed"
 script = ExtResource("4_272bh")
-
-[node name="ButtonTweaks" type="Button" parent="CanvasLayer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-text = "Tweaks"
-script = ExtResource("5_5vw27")
 
 [node name="TextureButton" type="TextureButton" parent="CanvasLayer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
@@ -84,6 +111,7 @@ title = "Popular"
 [node name="TrendingProductList" parent="CanvasLayer/VBoxContainer/ContentScrollContainer/VBoxContainer" instance=ExtResource("6_kek77")]
 layout_mode = 2
 size_flags_vertical = 1
+display_mode = 1
 title = "Trending"
 min_rows = 3
 
@@ -92,3 +120,6 @@ stream = ExtResource("3_h2yge")
 
 [node name="SelectSoundPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("7_272bh")
+
+[node name="BackSoundPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("9_4c57u")
