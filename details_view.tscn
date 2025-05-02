@@ -1,35 +1,22 @@
-[gd_scene load_steps=11 format=3 uid="uid://cauevp0c1nuys"]
+[gd_scene load_steps=8 format=3 uid="uid://cauevp0c1nuys"]
 
 [ext_resource type="Script" uid="uid://bggmpdvub3pb" path="res://details_view.gd" id="1_wsyjd"]
-[ext_resource type="Script" uid="uid://ch0lgaqmr0n8e" path="res://button_install.gd" id="2_52l82"]
-[ext_resource type="Script" uid="uid://dkwtalyhx756g" path="res://button_remove.gd" id="3_8dtdw"]
+[ext_resource type="Script" uid="uid://cd3qm3wofpocw" path="res://action_button.gd" id="2_uows0"]
 [ext_resource type="Script" uid="uid://c7ispvo0n3qfy" path="res://details_description_scroller.gd" id="4_8dtdw"]
 
 [sub_resource type="SystemFont" id="SystemFont_wsyjd"]
 subpixel_positioning = 0
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8dtdw"]
-bg_color = Color(0.317647, 0.698039, 0.305882, 1)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.627, 0.125, 0.941, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u0jqg"]
+bg_color = Color(0.627451, 0.12549, 0.941176, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wsyjd"]
-bg_color = Color(0.319272, 0.698451, 0.306331, 1)
-border_color = Color(0.627, 0.125, 0.941, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mufgs"]
-bg_color = Color(1, 0.341176, 0.282353, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_uows0"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
 border_width_left = 3
 border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
 border_color = Color(0.627451, 0.12549, 0.941176, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_52l82"]
-bg_color = Color(1, 0.342699, 0.281945, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_283hg"]
 bg_color = Color(0.6, 0.596, 0.6, 0)
@@ -93,48 +80,39 @@ vertical_alignment = 1
 layout_mode = 2
 size_flags_horizontal = 8
 
-[node name="ButtonInstall" type="Button" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
-custom_minimum_size = Vector2(120, 0)
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 25
-theme_override_styles/focus = SubResource("StyleBoxFlat_8dtdw")
-theme_override_styles/normal = SubResource("StyleBoxFlat_wsyjd")
-action_mode = 0
-text = "Install"
-script = ExtResource("2_52l82")
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
 
-[node name="ButtonRemove" type="Button" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
-visible = false
-custom_minimum_size = Vector2(120, 0)
-layout_mode = 2
-theme_override_font_sizes/font_size = 25
-theme_override_styles/focus = SubResource("StyleBoxFlat_mufgs")
-theme_override_styles/normal = SubResource("StyleBoxFlat_52l82")
-text = "Remove"
-script = ExtResource("3_8dtdw")
-
-[node name="ProgressInfo" type="VBoxContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
-visible = false
+[node name="ProgressInfo" type="VBoxContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer"]
 custom_minimum_size = Vector2(350, 0)
 layout_mode = 2
 
-[node name="ProgressLabel" type="Label" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ProgressInfo"]
+[node name="ProgressLabel" type="Label" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo"]
 layout_mode = 2
 text = "Preparing...."
+horizontal_alignment = 1
 
-[node name="ProgressBar" type="ProgressBar" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ProgressInfo"]
+[node name="ProgressBar" type="ProgressBar" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo"]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_styles/fill = SubResource("StyleBoxFlat_u0jqg")
 
-[node name="ButtonCancel" type="Button" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
-visible = false
-custom_minimum_size = Vector2(120, 0)
+[node name="ActionButton" type="Button" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
+custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 25
-theme_override_styles/focus = SubResource("StyleBoxFlat_mufgs")
-theme_override_styles/normal = SubResource("StyleBoxFlat_52l82")
-text = "Cancel"
-script = ExtResource("3_8dtdw")
+theme_override_styles/focus = SubResource("StyleBoxFlat_uows0")
+action_mode = 0
+text = "Loading..."
+script = ExtResource("2_uows0")
+install_color = Color(0.317647, 0.698039, 0.305882, 1)
+remove_color = Color(1, 0.341176, 0.282353, 1)
+busy_color = Color(0.290196, 0.290196, 0.290196, 1)
+normal_color = Color(0.384314, 0.384314, 0.384314, 1)
 
 [node name="ScreenshotClipContainer" type="Control" parent="MarginContainer/Panel/DetailsContents"]
 clip_contents = true

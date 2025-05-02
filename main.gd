@@ -202,8 +202,7 @@ func _on_move_to_details_view(app_id: String, installed: bool):
 	else:
 		_last_focused_product_box = null
 			
-	details_view.set_app_id(app_id)
-	details_view.set_installed(installed)
+	details_view.set_initial_state(app_id, installed)
 	details_view.load_details()
 	select_sound.play()
 	var tween = create_tween()

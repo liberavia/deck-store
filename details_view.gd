@@ -6,15 +6,16 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 
 @export var product_screenshot_scene: PackedScene = preload("res://product_screenshot.tscn")
 
-# --- @onready vars for UI elements ---
 @onready var app_icon: TextureRect = $MarginContainer/Panel/DetailsContents/DetailsNavbar/AppIcon
 @onready var app_title: RichTextLabel = $MarginContainer/Panel/DetailsContents/DetailsNavbar/AppTitle
 @onready var app_desc: RichTextLabel = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/DetailsDescriptionScroller/AppDescription
 @onready var screenshot_container: HBoxContainer = $MarginContainer/Panel/DetailsContents/ScreenshotClipContainer/ScrollContainer/ContainerScreenshots
 @onready var app_current_version: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerVersion/CurrentVersion
 @onready var app_release_date: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate/ReleaseDate
-@onready var button_install: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ButtonInstall
-@onready var button_remove: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ButtonRemove
+@onready var action_button: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ActionButton # ANPASSEN: Name des Buttons im Scene Tree!
+@onready var progress_info: VBoxContainer = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo
+@onready var progress_bar: ProgressBar = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo/ProgressBar
+@onready var progress_label: Label = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo/ProgressLabel
 @onready var screenshot_scroll_container: ScrollContainer = $MarginContainer/Panel/DetailsContents/ScreenshotClipContainer/ScrollContainer
 @onready var description_scroll_container: ScrollContainer = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/DetailsDescriptionScroller # Corrected path based on scene
 
@@ -36,6 +37,14 @@ func _ready():
 	var dir_access = DirAccess.open("user://")
 	if dir_access:
 		DirAccess.make_dir_recursive_absolute(API_CACHE_DIR)
+	# --- NEU: Signale vom DownloadManager HIER verbinden, um Progress anzuzeigen ---
+	if ProjectSettings.has_setting("autoload/DownloadManager"):
+		if DownloadManager.has_signal("task_updated"):
+			DownloadManager.task_updated.connect(_on_task_updated_for_progress)
+		if DownloadManager.has_signal("task_finished"):
+			DownloadManager.task_finished.connect(_on_task_finished_for_progress)
+	else:
+		printerr("DetailsView: DownloadManager Autoload not found!")
 
 func _unhandled_input(event: InputEvent):
 	# Only handle back button if this view is visible
@@ -49,14 +58,13 @@ func _unhandled_input(event: InputEvent):
 # PUBLIC METHODS (called from main.gd or elsewhere)
 # =============================================================================
 
-func set_app_id(assigned_id: String):
+func set_initial_state(assigned_id: String, is_initially_installed: bool):
 	current_app_id = assigned_id
-	button_install.set_app_id(assigned_id)
-	#button_remove.set_app_id(assigned_id)
-
-func set_installed(is_installed: bool):
-	is_currently_installed = is_installed
-	_update_install_buttons() # Update buttons based on passed status
+	# Gib ID und initialen Installationsstatus an den Button weiter
+	if is_instance_valid(action_button) and action_button.has_method("set_app_id_and_initial_state"):
+		action_button.set_app_id_and_initial_state(assigned_id, is_initially_installed)
+	else:
+		printerr("DetailsView: action_button node not found or invalid for initial state!")
 
 func clear_data():
 	current_app_id = ""
@@ -76,10 +84,8 @@ func load_details():
 		printerr("ERROR: Cannot load details, app_id is empty.")
 		app_title.text = "Error: No App ID" # Show error in UI
 		return
-
-	_update_install_buttons()
+	if progress_info: progress_info.visible = false
 	_load_details_data(current_app_id)
-
 
 # =============================================================================
 # INTERNAL DATA LOADING & CACHING
@@ -252,20 +258,61 @@ func _display_details(product: Dictionary):
 # --- Set initial focus when view becomes active ---
 func set_initial_focus():
 	description_scroll_container.remove_theme_stylebox_override("panel")
-	if button_install.visible:
-		button_install.grab_focus()
-	elif button_remove.visible:
-		button_remove.grab_focus()
+	if is_instance_valid(action_button) and action_button.visible and not action_button.disabled:
+		action_button.grab_focus()
 	else:
-		print("Nor install or remove button is visible -> Fallback")
 		if is_instance_valid(screenshot_scroll_container):
 			screenshot_scroll_container.grab_focus()
 
-# --- Update Install/Remove buttons visibility ---
-func _update_install_buttons():
-	button_install.visible = not is_currently_installed
-	button_remove.visible = is_currently_installed
-	# TODO: Connect pressed signals dynamically or ensure they are connected elsewhere
+func _on_task_updated_for_progress(operation_id: String, status_data: Dictionary):
+	# Nur Updates für die aktuell angezeigte App beachten
+	if is_instance_valid(action_button) and operation_id == action_button.current_operation_id:
+		var status = status_data.get("status", "unknown")
+		var progress = status_data.get("progress", null)
+
+		# --- Geänderte Bedingung für Sichtbarkeit ---
+		# Zeige Progress nur bei diesen Status an:
+		if status == "downloading" or status == "installing":
+			if progress_info: progress_info.visible = true
+			# ProgressBar und Label nur aktualisieren, wenn sie sichtbar sind
+			if progress_bar and progress != null:
+				progress_bar.value = progress
+			elif progress_bar: # Progress ist null
+				progress_bar.value = 0
+
+			if progress_label:
+				var label_text = "Status: %s" % status # Fallback
+				match status:
+					"queued", "preparing":
+						label_text = "Waiting..."
+					"downloading":
+						label_text = "Downloading (%d%%)" % progress if progress != null else "Downloading..."
+						# Hier könntest du Speed/ETA hinzufügen, falls gewünscht
+						var speed = status_data.get("speed", null)
+						var eta = status_data.get("eta", null)
+						if speed: label_text += " [%s]" % speed
+						if eta: label_text += " (%s)" % eta
+					"installing":
+						label_text = "Installing (%d%%)..." % progress if progress != null else "Installing..."
+					# "removing" ist jetzt nicht mehr hier drin
+				progress_label.text = label_text
+				# print("DEBUG DetailsView: Set progress_label text to: '", label_text, "'")
+		else:
+			# Bei ALLEN anderen Status (removing, completed, failed, cancelled, etc.) ausblenden
+			if progress_info: progress_info.visible = false
+			# Optional: Label Text hier löschen oder auf Standard setzen?
+			# if progress_label: progress_label.text = ""
+	# else: # DEBUG
+		# print("DEBUG DetailsView: Task update ignored (wrong OpID)")
+
+func _on_task_finished_for_progress(operation_id: String, final_status: String):
+	# Finde den zugehörigen Task, um die App ID zu bekommen
+	# Oder besser: Prüfe, ob es die operation_id des ActionButtons ist
+	progress_bar.value = 0
+	if is_instance_valid(action_button) and operation_id == action_button.current_operation_id:
+		# Task ist fertig, Progress-Anzeige ausblenden
+		if progress_info: progress_info.visible = false
+
 
 # Function to convert a limited subset of HTML to Godot-compatible BBCode
 func limited_html_to_bbcode(html_string: String) -> String:
