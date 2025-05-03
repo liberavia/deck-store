@@ -1,7 +1,8 @@
-[gd_scene load_steps=8 format=3 uid="uid://cauevp0c1nuys"]
+[gd_scene load_steps=11 format=3 uid="uid://cauevp0c1nuys"]
 
 [ext_resource type="Script" uid="uid://bggmpdvub3pb" path="res://details_view.gd" id="1_wsyjd"]
 [ext_resource type="Script" uid="uid://cd3qm3wofpocw" path="res://action_button.gd" id="2_uows0"]
+[ext_resource type="Script" uid="uid://lx48drc58j14" path="res://add_to_steam_button.gd" id="3_8dtdw"]
 [ext_resource type="Script" uid="uid://c7ispvo0n3qfy" path="res://details_description_scroller.gd" id="4_8dtdw"]
 
 [sub_resource type="SystemFont" id="SystemFont_wsyjd"]
@@ -9,6 +10,17 @@ subpixel_positioning = 0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u0jqg"]
 bg_color = Color(0.627451, 0.12549, 0.941176, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mufgs"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.627451, 0.12549, 0.941176, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8dtdw"]
+bg_color = Color(0.317647, 0.698039, 0.305882, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_uows0"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
@@ -88,6 +100,7 @@ theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
 [node name="ProgressInfo" type="VBoxContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer"]
+visible = false
 custom_minimum_size = Vector2(350, 0)
 layout_mode = 2
 
@@ -100,6 +113,15 @@ horizontal_alignment = 1
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/fill = SubResource("StyleBoxFlat_u0jqg")
+
+[node name="AddToSteamButton" type="Button" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 25
+theme_override_styles/focus = SubResource("StyleBoxFlat_mufgs")
+theme_override_styles/normal = SubResource("StyleBoxFlat_8dtdw")
+text = "Add to Steam"
+script = ExtResource("3_8dtdw")
 
 [node name="ActionButton" type="Button" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
 custom_minimum_size = Vector2(200, 0)

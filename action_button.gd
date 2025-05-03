@@ -15,6 +15,9 @@ var stylebox_install: StyleBoxFlat
 var stylebox_remove: StyleBoxFlat
 var stylebox_busy: StyleBoxFlat
 
+var app_name: String = ""
+var icon_url: String = ""
+
 const TEXT_INSTALL = "Install"
 const TEXT_UNINSTALL = "Remove"
 const TEXT_CANCEL = "Cancel"
@@ -51,6 +54,31 @@ func _ready():
 
 	if not app_id.is_empty(): _update_ui(DownloadManager.get_task_status(app_id))
 	print("DEBUG UI: ActionButton _ready finished for ", app_id)
+
+func set_app_info(id: String, name: String, url: String):
+	app_id = id
+	app_name = name # Speichern!
+	icon_url = url   # Speichern!
+
+	# Initialen Status basierend auf Installation und DownloadManager setzen
+	var main_node = get_node_or_null("/root/App") # Pfad anpassen!
+	var is_installed = false
+	if main_node and main_node.has_method("is_app_installed"):
+		is_installed = main_node.is_app_installed(app_id)
+
+	var active_task_status = DownloadManager.get_task_status(app_id)
+	var manager_has_active_task = false
+	if not active_task_status.is_empty():
+		var status = active_task_status.get("status")
+		if status != null and not ["completed", "failed", "cancelled"].has(status):
+			manager_has_active_task = true
+			if active_task_status.has("operation_id"): current_operation_id = active_task_status.operation_id
+
+	if manager_has_active_task:
+		_update_ui(active_task_status)
+	else:
+		if is_installed: _update_ui({"status": "completed", "app_id": app_id, "name": app_name, "icon_url": icon_url}) # Name/Icon mitgeben
+		else: _update_ui({})
 
 
 func set_app_id_and_initial_state(assigned_id: String, is_initially_installed: bool):
@@ -98,7 +126,8 @@ func _on_pressed():
 			# UI sofort aktualisieren (optional, aber gibt Feedback)
 			self.disabled = true; self.text = TEXT_WAITING; add_theme_stylebox_override("normal", stylebox_busy)
 			# Task starten
-			current_operation_id = DownloadManager.queue_install(app_id)
+			var app_data_for_task = {"name": app_name, "icon_url": icon_url}
+			current_operation_id = DownloadManager.queue_install(app_id, app_data_for_task)
 
 		TEXT_UNINSTALL: # Zustand, der eine Deinstallation erlaubt/triggert
 			print("ActionButton: Choosing UNINSTALL path based on text '", self.text, "'")
@@ -165,7 +194,6 @@ func _update_ui(status_data: Dictionary):
 
 	if not status_data.is_empty():
 		var status = status_data.get("status", "unknown")
-		# var progress = status_data.get("progress", null) # Wird im Button nicht direkt gebraucht
 
 		match status:
 			"queued", "preparing":

@@ -12,16 +12,21 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @onready var screenshot_container: HBoxContainer = $MarginContainer/Panel/DetailsContents/ScreenshotClipContainer/ScrollContainer/ContainerScreenshots
 @onready var app_current_version: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerVersion/CurrentVersion
 @onready var app_release_date: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate/ReleaseDate
-@onready var action_button: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ActionButton # ANPASSEN: Name des Buttons im Scene Tree!
+@onready var action_button: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ActionButton
+@onready var add_to_steam_button: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/AddToSteamButton
 @onready var progress_info: VBoxContainer = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo
 @onready var progress_bar: ProgressBar = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo/ProgressBar
 @onready var progress_label: Label = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo/ProgressLabel
 @onready var screenshot_scroll_container: ScrollContainer = $MarginContainer/Panel/DetailsContents/ScreenshotClipContainer/ScrollContainer
-@onready var description_scroll_container: ScrollContainer = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/DetailsDescriptionScroller # Corrected path based on scene
+@onready var description_scroll_container: ScrollContainer = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/DetailsDescriptionScroller
 
 # --- Internal State ---
 var current_app_id: String = ""
 var is_currently_installed: bool = false
+var current_app_name: String = ""
+var current_icon_url: String = ""
+var is_known_to_be_in_steam: bool = true
+var steam_check_pending: bool = false
 
 # --- Constants ---
 # Using constants directly here as requested. Consider Autoload for sharing with main.gd
@@ -33,11 +38,9 @@ const API_CACHE_DIR = "user://cache/api/"
 # =============================================================================
 
 func _ready():
-	# Ensure cache directory exists (good practice to have it here too)
 	var dir_access = DirAccess.open("user://")
 	if dir_access:
 		DirAccess.make_dir_recursive_absolute(API_CACHE_DIR)
-	# --- NEU: Signale vom DownloadManager HIER verbinden, um Progress anzuzeigen ---
 	if ProjectSettings.has_setting("autoload/DownloadManager"):
 		if DownloadManager.has_signal("task_updated"):
 			DownloadManager.task_updated.connect(_on_task_updated_for_progress)
@@ -46,26 +49,49 @@ func _ready():
 	else:
 		printerr("DetailsView: DownloadManager Autoload not found!")
 
+	if ProjectSettings.has_setting("autoload/SteamIntegration"):
+		if SteamIntegration.has_signal("shortcut_action_completed"):
+			SteamIntegration.shortcut_action_completed.connect(_on_shortcut_action_completed)
+
+	var main_app_node = get_node_or_null("/root/App") 
+	if main_app_node and main_app_node.has_signal("installed_apps_updated"):
+		main_app_node.installed_apps_updated.connect(_on_installed_apps_refreshed)
+
+func _on_installed_apps_refreshed():
+	print("DEBUG DetailsView: Installed apps refreshed signal received, updating button visibility for ", current_app_id)
+	if self.visible and not current_app_id.is_empty():
+		var main_app_node = get_node_or_null("/root/App") 
+		if main_app_node and main_app_node.has_method("is_app_installed"):
+			is_currently_installed = main_app_node.is_app_installed(current_app_id)
+		steam_check_pending = false 
+		_update_action_buttons_visibility()
+		_trigger_steam_check_if_needed()
+
 func _unhandled_input(event: InputEvent):
 	# Only handle back button if this view is visible
 	if not self.visible:
 		return
 	if event.is_action_pressed("ui_cancel"):
 		emit_signal("move_back_to_main_view")
-		get_viewport().set_input_as_handled() # Handle it here
+		get_viewport().set_input_as_handled()
 
 # =============================================================================
 # PUBLIC METHODS (called from main.gd or elsewhere)
 # =============================================================================
 
-func set_initial_state(assigned_id: String, is_initially_installed: bool):
+func set_initial_state(assigned_id: String, initially_installed: bool):
+	print("DEBUG DetailsView: set_initial_state - AppID:", assigned_id, "Installed:", initially_installed)
 	current_app_id = assigned_id
-	# Gib ID und initialen Installationsstatus an den Button weiter
-	if is_instance_valid(action_button) and action_button.has_method("set_app_id_and_initial_state"):
-		action_button.set_app_id_and_initial_state(assigned_id, is_initially_installed)
-	else:
-		printerr("DetailsView: action_button node not found or invalid for initial state!")
+	is_currently_installed = initially_installed 
+	is_known_to_be_in_steam = false 
+	steam_check_pending = false 
 
+	if is_instance_valid(action_button) and action_button.has_method("set_app_id_and_initial_state"):
+		action_button.set_app_id_and_initial_state(assigned_id, is_currently_installed)
+
+	_update_action_buttons_visibility() 
+	_trigger_steam_check_if_needed() 
+	
 func clear_data():
 	current_app_id = ""
 	is_currently_installed
@@ -77,15 +103,32 @@ func clear_data():
 	for screenshot in screenshot_container.get_children():
 		screenshot_container.remove_child(screenshot)
 		screenshot.queue_free()
+	current_app_name = ""
+	is_known_to_be_in_steam = true
+	if is_instance_valid(action_button) and action_button.has_method("_update_ui"): action_button._update_ui({})
+	if is_instance_valid(add_to_steam_button): add_to_steam_button.visible = false
+	if progress_info: progress_info.visible = false
 
 # Main entry point to load data for the current_app_id
 func load_details():
 	if current_app_id.is_empty():
 		printerr("ERROR: Cannot load details, app_id is empty.")
-		app_title.text = "Error: No App ID" # Show error in UI
+		app_title.text = "Error: No App ID" 
 		return
 	if progress_info: progress_info.visible = false
-	_load_details_data(current_app_id)
+	_update_and_check_button_visibility()
+	_load_details_data(current_app_id)	
+
+func _on_shortcut_action_completed(action: String, app_id: String, success: bool):
+	if action == "check" and app_id == current_app_id:
+		print("DEBUG DetailsView: Received shortcut 'check' result for ", app_id, ". Found: ", success)
+		is_known_to_be_in_steam = success
+		steam_check_pending = false
+		_update_action_buttons_visibility()
+	elif (action == "add" or action == "remove") and app_id == current_app_id:
+		print("DEBUG DetailsView: Add/Remove finished for ", app_id, " Re-triggering Steam check.")
+		steam_check_pending = false
+		_trigger_steam_check_if_needed()
 
 # =============================================================================
 # INTERNAL DATA LOADING & CACHING
@@ -118,9 +161,9 @@ func _load_details_data(app_id_to_load: String):
 				var cache_age = current_time - timestamp
 
 				if cache_age < CACHE_DURATION_MSEC and api_data != null:
-					_display_details(api_data) # Use cached data
+					_display_details(api_data)
 					# hide_loading_indicator() # Optional
-					return # Data loaded from cache, exit
+					return
 				else:
 					DirAccess.remove_absolute(cache_filepath)
 			else:
@@ -139,7 +182,7 @@ func _load_details_data(app_id_to_load: String):
 	if error != OK:
 		printerr("ERROR: Starting details request failed for '%s' (%s): %s" % [app_id_to_load, detail_api_url, error])
 		# hide_loading_indicator() # Optional
-		app_title.text = "Error: Request Failed" # Show error in UI
+		app_title.text = "Error: Request Failed"
 		if is_instance_valid(http_request): http_request.queue_free()
 
 # --- Handle request completion: Save to cache and display ---
@@ -154,7 +197,7 @@ func _on_product_details_request_completed(result, response_code, headers, body,
 				"timestamp": Time.get_ticks_msec(),
 				"api_data": api_json
 			}
-			var json_string_to_cache = JSON.stringify(data_to_cache) # No need for pretty print in cache
+			var json_string_to_cache = JSON.stringify(data_to_cache)
 			var cache_filepath = _get_api_cache_filepath(url)
 			var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
 			var open_error = FileAccess.get_open_error()
@@ -169,10 +212,10 @@ func _on_product_details_request_completed(result, response_code, headers, body,
 			_display_details(api_json)
 		else:
 			printerr("ERROR: JSON parse error for URL '%s'." % url)
-			app_title.text = "Error: Invalid Data" # Show error in UI
+			app_title.text = "Error: Invalid Data" 
 	else:
 		printerr("ERROR: HTTP Error %d (Result %d) requesting details from '%s'." % [response_code, result, url])
-		app_title.text = "Error: Download Failed" # Show error in UI
+		app_title.text = "Error: Download Failed" 
 
 	# --- Cleanup ---
 	# hide_loading_indicator() # Optional
@@ -209,22 +252,20 @@ func _display_details(product: Dictionary):
 		screenshot_container.remove_child(child)
 		child.queue_free()
 	# Add new ones
-	var screenshots_data = product.get("screenshots", []) # Default to empty array
+	var screenshots_data = product.get("screenshots", []) 
 	if screenshots_data is Array:
 		for screenshot_collection in screenshots_data:
 			if screenshot_collection is Dictionary and screenshot_collection.has("sizes"):
-				var screenshot_sizes = screenshot_collection.get("sizes", []) # Default to empty array
+				var screenshot_sizes = screenshot_collection.get("sizes", []) 
 				if screenshot_sizes is Array and not screenshot_sizes.is_empty():
-					var screenshot = screenshot_sizes[0] # Take the first size available
+					var screenshot = screenshot_sizes[0] 
 					if screenshot is Dictionary:
 						var screenshot_url = screenshot.get("src", "")
 						if not screenshot_url.is_empty():
 							var screenshot_instance = product_screenshot_scene.instantiate()
 							if screenshot_instance:
-								# Add before trying to find child? Safer.
 								screenshot_container.add_child(screenshot_instance)
-								# Find the TextureRect node within the instance
-								var screenshot_rect = screenshot_instance.find_child("Screenshot", true, false) as TextureRect # Use find_child with name
+								var screenshot_rect = screenshot_instance.find_child("Screenshot", true, false) as TextureRect 
 								if screenshot_rect:
 									emit_signal("image_load_requested", screenshot_url, screenshot_rect)
 								else:
@@ -245,7 +286,7 @@ func _display_details(product: Dictionary):
 				var day = str(datetime_dict["day"]).pad_zeros(2)
 				var month = str(datetime_dict["month"]).pad_zeros(2)
 				var year = str(datetime_dict["year"])
-				app_release_date.text = "%s-%s-%s" % [year, month, day] # ISO format
+				app_release_date.text = "%s-%s-%s" % [year, month, day] 
 			else:
 				app_release_date.text = "N/A"
 		else:
@@ -254,64 +295,135 @@ func _display_details(product: Dictionary):
 	else:
 		app_current_version.text = "N/A"
 		app_release_date.text = "N/A"
+		
+	current_app_name = product.get("name", "N/A")
+
+	if is_instance_valid(action_button) and action_button.has_method("set_app_info"):
+		action_button.set_app_info(current_app_id, current_app_name, icon_url)
+			
+	if is_instance_valid(add_to_steam_button) and add_to_steam_button.has_method("set_app_info"):
+		add_to_steam_button.set_app_info(current_app_id, current_app_name, icon_url)
+	_update_action_buttons_visibility()
+	_trigger_steam_check_if_needed()
 
 # --- Set initial focus when view becomes active ---
 func set_initial_focus():
 	description_scroll_container.remove_theme_stylebox_override("panel")
 	if is_instance_valid(action_button) and action_button.visible and not action_button.disabled:
 		action_button.grab_focus()
+	elif is_instance_valid(add_to_steam_button) and add_to_steam_button.visible and not add_to_steam_button.disabled:
+		add_to_steam_button.grab_focus()
 	else:
 		if is_instance_valid(screenshot_scroll_container):
 			screenshot_scroll_container.grab_focus()
 
+func _update_action_buttons_visibility():
+	print("DEBUG DetailsView: Updating button visibility. Current AppID=", current_app_id) 
+
+	if current_app_id.is_empty():
+		if is_instance_valid(action_button): action_button.visible = false
+		if is_instance_valid(add_to_steam_button): add_to_steam_button.visible = false
+		return
+
+	var main_app_node = get_node_or_null("/root/App") 
+	var is_installed = false
+	if main_app_node and main_app_node.has_method("is_app_installed"):
+		is_installed = main_app_node.is_app_installed(current_app_id)
+
+	var task_status_data = DownloadManager.get_task_status(current_app_id)
+	var task_status = task_status_data.get("status", null)
+	var task_is_active = task_status != null and not ["completed", "failed", "cancelled"].has(task_status)
+	print("DEBUG DetailsView: Is task active? ", task_is_active, " (Status: ", task_status, ")") 
+	if is_instance_valid(action_button):
+		action_button.visible = true
+		print("DEBUG DetailsView: Setting ActionButton visible: ", action_button.visible)
+
+	if is_instance_valid(add_to_steam_button):
+		add_to_steam_button.visible = not task_is_active and is_installed and not is_known_to_be_in_steam
+		print("DEBUG DetailsView: Setting 'Add to Steam' visibility: ", add_to_steam_button.visible) # DEBUG
+
+func _trigger_steam_check_if_needed():
+	if is_currently_installed and not steam_check_pending:
+		print("DEBUG DetailsView: Triggering async Steam check for ", current_app_id)
+		if ProjectSettings.has_setting("autoload/SteamIntegration") and SteamIntegration.has_method("check_in_steam_async"):
+			var started = SteamIntegration.check_in_steam_async(current_app_id)
+			if started:
+				steam_check_pending = true 
+			else:
+				print("WARN DetailsView: Could not start async Steam check.")
+		else:
+			printerr("DetailsView: Cannot trigger Steam status check (SteamIntegration missing?).")
+
+func _update_and_check_button_visibility():
+	var main_app_node = get_node_or_null("/root/App") 
+	var is_installed = false
+	if main_app_node and main_app_node.has_method("is_app_installed"):
+		is_installed = main_app_node.is_app_installed(current_app_id)
+	else:
+		printerr("DetailsView: Cannot check installed status from main node!")
+		if is_instance_valid(action_button): action_button.visible = true
+		if is_instance_valid(add_to_steam_button): add_to_steam_button.visible = false
+		return
+
+	_set_button_visibility(is_installed, is_known_to_be_in_steam)
+
+	if is_installed:
+		if ProjectSettings.has_setting("autoload/SteamIntegration") and SteamIntegration.has_method("check_in_steam_async"):
+			print("DEBUG DetailsView: App is installed, triggering async check if needed...")
+			SteamIntegration.check_in_steam_async(current_app_id)
+		else:
+			printerr("DetailsView: Cannot trigger Steam status check!")
+
+
+func _set_button_visibility(is_installed : bool, is_in_steam : bool):
+	if is_instance_valid(action_button):
+		action_button.visible = true
+
+	if is_instance_valid(add_to_steam_button):
+		add_to_steam_button.visible = is_installed and not is_in_steam
+		print("DEBUG DetailsView: Setting 'Add to Steam' visibility: ", add_to_steam_button.visible, " (Installed=", is_installed, ", InSteam=", is_in_steam, ")")
+
 func _on_task_updated_for_progress(operation_id: String, status_data: Dictionary):
-	# Nur Updates für die aktuell angezeigte App beachten
 	if is_instance_valid(action_button) and operation_id == action_button.current_operation_id:
 		var status = status_data.get("status", "unknown")
 		var progress = status_data.get("progress", null)
+		var op_type = status_data.get("operation_type", "unknown")
 
-		# --- Geänderte Bedingung für Sichtbarkeit ---
-		# Zeige Progress nur bei diesen Status an:
+		var should_show_progress = false
 		if status == "downloading" or status == "installing":
-			if progress_info: progress_info.visible = true
-			# ProgressBar und Label nur aktualisieren, wenn sie sichtbar sind
-			if progress_bar and progress != null:
-				progress_bar.value = progress
-			elif progress_bar: # Progress ist null
-				progress_bar.value = 0
+			should_show_progress = true
 
+		if should_show_progress:
+			if progress_info: progress_info.visible = true
+			if progress_bar: 
+				progress_bar.value = progress
 			if progress_label:
-				var label_text = "Status: %s" % status # Fallback
+				var label_text = ""
 				match status:
-					"queued", "preparing":
-						label_text = "Waiting..."
-					"downloading":
+					"downloading": 
 						label_text = "Downloading (%d%%)" % progress if progress != null else "Downloading..."
-						# Hier könntest du Speed/ETA hinzufügen, falls gewünscht
 						var speed = status_data.get("speed", null)
 						var eta = status_data.get("eta", null)
 						if speed: label_text += " [%s]" % speed
 						if eta: label_text += " (%s)" % eta
-					"installing":
-						label_text = "Installing (%d%%)..." % progress if progress != null else "Installing..."
-					# "removing" ist jetzt nicht mehr hier drin
+					"installing": label_text = "Installing..."
+					_: label_text = "Status: %s" % status
 				progress_label.text = label_text
-				# print("DEBUG DetailsView: Set progress_label text to: '", label_text, "'")
 		else:
-			# Bei ALLEN anderen Status (removing, completed, failed, cancelled, etc.) ausblenden
 			if progress_info: progress_info.visible = false
-			# Optional: Label Text hier löschen oder auf Standard setzen?
-			# if progress_label: progress_label.text = ""
-	# else: # DEBUG
-		# print("DEBUG DetailsView: Task update ignored (wrong OpID)")
-
+			
 func _on_task_finished_for_progress(operation_id: String, final_status: String):
-	# Finde den zugehörigen Task, um die App ID zu bekommen
-	# Oder besser: Prüfe, ob es die operation_id des ActionButtons ist
-	progress_bar.value = 0
 	if is_instance_valid(action_button) and operation_id == action_button.current_operation_id:
-		# Task ist fertig, Progress-Anzeige ausblenden
 		if progress_info: progress_info.visible = false
+		if progress_bar: progress_bar.value = 0
+
+		var main_app_node = get_node_or_null("/root/App")
+		if main_app_node and main_app_node.has_method("is_app_installed"):
+			is_currently_installed = main_app_node.is_app_installed(current_app_id)
+
+		steam_check_pending = false
+		_update_action_buttons_visibility()
+		_trigger_steam_check_if_needed()
 
 
 # Function to convert a limited subset of HTML to Godot-compatible BBCode
@@ -319,15 +431,13 @@ func limited_html_to_bbcode(html_string: String) -> String:
 	# print("--- Incoming HTML ---")
 	# print(html_string)
 	# print("-------------------------")
-
-	# Make a mutable copy
 	var work_string: String = html_string
 
-	# --- Step 1: Basic Tags & List Placeholders ---
-	# Handle paragraphs first to establish basic newlines
-	var regex_p_open = RegEx.new(); regex_p_open.compile("\\s*<p>\\s*")
+	var regex_p_open = RegEx.new()
+	regex_p_open.compile("\\s*<p>\\s*")
 	work_string = regex_p_open.sub(work_string, "\n", true)
-	var regex_p_close = RegEx.new(); regex_p_close.compile("\\s*</p>\\s*")
+	var regex_p_close = RegEx.new()
+	regex_p_close.compile("\\s*</p>\\s*")
 	work_string = regex_p_close.sub(work_string, "\n", true)
 
 	# Basic inline tags
@@ -343,53 +453,52 @@ func limited_html_to_bbcode(html_string: String) -> String:
 
 	# -- Replace HTML list tags with placeholders --
 	# Use regex to consume whitespace around tags
-	var regex_ul_open = RegEx.new(); regex_ul_open.compile("\\s*<ul>\\s*")
+	var regex_ul_open = RegEx.new()
+	regex_ul_open.compile("\\s*<ul>\\s*")
 	work_string = regex_ul_open.sub(work_string, "<LIST_START>", true)
-	var regex_ol_open = RegEx.new(); regex_ol_open.compile("\\s*<ol>\\s*")
+	var regex_ol_open = RegEx.new()
+	regex_ol_open.compile("\\s*<ol>\\s*")
 	work_string = regex_ol_open.sub(work_string, "<LIST_START>", true) # Treat ol like ul for now
 
-	var regex_ul_close = RegEx.new(); regex_ul_close.compile("\\s*</ul>\\s*")
+	var regex_ul_close = RegEx.new()
+	regex_ul_close.compile("\\s*</ul>\\s*")
 	work_string = regex_ul_close.sub(work_string, "<LIST_END>", true)
-	var regex_ol_close = RegEx.new(); regex_ol_close.compile("\\s*</ol>\\s*")
+	var regex_ol_close = RegEx.new()
+	regex_ol_close.compile("\\s*</ol>\\s*")
 	work_string = regex_ol_close.sub(work_string, "<LIST_END>", true)
 
-	var regex_li_open = RegEx.new(); regex_li_open.compile("\\s*<li>\\s*")
+	var regex_li_open = RegEx.new()
+	regex_li_open.compile("\\s*<li>\\s*")
 	work_string = regex_li_open.sub(work_string, "<ITEM_START>", true)
-	var regex_li_close = RegEx.new(); regex_li_close.compile("\\s*</li>\\s*")
+	var regex_li_close = RegEx.new()
+	regex_li_close.compile("\\s*</li>\\s*")
 	work_string = regex_li_close.sub(work_string, "<ITEM_END>", true)
 
-	# --- Step 2: Cleanup remaining HTML Tags & Entities ---
 	var regex_tags = RegEx.new()
 	regex_tags.compile("<(?!LIST_START|LIST_END|ITEM_START|ITEM_END)[^>]*>") # Remove HTML tags EXCEPT our placeholders
 	work_string = regex_tags.sub(work_string, "", true)
 	work_string = work_string.xml_unescape()
 
-
-	# --- Step 3: Convert Placeholders to BBCode with desired spacing ---
-	# Replace list item placeholders
-	# Use regex again to handle potential whitespace introduced around placeholders
-	var regex_item_start = RegEx.new(); regex_item_start.compile("\\s*<ITEM_START>\\s*")
+	var regex_item_start = RegEx.new()
+	regex_item_start.compile("\\s*<ITEM_START>\\s*")
 	work_string = regex_item_start.sub(work_string, "[indent]\u2022  ", true) # Bullet + two spaces
-	var regex_item_end = RegEx.new(); regex_item_end.compile("\\s*<ITEM_END>\\s*")
+	var regex_item_end = RegEx.new()
+	regex_item_end.compile("\\s*<ITEM_END>\\s*")
 	work_string = regex_item_end.sub(work_string, "[/indent]\n", true) # Close indent + newline
 
 	# Replace list container placeholders, adding the definitive spacing HERE
-	var regex_list_start = RegEx.new(); regex_list_start.compile("\\s*<LIST_START>\\s*")
+	var regex_list_start = RegEx.new()
+	regex_list_start.compile("\\s*<LIST_START>\\s*")
 	work_string = regex_list_start.sub(work_string, "\n\n", true) # Force blank line before list
-	var regex_list_end = RegEx.new(); regex_list_end.compile("\\s*<LIST_END>\\s*")
+	var regex_list_end = RegEx.new()
+	regex_list_end.compile("\\s*<LIST_END>\\s*")
 	work_string = regex_list_end.sub(work_string, "\n\n", true) # Force blank line after list
-
-
-	# --- Step 4: Final Newline Cleanup ---
-	# Now, reduce sequences of 3 or more newlines down to 2 (one blank line)
-	# This should respect the \n\n we just added around the lists.
 	var regex_newlines = RegEx.new()
 	regex_newlines.compile("\n{3,}")
 	work_string = regex_newlines.sub(work_string, "\n\n", true)
 
 	# Final trim
 	work_string = work_string.strip_edges()
-
 
 	# --- Debug Output (Optional) ---
 	# print("--- Generated BBCode ---")
