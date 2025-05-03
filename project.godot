@@ -19,11 +19,13 @@ config/icon="res://icon.svg"
 
 DownloadManager="*res://scripts/DownloadManager.gd"
 SteamIntegration="*res://scripts/SteamIntegration.gd"
+GlobalBackgroundShader="*res://global_background_shader.tscn"
 
 [display]
 
 window/size/viewport_width=1280
 window/size/viewport_height=800
+window/size/mode=3
 
 [editor]
 
