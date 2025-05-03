@@ -27,6 +27,8 @@ const IMAGE_CACHE_DIR = "user://cache/images/"
 const IMAGE_CACHE_DURATION_SEC: int = 7 * 24 * 60 * 60 # 1 week in seconds
 var transition_time := 0.5
 
+signal installed_apps_updated
+
 
 # =============================================================================
 # LIFECYCLE METHODS
@@ -103,6 +105,12 @@ func _unhandled_input(event: InputEvent):
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+func get_image_cache_dir():
+	return IMAGE_CACHE_DIR
+
+func is_app_installed(app_id: String) -> bool:
+	return _installed_flatpak_ids.has(app_id)
+
 func get_installed_ids() -> Dictionary:
 	return _installed_flatpak_ids
 
@@ -202,8 +210,7 @@ func _on_move_to_details_view(app_id: String, installed: bool):
 	else:
 		_last_focused_product_box = null
 			
-	details_view.set_app_id(app_id)
-	details_view.set_installed(installed)
+	details_view.set_initial_state(app_id, installed)
 	details_view.load_details()
 	select_sound.play()
 	var tween = create_tween()
@@ -462,6 +469,23 @@ func _execute_flatpak_in_thread():
 
 	Callable(self, "_process_flatpak_result").call_deferred(output_string, exit_code)
 
+func get_cached_image_path(image_url: String) -> String:
+	if image_url.is_empty():
+		return ""
+
+	var url_hash = image_url.md5_text()
+	var path_png = IMAGE_CACHE_DIR.path_join(url_hash + ".png")
+	var path_webp = IMAGE_CACHE_DIR.path_join(url_hash + ".webp")
+
+	if FileAccess.file_exists(path_png):
+		return path_png
+	elif FileAccess.file_exists(path_webp):
+		print("WARN: Found cached image as WebP, Python Pillow needs libwebp support: ", path_webp)
+		return path_webp
+	else:
+		print("DEBUG Main: Image not found in cache for URL: ", image_url)
+		return ""
+
 func _process_flatpak_result(output: String, exit_code: int):
 	print("INFO: Process flatpak result...")
 	if exit_code == 0:
@@ -475,6 +499,7 @@ func _process_flatpak_result(output: String, exit_code: int):
 				count += 1
 		print("INFO: %d installed flatpaks found and processed." % count)
 		_update_all_lists_install_status()
+		emit_signal("installed_apps_updated")
 	else:
 		printerr("ERROR: 'flatpak list' failed with code: ", exit_code)
 		printerr("Flatpak Output: ", output)
