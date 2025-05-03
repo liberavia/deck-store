@@ -71,18 +71,21 @@ size_flags_vertical = 0
 alignment = 1
 
 [node name="ButtonHome" type="Button" parent="CanvasLayer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 text = "Home"
 script = ExtResource("1_ig7tw")
 
 [node name="ButtonCategories" type="Button" parent="CanvasLayer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 theme_override_styles/focus = SubResource("StyleBoxFlat_4c57u")
 text = "Categories"
 script = ExtResource("3_7mycd")
 
 [node name="ButtonInstalled" type="Button" parent="CanvasLayer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 theme_override_styles/focus = SubResource("StyleBoxFlat_5vw27")
 text = "Installed"
