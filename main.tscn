@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://bl8qcy5u1yua6"]
+[gd_scene load_steps=12 format=3 uid="uid://bl8qcy5u1yua6"]
 
 [ext_resource type="Script" uid="uid://rn4h4pbvc6e3" path="res://main.gd" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://bgg8x1gfr8iq3" path="res://button_home.gd" id="1_ig7tw"]
@@ -11,28 +11,20 @@
 [ext_resource type="PackedScene" uid="uid://cauevp0c1nuys" path="res://details_view.tscn" id="9_kek77"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kek77"]
-bg_color = Color(0.6, 0.6, 0.6, 0)
+bg_color = Color(0, 0, 0, 0.35)
 border_width_left = 3
 border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
 border_color = Color(0.627451, 0.12549, 0.941176, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4c57u"]
-bg_color = Color(0.6, 0.6, 0.6, 0)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.627451, 0.12549, 0.941176, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5vw27"]
-bg_color = Color(0.6, 0.6, 0.6, 0)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.627451, 0.12549, 0.941176, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_efxa6"]
+bg_color = Color(0, 0, 0, 0.35)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 1)
 
 [node name="App" type="Control"]
 light_mask = 8
@@ -74,24 +66,28 @@ alignment = 1
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
+theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 text = "Home"
 script = ExtResource("1_ig7tw")
 
 [node name="ButtonCategories" type="Button" parent="CanvasLayer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
-theme_override_styles/focus = SubResource("StyleBoxFlat_4c57u")
-text = "Categories"
+theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
+theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
+text = "Categories
+"
 script = ExtResource("3_7mycd")
 
 [node name="ButtonInstalled" type="Button" parent="CanvasLayer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
-theme_override_styles/focus = SubResource("StyleBoxFlat_5vw27")
+theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
+theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 text = "Installed"
 script = ExtResource("4_272bh")
 
-[node name="TextureButton" type="TextureButton" parent="CanvasLayer/VBoxContainer/HBoxContainer"]
+[node name="ButtonSearch" type="TextureButton" parent="CanvasLayer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 
 [node name="ContentScrollContainer" type="ScrollContainer" parent="CanvasLayer/VBoxContainer"]
@@ -114,7 +110,6 @@ title = "Popular"
 [node name="TrendingProductList" parent="CanvasLayer/VBoxContainer/ContentScrollContainer/VBoxContainer" instance=ExtResource("6_kek77")]
 layout_mode = 2
 size_flags_vertical = 1
-display_mode = 1
 title = "Trending"
 min_rows = 3
 

@@ -35,7 +35,6 @@ func _execute_shortcut_manager_in_thread(args: Array):
 	print("SteamIntegration Thread: Executing: ", command_to_run, " with args: ", final_args)
 
 	var execute_output: PackedStringArray = []
-	var flags = {"block": true, "read_stdout": true, "read_stderr": true} 
 	var exit_code = OS.execute(command_to_run, final_args, execute_output, true)
 
 	print("SteamIntegration Thread: Helper script finished. Exit Code: ", exit_code)

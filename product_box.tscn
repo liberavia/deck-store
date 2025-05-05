@@ -1,7 +1,15 @@
-[gd_scene load_steps=3 format=3 uid="uid://bubfvije4jq88"]
+[gd_scene load_steps=4 format=3 uid="uid://bubfvije4jq88"]
 
 [ext_resource type="Script" uid="uid://d3yiqlqnvtqyr" path="res://product_box.gd" id="1_pn8qf"]
 [ext_resource type="Texture2D" uid="uid://cyceumguanpq3" path="res://assets/check_green.png" id="2_mvps1"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mvps1"]
+bg_color = Color(0, 0, 0, 0.35)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.638305, 0.47971, 0.698417, 1)
 
 [node name="ProductBox" type="Control"]
 custom_minimum_size = Vector2(210, 350)
@@ -21,6 +29,7 @@ offset_right = 200.5
 offset_bottom = 327.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_mvps1")
 
 [node name="ProductLogo" type="TextureRect" parent="Panel"]
 layout_mode = 0
