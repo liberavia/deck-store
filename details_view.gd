@@ -5,6 +5,7 @@ signal move_back_to_main_view
 signal image_load_requested(url: String, texture_rect: TextureRect)
 
 @export var product_screenshot_scene: PackedScene = preload("res://product_screenshot.tscn")
+@export var screenshot_zoom_popup_scene: PackedScene = preload("res://screenshot_zoom_popup.tscn")
 
 @onready var app_icon: TextureRect = $MarginContainer/Panel/DetailsContents/DetailsNavbar/AppIcon
 @onready var app_title: RichTextLabel = $MarginContainer/Panel/DetailsContents/DetailsNavbar/AppTitle
@@ -27,6 +28,7 @@ var current_app_name: String = ""
 var current_icon_url: String = ""
 var is_known_to_be_in_steam: bool = true
 var steam_check_pending: bool = false
+var screenshot_zoom_popup_instance: Window = null
 
 # --- Constants ---
 # Using constants directly here as requested. Consider Autoload for sharing with main.gd
@@ -71,9 +73,32 @@ func _unhandled_input(event: InputEvent):
 	# Only handle back button if this view is visible
 	if not self.visible:
 		return
+
+	if is_instance_valid(screenshot_zoom_popup_instance) and screenshot_zoom_popup_instance.visible:
+		return
+		
 	if event.is_action_pressed("ui_cancel"):
 		emit_signal("move_back_to_main_view")
 		get_viewport().set_input_as_handled()
+		return
+
+	if event.is_action_pressed("ui_accept"):
+		var focused_control = get_viewport().gui_get_focus_owner()
+		# Überprüfen, ob das fokussierte Element ein Screenshot aus unserer Gruppe ist
+		if focused_control.is_in_group("zoomable_screenshots"):
+			var texture_rect_node = focused_control.get_node_or_null("MarginContainer/Panel/MarginContainer/Screenshot") as TextureRect
+			var texture_to_zoom = texture_rect_node.texture # Direkter Zugriff auf die Textur
+			if texture_to_zoom:
+				_open_screenshot_zoom_popup(texture_to_zoom)
+				get_viewport().set_input_as_handled()
+				return
+		else:
+			if not focused_control is TextureRect:
+				printerr("Focused control not a TextureRect")
+			if not focused_control.is_in_group("zoomable_screenshots"):
+				printerr("Focused control is not in group zoomable_screenshots", focused_control)
+		# Hier könnte die ui_accept-Logik für andere fokussierte Elemente (z.B. Buttons) folgen,
+		# aber da Buttons ihr eigenes pressed-Signal haben, ist das oft nicht nötig.
 
 # =============================================================================
 # PUBLIC METHODS (called from main.gd or elsewhere)
@@ -264,6 +289,7 @@ func _display_details(product: Dictionary):
 						if not screenshot_url.is_empty():
 							var screenshot_instance = product_screenshot_scene.instantiate()
 							if screenshot_instance:
+								screenshot_instance.add_to_group("zoomable_screenshots")
 								screenshot_container.add_child(screenshot_instance)
 								var screenshot_rect = screenshot_instance.find_child("Screenshot", true, false) as TextureRect 
 								if screenshot_rect:
@@ -305,6 +331,24 @@ func _display_details(product: Dictionary):
 		add_to_steam_button.set_app_info(current_app_id, current_app_name, icon_url)
 	_update_action_buttons_visibility()
 	_trigger_steam_check_if_needed()
+
+func _open_screenshot_zoom_popup(texture_to_zoom: Texture2D):
+	if not screenshot_zoom_popup_scene:
+		printerr("DetailsView: ScreenshotZoomPopup scene not preloaded!")
+		return
+
+	if not is_instance_valid(screenshot_zoom_popup_instance):
+		screenshot_zoom_popup_instance = screenshot_zoom_popup_scene.instantiate()
+		add_child(screenshot_zoom_popup_instance) 
+	
+	if screenshot_zoom_popup_instance.has_method("popup_zoomed_image"):
+		var focused_element_before_popup = get_viewport().gui_get_focus_owner()
+		screenshot_zoom_popup_instance.popup_zoomed_image(texture_to_zoom, focused_element_before_popup)
+	else:
+		printerr("DetailsView: ScreenshotZoomPopup instance does not have 'popup_zoomed_image' method.")
+		if is_instance_valid(screenshot_zoom_popup_instance): 
+			screenshot_zoom_popup_instance.queue_free()
+			screenshot_zoom_popup_instance = null
 
 # --- Set initial focus when view becomes active ---
 func set_initial_focus():

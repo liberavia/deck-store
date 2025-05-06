@@ -1,0 +1,37 @@
+[gd_scene load_steps=3 format=3 uid="uid://bprl2o0jaf8mk"]
+
+[ext_resource type="Script" uid="uid://bxkv25vfv633x" path="res://screenshot_zoom_popup.gd" id="1_euhr4"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ftyqo"]
+bg_color = Color(0, 0, 0, 0.35)
+
+[node name="ScreenshotZoomPopup" type="Window"]
+visible = false
+unresizable = true
+always_on_top = true
+popup_window = true
+script = ExtResource("1_euhr4")
+
+[node name="Background" type="Panel" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ftyqo")
+
+[node name="Margin" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="ZoomedTextureRect" type="TextureRect" parent="Margin"]
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
