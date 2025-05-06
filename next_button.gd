@@ -10,9 +10,9 @@ func _ready() -> void:
 	if not _focus_sound_player:
 		printerr("FocusSoundPlayer not found at /root/App/FocusSoundPlayer!")
 
-	_pressed_sound_player = get_node_or_null("/root/App/NextPrevSoundPlayer")
+	_pressed_sound_player = get_node_or_null("/root/App/ButtonSoundPlayer")
 	if not _pressed_sound_player:
-		printerr("NextPrevSoundPlayer not found at /root/App/NextPrevSoundPlayer!")
+		printerr("NextPrevSoundPlayer not found at /root/App/ButtonSoundPlayer!")
 	
 func _on_focus_entered_sound():
 	if is_instance_valid(_focus_sound_player):
