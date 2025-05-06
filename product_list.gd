@@ -13,6 +13,7 @@ enum DisplayMode { MULTI_LINE_WRAP, SINGLE_LINE_SCROLL }
 signal focus_exited_up
 signal image_load_requested(url: String, texture_rect: TextureRect)
 signal move_to_details_view(app_id: String, installed: bool)
+signal load_new_page(url: String, target_list: ProductList)
 
 
 # --- Nodes ---
@@ -22,6 +23,10 @@ signal move_to_details_view(app_id: String, installed: bool)
 @onready var single_line_content: HBoxContainer = $VBoxContainer/SingleLineScroll/SingleLineContent
 @onready var title_label: Label = $VBoxContainer/TitleLabel
 @onready var inner_vbox: VBoxContainer = $VBoxContainer
+@onready var prev_button: Button = $VBoxContainer/PaginationBar/PrevButton
+@onready var next_button: Button = $VBoxContainer/PaginationBar/NextButton
+@onready var page_label: Label = $VBoxContainer/PaginationBar/PageLabel
+@onready var pagination_bar: HBoxContainer = $VBoxContainer/PaginationBar
 
 # --- Internal Variables ---
 var _active_content_container: Container 
@@ -30,6 +35,13 @@ var _product_box_min_height: float = 350.0
 var installed_ids: Dictionary = {}
 var origin_position := Vector2.ZERO
 var origin_size := Vector2.ZERO
+var current_page = 1
+var total_pages = 1
+var items_per_page = 10
+var total_hits = 0 
+var current_query = ""
+var current_category = ""
+var current_url = ""
 
 # --- Cooldown Variables ---
 const NAV_COOLDOWN_MS = 250
@@ -64,6 +76,7 @@ func _ready():
 		multi_line_scroll.visible = true
 		single_line_scroll.visible = false
 		_active_content_container = multi_line_content
+		pagination_bar.visible = _show_pagination()
 		print("ProductList: Multi-line mode activated.")
 	else: # SINGLE_LINE_SCROLL
 		multi_line_scroll.visible = false
@@ -80,7 +93,38 @@ func _ready():
 		printerr("ProductList: product_box_scene ist nicht zugewiesen!")
 		
 	call_deferred("_update_minimum_height")
+	if prev_button:
+		prev_button.pressed.connect(_on_prev_button_pressed)
+	if next_button:
+		next_button.pressed.connect(_on_next_button_pressed)	
 	print("--- ProductList _ready END for '", title, "' ---")
+
+func set_url(url: String):
+	current_url = url
+
+func set_pagination_data(hitsPerPage: int, page: int, totalPages: int):
+	items_per_page = hitsPerPage
+	current_page = page
+	total_pages = totalPages
+	page_label.text = "Page %s of %s" % [current_page, total_pages]
+	
+	if current_page >= total_pages:
+		next_button.disabled = true
+		next_button.focus_mode = Control.FOCUS_NONE
+		prev_button.grab_focus()
+	else:
+		next_button.disabled = false
+		next_button.focus_mode = Control.FOCUS_ALL
+		next_button.pressed.connect(_on_next_button_pressed)
+		
+	if current_page <= 1:
+		prev_button.disabled = true
+		prev_button.focus_mode = Control.FOCUS_NONE
+		next_button.grab_focus()
+	else:
+		prev_button.disabled = false
+		prev_button.focus_mode = Control.FOCUS_ALL
+		prev_button.pressed.connect(_on_prev_button_pressed)
 
 func set_products(product_data: Array):
 	if not is_instance_valid(_active_content_container):
@@ -120,7 +164,27 @@ func set_products(product_data: Array):
 	print("Final child count in active container: ", final_child_count)
 	var main_node = get_node_or_null("/root/App")
 	update_installed_status(main_node.get_installed_ids())
+func get_base_url(full_url: String) -> String:
+	var parts = full_url.split("?", false, 1)
+	return parts[0]
+	
+func _show_pagination():
+	# decide wether pagination is shown or not
+	# @TODO: possibly better to decide after all elements have been loaded. For now just true
+	return true
 
+func _on_prev_button_pressed():
+	var base_url = get_base_url(current_url)
+	var prev_page = current_page - 1
+	var target_url = "%s?page=%s&per_page=%s&locale=en" % [base_url, prev_page, items_per_page]
+	emit_signal("load_new_page", target_url, self)
+	
+func _on_next_button_pressed():
+	var base_url = get_base_url(current_url)
+	var next_page = current_page + 1
+	var target_url = "%s?page=%s&per_page=%s&locale=en" % [base_url, next_page, items_per_page]
+	emit_signal("load_new_page", target_url, self)
+	
 func _on_emit_move_to_details_view(app_id: String, installed: bool):
 	emit_signal("move_to_details_view", app_id, installed)
 

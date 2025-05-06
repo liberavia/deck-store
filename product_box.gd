@@ -55,7 +55,7 @@ func _on_focus_entered_visual():
 func _on_focus_exited_visual():
 	if not is_instance_valid(panel): return
 	panel.remove_theme_stylebox_override("panel")
-	panel.modulate = Color(1, 1, 1)
+	panel.add_theme_stylebox_override("panel", _original_panel_style)
 
 func _on_focus_entered_sound():
 	if is_instance_valid(_focus_sound_player):

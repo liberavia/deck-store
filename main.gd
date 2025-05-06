@@ -73,8 +73,10 @@ func _ready():
 	trending_product_list.move_to_details_view.connect(_on_move_to_details_view)
 	popular_product_list.image_load_requested.connect(_on_product_list_image_load_requested)
 	popular_product_list.focus_exited_up.connect(_on_product_list_focus_exited_up)
+	popular_product_list.load_new_page.connect(_load_product_list)
 	trending_product_list.image_load_requested.connect(_on_product_list_image_load_requested)
 	trending_product_list.focus_exited_up.connect(_on_product_list_focus_exited_up)
+	trending_product_list.load_new_page.connect(_load_product_list)
 
 	_check_connected_controllers() 
 	print("-----------------------------------------")
@@ -343,7 +345,7 @@ func _load_product_list(url: String, target_list: ProductList):
 				# Vergleiche mit der Dauer in Sekunden
 				if cache_age < CACHE_DURATION_SEC and api_data != null:
 					print("--> Cache HIT for %s (Age: %d sec)" % [target_list.title, cache_age]) # Ausgabe in Sekunden
-					_process_product_list_data(api_data, target_list)
+					_process_product_list_data(api_data, target_list, url)
 					return
 				else:
 					print("--> Cache EXPIRED or invalid for %s (Age: %d sec)" % [target_list.title, cache_age]) # Ausgabe in Sekunden
@@ -394,7 +396,7 @@ func _on_product_list_request_completed(result, response_code, headers, body, ht
 				printerr("--> Error writing cache file %s: %s" % [cache_filepath.get_file(), open_error])
 				if is_instance_valid(file): file.close()
 
-			_process_product_list_data(api_json, target_list)
+			_process_product_list_data(api_json, target_list, url)
 		else:
 			printerr("JSON parse error for URL '%s'." % url)
 	else:
@@ -403,10 +405,13 @@ func _on_product_list_request_completed(result, response_code, headers, body, ht
 	if is_instance_valid(http_request_list):
 		http_request_list.queue_free()
 		
-func _process_product_list_data(json_data, target_list: ProductList):
+func _process_product_list_data(json_data, target_list: ProductList, url: String):
+	print("DEBUG Process product list data of url: ", url)
 	if not is_instance_valid(target_list): printerr("Invalid target list in _process_product_list_data"); return
 	if json_data is Dictionary and json_data.has('hits') and json_data['hits'] is Array:
+		target_list.set_url(url)
 		target_list.set_products(json_data['hits'])
+		target_list.set_pagination_data(int(json_data['hitsPerPage']), int(json_data['page']), int(json_data['totalPages']))
 		print("Productlist '%s' updated." % target_list.title)
 	else: printerr("Unexpected data structure for list '%s'." % target_list.title)
 

@@ -7,7 +7,7 @@ shader = ExtResource("1_0eyeh")
 shader_parameter/fog_color = Color(0.627, 0.125, 0.941, 1)
 shader_parameter/speed = 0.2
 shader_parameter/scale = 5.0
-shader_parameter/brightness = 0.7
+shader_parameter/brightness = 0.3
 shader_parameter/octaves = 5
 shader_parameter/contrast_power = 2.0
 
