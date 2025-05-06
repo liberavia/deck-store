@@ -111,7 +111,8 @@ func set_pagination_data(hitsPerPage: int, page: int, totalPages: int):
 	if current_page >= total_pages:
 		next_button.disabled = true
 		next_button.focus_mode = Control.FOCUS_NONE
-		prev_button.grab_focus()
+		if next_button.has_focus():
+			prev_button.grab_focus()
 	else:
 		next_button.disabled = false
 		next_button.focus_mode = Control.FOCUS_ALL
@@ -120,7 +121,8 @@ func set_pagination_data(hitsPerPage: int, page: int, totalPages: int):
 	if current_page <= 1:
 		prev_button.disabled = true
 		prev_button.focus_mode = Control.FOCUS_NONE
-		next_button.grab_focus()
+		if prev_button.has_focus():
+			next_button.grab_focus()
 	else:
 		prev_button.disabled = false
 		prev_button.focus_mode = Control.FOCUS_ALL
