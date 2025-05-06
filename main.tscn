@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://bl8qcy5u1yua6"]
+[gd_scene load_steps=13 format=3 uid="uid://bl8qcy5u1yua6"]
 
 [ext_resource type="Script" uid="uid://rn4h4pbvc6e3" path="res://main.gd" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://bgg8x1gfr8iq3" path="res://button_home.gd" id="1_ig7tw"]
@@ -9,6 +9,7 @@
 [ext_resource type="AudioStream" uid="uid://cb3j1gqxupbrs" path="res://assets/select.mp3" id="7_272bh"]
 [ext_resource type="AudioStream" uid="uid://crqv67kcd0gii" path="res://assets/back.wav" id="9_4c57u"]
 [ext_resource type="PackedScene" uid="uid://cauevp0c1nuys" path="res://details_view.tscn" id="9_kek77"]
+[ext_resource type="AudioStream" uid="uid://ef3g1di4j6uw" path="res://assets/nextprev.wav" id="10_4c57u"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kek77"]
 bg_color = Color(0, 0, 0, 0.35)
@@ -110,6 +111,7 @@ title = "Popular"
 [node name="TrendingProductList" parent="CanvasLayer/VBoxContainer/ContentScrollContainer/VBoxContainer" instance=ExtResource("6_kek77")]
 layout_mode = 2
 size_flags_vertical = 1
+display_mode = 1
 title = "Trending"
 min_rows = 3
 
@@ -121,3 +123,6 @@ stream = ExtResource("7_272bh")
 
 [node name="BackSoundPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("9_4c57u")
+
+[node name="NextPrevSoundPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("10_4c57u")
