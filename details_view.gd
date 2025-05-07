@@ -11,6 +11,7 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @onready var app_title: RichTextLabel = $MarginContainer/Panel/DetailsContents/DetailsNavbar/AppTitle
 @onready var app_desc: RichTextLabel = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/DetailsDescriptionScroller/AppDescription
 @onready var screenshot_container: HBoxContainer = $MarginContainer/Panel/DetailsContents/ScreenshotClipContainer/ScrollContainer/ContainerScreenshots
+@onready var app_developer: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerDeveloper/Developer
 @onready var app_current_version: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerVersion/CurrentVersion
 @onready var app_release_date: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate/ReleaseDate
 @onready var action_button: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ActionButton
@@ -323,6 +324,7 @@ func _display_details(product: Dictionary):
 		app_release_date.text = "N/A"
 		
 	current_app_name = product.get("name", "N/A")
+	app_developer.text = product.get("developer_name", "N/A")
 
 	if is_instance_valid(action_button) and action_button.has_method("set_app_info"):
 		action_button.set_app_info(current_app_id, current_app_name, icon_url)

@@ -206,6 +206,17 @@ custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_horizontal = 10
 
+[node name="ContainerDeveloper" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails"]
+layout_mode = 2
+
+[node name="LabelDeveloper" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerDeveloper"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+text = "Developer/Publisher:"
+
+[node name="Developer" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerDeveloper"]
+layout_mode = 2
+
 [node name="ContainerVersion" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails"]
 layout_mode = 2
 
@@ -223,7 +234,7 @@ layout_mode = 2
 [node name="LabelReleaseDate" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate"]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
-text = "Release-Date:"
+text = "Last Release:"
 
 [node name="ReleaseDate" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate"]
 layout_mode = 2

@@ -7,7 +7,7 @@
 [ext_resource type="Script" uid="uid://d2kbc3lqsoti4" path="res://button_installed.gd" id="4_272bh"]
 [ext_resource type="PackedScene" uid="uid://b8fwocgf5txps" path="res://product_list.tscn" id="6_kek77"]
 [ext_resource type="AudioStream" uid="uid://crqv67kcd0gii" path="res://assets/back.wav" id="9_4c57u"]
-[ext_resource type="AudioStream" uid="uid://w175ywh0i4b0" path="res://assets/whoosh.wav" id="9_efxa6"]
+[ext_resource type="AudioStream" uid="uid://bqyhdiitobub2" path="res://assets/menuback.wav" id="9_efxa6"]
 [ext_resource type="PackedScene" uid="uid://cauevp0c1nuys" path="res://details_view.tscn" id="9_kek77"]
 [ext_resource type="AudioStream" uid="uid://ef3g1di4j6uw" path="res://assets/nextprev.wav" id="10_4c57u"]
 
