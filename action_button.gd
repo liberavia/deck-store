@@ -1,7 +1,7 @@
 extends Button
 
-@export var install_color := Color.from_string("#51b24e", Color.GREEN)
-@export var remove_color := Color.from_string("#ff5748", Color.RED)
+@export var install_color := Color.from_string("#245322", Color.GREEN)
+@export var remove_color := Color.from_string("#5c0001", Color.RED)
 @export var busy_color := Color.from_string("#4a4a4a", Color.DARK_GRAY) # Farbe für nicht-interaktive Zustände
 @export var normal_color := Color.from_string("#626262", Color.GRAY) # Standardfarbe, wenn nichts zutrifft
 

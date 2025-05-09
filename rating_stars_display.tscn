@@ -1,0 +1,25 @@
+[gd_scene load_steps=5 format=3 uid="uid://v076dx1dqhl3"]
+
+[ext_resource type="Script" uid="uid://du1i2bxoxkbdn" path="res://rating_stars_display.gd" id="1_bshxq"]
+[ext_resource type="Texture2D" uid="uid://bsrqyxwd2jt5u" path="res://assets/icons/star-fill.svg" id="2_jol2k"]
+[ext_resource type="Texture2D" uid="uid://dakl3lmh5dfyo" path="res://assets/icons/star-half.svg" id="3_i6wws"]
+[ext_resource type="Texture2D" uid="uid://bk37n5662cdvi" path="res://assets/icons/star.svg" id="4_ejop3"]
+
+[node name="RatingStarsDisplay" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_bshxq")
+star_full_texture = ExtResource("2_jol2k")
+star_half_texture = ExtResource("3_i6wws")
+star_empty_texture = ExtResource("4_ejop3")
+star_size = Vector2(18, 18)
+
+[node name="StarsContainer" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+theme_override_constants/separation = 5

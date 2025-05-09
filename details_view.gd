@@ -6,6 +6,7 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 
 @export var product_screenshot_scene: PackedScene = preload("res://product_screenshot.tscn")
 @export var screenshot_zoom_popup_scene: PackedScene = preload("res://screenshot_zoom_popup.tscn")
+@export var reviews_popup_scene: PackedScene = preload("res://reviews_popup.tscn")
 
 @onready var app_icon: TextureRect = $MarginContainer/Panel/DetailsContents/DetailsNavbar/AppIcon
 @onready var app_title: RichTextLabel = $MarginContainer/Panel/DetailsContents/DetailsNavbar/AppTitle
@@ -21,6 +22,9 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @onready var progress_label: Label = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo/ProgressLabel
 @onready var screenshot_scroll_container: ScrollContainer = $MarginContainer/Panel/DetailsContents/ScreenshotClipContainer/ScrollContainer
 @onready var description_scroll_container: ScrollContainer = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/DetailsDescriptionScroller
+@onready var rating_stars_display: RatingStarsDisplay = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars/RatingStarsDisplayNode
+@onready var show_reviews_button: Button = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/ShowReviews
+@onready var rating_label: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars/MarginContainer/RatingCountLabel
 
 # --- Internal State ---
 var current_app_id: String = ""
@@ -30,11 +34,13 @@ var current_icon_url: String = ""
 var is_known_to_be_in_steam: bool = true
 var steam_check_pending: bool = false
 var screenshot_zoom_popup_instance: Window = null
+var current_detailed_reviews: Array = []
+var detailed_reviews_request: HTTPRequest = null
 
 # --- Constants ---
-# Using constants directly here as requested. Consider Autoload for sharing with main.gd
 const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 hour
 const API_CACHE_DIR = "user://cache/api/"
+const ODRS_REVIEWS_CACHE_DIR = "user://cache/odrs_reviews/" 
 
 # =============================================================================
 # BUILT-IN GODOT METHODS
@@ -59,6 +65,9 @@ func _ready():
 	var main_app_node = get_node_or_null("/root/App") 
 	if main_app_node and main_app_node.has_signal("installed_apps_updated"):
 		main_app_node.installed_apps_updated.connect(_on_installed_apps_refreshed)
+		
+	# if is_instance_valid(show_reviews_button):
+	#	show_reviews_button.pressed.connect(_on_show_reviews_button_pressed)		
 
 func _on_installed_apps_refreshed():
 	print("DEBUG DetailsView: Installed apps refreshed signal received, updating button visibility for ", current_app_id)
@@ -134,12 +143,22 @@ func clear_data():
 	if is_instance_valid(action_button) and action_button.has_method("_update_ui"): action_button._update_ui({})
 	if is_instance_valid(add_to_steam_button): add_to_steam_button.visible = false
 	if progress_info: progress_info.visible = false
-
+	_clear_rating_ui() # NEU: Rating-UI zurücksetzen
+	
+	# Laufenden Review-Detail-Request abbrechen, falls vorhanden
+	if is_instance_valid(detailed_reviews_request):
+		if detailed_reviews_request.is_connected("request_completed", Callable(self, "_on_detailed_reviews_request_completed")): # Name anpassen
+			detailed_reviews_request.request_completed.disconnect(Callable(self, "_on_detailed_reviews_request_completed"))
+		detailed_reviews_request.queue_free()
+		detailed_reviews_request = null
+	current_detailed_reviews = []
+	
 # Main entry point to load data for the current_app_id
 func load_details():
 	if current_app_id.is_empty():
 		printerr("ERROR: Cannot load details, app_id is empty.")
 		app_title.text = "Error: No App ID" 
+		_clear_rating_ui()
 		return
 	if progress_info: progress_info.visible = false
 	_update_and_check_button_visibility()
@@ -333,6 +352,69 @@ func _display_details(product: Dictionary):
 		add_to_steam_button.set_app_info(current_app_id, current_app_name, icon_url)
 	_update_action_buttons_visibility()
 	_trigger_steam_check_if_needed()
+	_clear_rating_ui()
+	if not current_app_id.is_empty():
+		_update_rating_display(current_app_id) 
+
+func _update_rating_display(app_id_for_rating: String):
+	if app_id_for_rating.is_empty():
+		_clear_rating_ui()
+		return
+
+	if not ProjectSettings.has_setting("autoload/OdrsRatingsCache"):
+		printerr("DetailsView: OdrsRatingsCache Autoload not found!")
+		_clear_rating_ui()
+		return
+		
+	var summary = OdrsRatingsCache.get_rating_summary(app_id_for_rating)
+
+	if summary.is_empty():
+		_clear_rating_ui()
+		return
+
+	var s1 = summary.get("star1", 0)
+	var s2 = summary.get("star2", 0)
+	var s3 = summary.get("star3", 0)
+	var s4 = summary.get("star4", 0)
+	var s5 = summary.get("star5", 0)
+	var total_score = float(s1*1 + s2*2 + s3*3 + s4*4 + s5*5)
+	var total_valid_votes = s1 + s2 + s3 + s4 + s5
+	
+	var avg_rating = -1.0
+	if total_valid_votes > 0:
+		avg_rating = total_score / float(total_valid_votes)
+	
+	var total_reviews_from_summary = summary.get("total", 0)
+
+	if is_instance_valid(rating_stars_display):
+		if rating_stars_display.has_method("set_stars"):
+			rating_stars_display.set_stars(avg_rating)
+		else: 
+			rating_stars_display.visible = (avg_rating >= 0) 
+	
+	if is_instance_valid(rating_label):
+		if total_reviews_from_summary > 0:
+			rating_label.text = "(%d)" % total_reviews_from_summary
+			rating_label.visible = true
+		else:
+			rating_label.visible = false
+			
+	if is_instance_valid(show_reviews_button):
+		show_reviews_button.disabled = (total_reviews_from_summary == 0)
+		show_reviews_button.visible = true
+
+func _clear_rating_ui():
+	if is_instance_valid(rating_stars_display):
+		if rating_stars_display.has_method("set_stars"):
+			rating_stars_display.set_stars(-1.0)
+		else:
+			rating_stars_display.visible = false
+	if is_instance_valid(rating_label):
+		rating_label.visible = false
+		rating_label.text = ""
+	if is_instance_valid(show_reviews_button):
+		show_reviews_button.visible = false
+		show_reviews_button.disabled = true
 
 func _open_screenshot_zoom_popup(texture_to_zoom: Texture2D):
 	if not screenshot_zoom_popup_scene:
