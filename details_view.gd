@@ -726,7 +726,6 @@ func _on_detailed_reviews_request_completed(result, response_code, headers, body
 	if response_code == 200 and result == HTTPRequest.RESULT_SUCCESS:
 		var response_string = body.get_string_from_utf8()
 		var odrs_json = JSON.parse_string(response_string)
-		print("DEBUG Review: ", odrs_json)
 		if odrs_json is Array:
 			reviews_to_display = odrs_json
 			current_detailed_reviews = reviews_to_display # Für sofortige Anzeige merken
