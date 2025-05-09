@@ -40,6 +40,7 @@ var detailed_reviews_request: HTTPRequest = null
 
 # --- Constants ---
 const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 hour
+const ODRS_DETAILED_REVIEWS_CACHE_DURATION_SEC = 60 * 60 * 6 # 6 hours
 const API_CACHE_DIR = "user://cache/api/"
 const ODRS_REVIEWS_CACHE_DIR = "user://cache/odrs_reviews/" 
 
@@ -67,8 +68,8 @@ func _ready():
 	if main_app_node and main_app_node.has_signal("installed_apps_updated"):
 		main_app_node.installed_apps_updated.connect(_on_installed_apps_refreshed)
 		
-	# if is_instance_valid(show_reviews_button):
-	#	show_reviews_button.pressed.connect(_on_show_reviews_button_pressed)		
+	if is_instance_valid(show_reviews_button):
+		show_reviews_button.pressed.connect(_on_show_reviews_button_pressed)		
 
 func _on_installed_apps_refreshed():
 	print("DEBUG DetailsView: Installed apps refreshed signal received, updating button visibility for ", current_app_id)
@@ -96,7 +97,6 @@ func _unhandled_input(event: InputEvent):
 
 	if event.is_action_pressed("ui_accept"):
 		var focused_control = get_viewport().gui_get_focus_owner()
-		# Überprüfen, ob das fokussierte Element ein Screenshot aus unserer Gruppe ist
 		if focused_control.is_in_group("zoomable_screenshots"):
 			var texture_rect_node = focused_control.get_node_or_null("MarginContainer/Panel/MarginContainer/Screenshot") as TextureRect
 			var texture_to_zoom = texture_rect_node.texture # Direkter Zugriff auf die Textur
@@ -109,8 +109,6 @@ func _unhandled_input(event: InputEvent):
 				printerr("Focused control not a TextureRect")
 			if not focused_control.is_in_group("zoomable_screenshots"):
 				printerr("Focused control is not in group zoomable_screenshots", focused_control)
-		# Hier könnte die ui_accept-Logik für andere fokussierte Elemente (z.B. Buttons) folgen,
-		# aber da Buttons ihr eigenes pressed-Signal haben, ist das oft nicht nötig.
 
 # =============================================================================
 # PUBLIC METHODS (called from main.gd or elsewhere)
@@ -646,3 +644,157 @@ func limited_html_to_bbcode(html_string: String) -> String:
 	# print("-------------------------")
 
 	return work_string
+
+func _on_show_reviews_button_pressed():
+	print("DetailsView: 'Show reviews' clicked for App ID: ", current_app_id)
+	if current_app_id.is_empty(): 
+		printerr("DetailsView: No current_app_id for loading reviews.")
+		return
+
+	var cache_filepath = _get_detailed_reviews_cache_filepath(current_app_id)
+
+	if FileAccess.file_exists(cache_filepath):
+		var file = FileAccess.open(cache_filepath, FileAccess.READ)
+		if file:
+			var json_string = file.get_as_text()
+			var cache_content = JSON.parse_string(json_string)
+			file.close()
+			
+			if cache_content is Dictionary:
+				var timestamp = cache_content.get("timestamp", 0)
+				var cached_reviews_array = cache_content.get("reviews_data")
+				var cache_age_sec = (Time.get_unix_time_from_system() - timestamp)
+				
+				if cache_age_sec < ODRS_DETAILED_REVIEWS_CACHE_DURATION_SEC and cached_reviews_array is Array:
+					print("DetailsView: Detaillierte Reviews aus Cache geladen für ", current_app_id)
+					current_detailed_reviews = cached_reviews_array
+					_show_reviews_popup(current_detailed_reviews)
+					return # Daten aus Cache sind gültig
+
+	# 2. Kein gültiger Cache -> Starte neuen Fetch
+	print("DetailsView: Kein gültiger Cache für detaillierte Reviews. Starte Fetch für ", current_app_id)
+	_fetch_detailed_reviews(current_app_id)
+	# Optional: Ladeindikator im (noch leeren) Popup anzeigen oder Button deaktivieren
+	# Fürs Erste zeigen wir das Popup, und es wird befüllt, wenn die Daten da sind.
+	# Oder wir warten, bis die Daten da sind, und zeigen das Popup dann erst.
+	# Eleganter: Popup instanziieren, eine "Lade..." Nachricht anzeigen, und dann mit Daten befüllen.
+	_show_reviews_popup([]) # Zeigt Popup, das auf Daten wartet oder "Lade..." anzeigt
+
+
+func _get_detailed_reviews_cache_filepath(app_id: String) -> String:
+	var request_hash = app_id.md5_text() # Cache basierend auf App-ID
+	# Sicherstellen, dass das Verzeichnis existiert (wird in _ready() von OdersRatingsCache gemacht, hier ggf. auch)
+	var dir_access = DirAccess.open("user://")
+	if dir_access: # ODRS_REVIEWS_CACHE_DIR muss definiert sein (ist es oben)
+		DirAccess.make_dir_recursive_absolute(ODRS_REVIEWS_CACHE_DIR)
+	return ODRS_REVIEWS_CACHE_DIR.path_join(request_hash + ".json")
+
+func _fetch_detailed_reviews(app_id: String):
+	if app_id.is_empty(): return
+
+	var odrs_reviews_url = "https://odrs.gnome.org/1.0/reviews/api/app/%s" % app_id
+
+	print("DetailsView: Fetching detailed reviews from: ", odrs_reviews_url)
+
+	if is_instance_valid(detailed_reviews_request):
+		if detailed_reviews_request.is_connected("request_completed", Callable(self, "_on_detailed_reviews_request_completed")):
+			detailed_reviews_request.request_completed.disconnect(Callable(self, "_on_detailed_reviews_request_completed"))
+		detailed_reviews_request.queue_free()
+
+	detailed_reviews_request = HTTPRequest.new()
+	add_child(detailed_reviews_request)
+	detailed_reviews_request.request_completed.connect(
+		_on_detailed_reviews_request_completed.bind(odrs_reviews_url, app_id) # URL und app_id für Kontext binden
+	)
+	
+	var error = detailed_reviews_request.request(odrs_reviews_url)
+	if error != OK:
+		printerr("DetailsView: Starten des Detailed Reviews Request fehlgeschlagen für '%s': %s" % [odrs_reviews_url, error])
+		if is_instance_valid(detailed_reviews_request):
+			detailed_reviews_request.queue_free()
+			detailed_reviews_request = null
+		# Optional: Fehlermeldung im Popup anzeigen
+		var popup_instance = get_node_or_null("ReviewsPopupInstance") # Annahme: Popup ist schon da und heißt so
+		if is_instance_valid(popup_instance) and popup_instance.has_method("show_error"):
+			popup_instance.show_error("Fehler beim Laden der Bewertungen.")
+
+
+func _on_detailed_reviews_request_completed(result, response_code, headers, body, url: String, app_id_ctx: String):
+	var reviews_to_display: Array = []
+	var success = false
+
+	if response_code == 200 and result == HTTPRequest.RESULT_SUCCESS:
+		var response_string = body.get_string_from_utf8()
+		var odrs_json = JSON.parse_string(response_string)
+		print("DEBUG Review: ", odrs_json)
+		if odrs_json is Array:
+			reviews_to_display = odrs_json
+			current_detailed_reviews = reviews_to_display # Für sofortige Anzeige merken
+			success = true
+			
+			# Daten für diese App im Cache speichern
+			var cache_content = {
+				"timestamp": Time.get_unix_time_from_system(),
+				"reviews_data": reviews_to_display
+			}
+			var cache_filepath = _get_detailed_reviews_cache_filepath(app_id_ctx) # app_id_ctx ist die gebundene app_id
+			var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
+			if file:
+				file.store_string(JSON.stringify(cache_content))
+				file.close()
+				print("DetailsView: Detaillierte Reviews für ", app_id_ctx, " gecached.")
+			else:
+				printerr("DetailsView: Fehler beim Schreiben der Cache-Datei für detaillierte Reviews: ", cache_filepath)
+		else:
+			printerr("DetailsView: JSON Parse-Fehler für detaillierte Reviews URL '%s'." % url)
+	elif response_code == 404:
+		printerr("DetailsView: Detaillierte Reviews nicht gefunden (404) für URL '%s'." % url)
+		current_detailed_reviews = [] # Leeren, falls vorher was drin war
+	else:
+		printerr("DetailsView: HTTP Fehler %d (Result %d) bei Abfrage von detaillierten Reviews von '%s'." % [response_code, result, url])
+		current_detailed_reviews = []
+
+	# Popup mit den (möglicherweise leeren) Reviews aktualisieren oder anzeigen
+	_show_reviews_popup(current_detailed_reviews, not success and response_code != 404) # error_flag übergeben, außer bei 404
+
+	if is_instance_valid(detailed_reviews_request):
+		detailed_reviews_request.queue_free()
+		detailed_reviews_request = null
+
+func _show_reviews_popup(reviews_array: Array, has_error: bool = false):
+	# Versuche, eine existierende Instanz zu finden oder erstelle eine neue
+	var popup_node_name = "ReviewsPopupInstance" # Ein eindeutiger Name
+	var popup_instance = get_node_or_null(popup_node_name)
+
+	if not is_instance_valid(popup_instance):
+		if not reviews_popup_scene:
+			printerr("DetailsView: reviews_popup_scene ist nicht geladen!")
+			return
+		popup_instance = reviews_popup_scene.instantiate()
+		popup_instance.name = popup_node_name # Gib ihm einen Namen, um es wiederzufinden
+		# Wichtig: Popup zum Root hinzufügen oder als Child, damit es korrekt angezeigt wird
+		get_tree().root.add_child(popup_instance) 
+		# Signal verbinden, um es aus dem Baum zu entfernen, wenn es sich schließt (optional, aber gut für Speicher)
+		popup_instance.connect("close_requested", Callable(popup_instance,"queue_free"), CONNECT_ONE_SHOT)
+		if popup_instance.has_method("connect_signals"): # Falls das Popup interne Signale für Schließen hat
+			popup_instance.connect_signals()
+
+
+	if not is_instance_valid(popup_instance): # Immer noch nicht gültig? Sollte nicht passieren.
+		printerr("DetailsView: Konnte ReviewsPopup nicht instanziieren.")
+		return
+	
+	# Methode im Popup aufrufen, um Reviews anzuzeigen
+	if popup_instance.has_method("display_reviews"):
+		var app_display_name = current_app_name # Oder app_title.text
+		popup_instance.display_reviews(reviews_array, app_display_name, has_error)
+	else:
+		printerr("DetailsView: 'reviews_popup.tscn' hat keine Methode 'display_reviews(reviews_array, app_name, has_error)'.")
+
+	# Popup anzeigen (wenn es ein Window oder PopupPanel ist)
+	if popup_instance is Window:
+		popup_instance.popup_centered()
+	elif popup_instance.has_method("show_modal"): # Benutzerdefinierte Methode
+		popup_instance.show_modal()
+	elif popup_instance.has_method("show"):
+		popup_instance.show()

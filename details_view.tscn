@@ -310,3 +310,5 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_3hj5f")
 theme_override_styles/normal = SubResource("StyleBoxFlat_fogxl")
 text = "Show Reviews"
 script = ExtResource("6_mufgs")
+
+[connection signal="pressed" from="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/ShowReviews" to="." method="_on_show_reviews_pressed"]

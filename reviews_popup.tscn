@@ -1,9 +1,49 @@
-[gd_scene format=3 uid="uid://xc8wsdn6vkae"]
+[gd_scene load_steps=3 format=3 uid="uid://xc8wsdn6vkae"]
 
-[node name="ReviewsPopup" type="Control"]
-layout_mode = 3
+[ext_resource type="Script" uid="uid://bj1ar1e1crd6t" path="res://reviews_popup.gd" id="1_hsmpc"]
+[ext_resource type="PackedScene" uid="uid://ny0jkwl7xnql" path="res://review_item.tscn" id="2_hbqj0"]
+
+[node name="ReviewsPopup" type="Window"]
+title = "Reviews"
+initial_position = 1
+size = Vector2i(800, 600)
+unresizable = true
+popup_window = true
+script = ExtResource("1_hsmpc")
+review_item_scene = ExtResource("2_hbqj0")
+
+[node name="MainMargin" type="MarginContainer" parent="."]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="PopupVBox" type="VBoxContainer" parent="MainMargin"]
+layout_mode = 2
+
+[node name="AppNameLabel" type="Label" parent="MainMargin/PopupVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "My Application"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="MainMargin/PopupVBox"]
+layout_mode = 2
+
+[node name="StatusLabel" type="Label" parent="MainMargin/PopupVBox"]
+visible = false
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="ReviewScroll" type="ScrollContainer" parent="MainMargin/PopupVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ReviewListContainer" type="VBoxContainer" parent="MainMargin/PopupVBox/ReviewScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
