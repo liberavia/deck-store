@@ -5,11 +5,14 @@ signal move_back_to_main_view
 signal image_load_requested(url: String, texture_rect: TextureRect)
 
 @export var product_screenshot_scene: PackedScene = preload("res://product_screenshot.tscn")
+@export var screenshot_zoom_popup_scene: PackedScene = preload("res://screenshot_zoom_popup.tscn")
+@export var reviews_popup_scene: PackedScene = preload("res://reviews_popup.tscn")
 
 @onready var app_icon: TextureRect = $MarginContainer/Panel/DetailsContents/DetailsNavbar/AppIcon
 @onready var app_title: RichTextLabel = $MarginContainer/Panel/DetailsContents/DetailsNavbar/AppTitle
 @onready var app_desc: RichTextLabel = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/DetailsDescriptionScroller/AppDescription
 @onready var screenshot_container: HBoxContainer = $MarginContainer/Panel/DetailsContents/ScreenshotClipContainer/ScrollContainer/ContainerScreenshots
+@onready var app_developer: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerDeveloper/Developer
 @onready var app_current_version: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerVersion/CurrentVersion
 @onready var app_release_date: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate/ReleaseDate
 @onready var action_button: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ActionButton
@@ -19,6 +22,10 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @onready var progress_label: Label = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo/ProgressLabel
 @onready var screenshot_scroll_container: ScrollContainer = $MarginContainer/Panel/DetailsContents/ScreenshotClipContainer/ScrollContainer
 @onready var description_scroll_container: ScrollContainer = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/DetailsDescriptionScroller
+@onready var rating_stars_display: RatingStarsDisplay = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars/RatingStarsDisplayNode
+@onready var show_reviews_button: Button = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/ShowReviews
+@onready var rating_label: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars/MarginContainer/RatingCountLabel
+@onready var verified_app: HBoxContainer = $MarginContainer/Panel/DetailsContents/DetailsNavbar/VerifiedContainer
 
 # --- Internal State ---
 var current_app_id: String = ""
@@ -27,11 +34,17 @@ var current_app_name: String = ""
 var current_icon_url: String = ""
 var is_known_to_be_in_steam: bool = true
 var steam_check_pending: bool = false
+var screenshot_zoom_popup_instance: Window = null
+var current_detailed_reviews: Array = []
+var detailed_reviews_request: HTTPRequest = null
 
 # --- Constants ---
-# Using constants directly here as requested. Consider Autoload for sharing with main.gd
 const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 hour
+const ODRS_DETAILED_REVIEWS_CACHE_DURATION_SEC = 60 * 60 * 6 # 6 hours
 const API_CACHE_DIR = "user://cache/api/"
+const ODRS_REVIEWS_CACHE_DIR = "user://cache/odrs_reviews/" 
+const DEFAULT_REVIEWS_BUTTON_CAPTION: String = "Show Reviews"
+const REVIEWS_BUTTON_LOADING_CAPTION: String = "Loading..."
 
 # =============================================================================
 # BUILT-IN GODOT METHODS
@@ -56,6 +69,9 @@ func _ready():
 	var main_app_node = get_node_or_null("/root/App") 
 	if main_app_node and main_app_node.has_signal("installed_apps_updated"):
 		main_app_node.installed_apps_updated.connect(_on_installed_apps_refreshed)
+		
+	if is_instance_valid(show_reviews_button):
+		show_reviews_button.pressed.connect(_on_show_reviews_button_pressed)		
 
 func _on_installed_apps_refreshed():
 	print("DEBUG DetailsView: Installed apps refreshed signal received, updating button visibility for ", current_app_id)
@@ -71,9 +87,25 @@ func _unhandled_input(event: InputEvent):
 	# Only handle back button if this view is visible
 	if not self.visible:
 		return
+
+	if is_instance_valid(screenshot_zoom_popup_instance) and screenshot_zoom_popup_instance.visible:
+		return
+		
 	if event.is_action_pressed("ui_cancel"):
+		verified_app.visible = false
 		emit_signal("move_back_to_main_view")
 		get_viewport().set_input_as_handled()
+		return
+
+	if event.is_action_pressed("ui_accept"):
+		var focused_control = get_viewport().gui_get_focus_owner()
+		if focused_control.is_in_group("zoomable_screenshots"):
+			var texture_rect_node = focused_control.get_node_or_null("MarginContainer/Panel/MarginContainer/Screenshot") as TextureRect
+			var texture_to_zoom = texture_rect_node.texture # Direkter Zugriff auf die Textur
+			if texture_to_zoom:
+				_open_screenshot_zoom_popup(texture_to_zoom)
+				get_viewport().set_input_as_handled()
+				return
 
 # =============================================================================
 # PUBLIC METHODS (called from main.gd or elsewhere)
@@ -108,12 +140,21 @@ func clear_data():
 	if is_instance_valid(action_button) and action_button.has_method("_update_ui"): action_button._update_ui({})
 	if is_instance_valid(add_to_steam_button): add_to_steam_button.visible = false
 	if progress_info: progress_info.visible = false
-
+	_clear_rating_ui() 
+	
+	if is_instance_valid(detailed_reviews_request):
+		if detailed_reviews_request.is_connected("request_completed", Callable(self, "_on_detailed_reviews_request_completed")):
+			detailed_reviews_request.request_completed.disconnect(Callable(self, "_on_detailed_reviews_request_completed"))
+		detailed_reviews_request.queue_free()
+		detailed_reviews_request = null
+	current_detailed_reviews = []
+	
 # Main entry point to load data for the current_app_id
 func load_details():
 	if current_app_id.is_empty():
 		printerr("ERROR: Cannot load details, app_id is empty.")
 		app_title.text = "Error: No App ID" 
+		_clear_rating_ui()
 		return
 	if progress_info: progress_info.visible = false
 	_update_and_check_button_visibility()
@@ -242,6 +283,16 @@ func _display_details(product: Dictionary):
 	else:
 		app_icon.texture = null # Clear old icon if none provided
 
+	# verified
+	verified_app.visible = false
+	var metadata = product.get("metadata", false)
+	if metadata:
+		print("DEBUG App metadata: ", metadata)
+		var verified_flag = metadata.get("flathub::verification::verified", false)
+		print("DEBUG App verified_flag: ", verified_flag)
+		if verified_flag:
+			verified_app.visible = true
+
 	# description
 	var description_html = product.get("description", "")
 	app_desc.text = limited_html_to_bbcode(description_html) if not description_html.is_empty() else "No description available."
@@ -264,6 +315,7 @@ func _display_details(product: Dictionary):
 						if not screenshot_url.is_empty():
 							var screenshot_instance = product_screenshot_scene.instantiate()
 							if screenshot_instance:
+								screenshot_instance.add_to_group("zoomable_screenshots")
 								screenshot_container.add_child(screenshot_instance)
 								var screenshot_rect = screenshot_instance.find_child("Screenshot", true, false) as TextureRect 
 								if screenshot_rect:
@@ -297,6 +349,7 @@ func _display_details(product: Dictionary):
 		app_release_date.text = "N/A"
 		
 	current_app_name = product.get("name", "N/A")
+	app_developer.text = product.get("developer_name", "N/A")
 
 	if is_instance_valid(action_button) and action_button.has_method("set_app_info"):
 		action_button.set_app_info(current_app_id, current_app_name, icon_url)
@@ -305,6 +358,87 @@ func _display_details(product: Dictionary):
 		add_to_steam_button.set_app_info(current_app_id, current_app_name, icon_url)
 	_update_action_buttons_visibility()
 	_trigger_steam_check_if_needed()
+	_clear_rating_ui()
+	if not current_app_id.is_empty():
+		_update_rating_display(current_app_id) 
+
+func _update_rating_display(app_id_for_rating: String):
+	if app_id_for_rating.is_empty():
+		_clear_rating_ui()
+		return
+
+	if not ProjectSettings.has_setting("autoload/OdrsRatingsCache"):
+		printerr("DetailsView: OdrsRatingsCache Autoload not found!")
+		_clear_rating_ui()
+		return
+		
+	var summary = OdrsRatingsCache.get_rating_summary(app_id_for_rating)
+
+	if summary.is_empty():
+		_clear_rating_ui()
+		return
+
+	var s1 = summary.get("star1", 0)
+	var s2 = summary.get("star2", 0)
+	var s3 = summary.get("star3", 0)
+	var s4 = summary.get("star4", 0)
+	var s5 = summary.get("star5", 0)
+	var total_score = float(s1*1 + s2*2 + s3*3 + s4*4 + s5*5)
+	var total_valid_votes = s1 + s2 + s3 + s4 + s5
+	
+	var avg_rating = -1.0
+	if total_valid_votes > 0:
+		avg_rating = total_score / float(total_valid_votes)
+	
+	var total_reviews_from_summary = summary.get("total", 0)
+
+	if is_instance_valid(rating_stars_display):
+		if rating_stars_display.has_method("set_stars"):
+			rating_stars_display.set_stars(avg_rating)
+		else: 
+			rating_stars_display.visible = (avg_rating >= 0) 
+	
+	if is_instance_valid(rating_label):
+		if total_reviews_from_summary > 0:
+			rating_label.text = "(%d)" % total_reviews_from_summary
+			rating_label.visible = true
+		else:
+			rating_label.visible = false
+			
+	if is_instance_valid(show_reviews_button):
+		show_reviews_button.disabled = (total_reviews_from_summary == 0)
+		show_reviews_button.visible = true
+
+func _clear_rating_ui():
+	if is_instance_valid(rating_stars_display):
+		if rating_stars_display.has_method("set_stars"):
+			rating_stars_display.set_stars(-1.0)
+		else:
+			rating_stars_display.visible = false
+	if is_instance_valid(rating_label):
+		rating_label.visible = false
+		rating_label.text = ""
+	if is_instance_valid(show_reviews_button):
+		show_reviews_button.visible = false
+		show_reviews_button.disabled = true
+
+func _open_screenshot_zoom_popup(texture_to_zoom: Texture2D):
+	if not screenshot_zoom_popup_scene:
+		printerr("DetailsView: ScreenshotZoomPopup scene not preloaded!")
+		return
+
+	if not is_instance_valid(screenshot_zoom_popup_instance):
+		screenshot_zoom_popup_instance = screenshot_zoom_popup_scene.instantiate()
+		add_child(screenshot_zoom_popup_instance) 
+	
+	if screenshot_zoom_popup_instance.has_method("popup_zoomed_image"):
+		var focused_element_before_popup = get_viewport().gui_get_focus_owner()
+		screenshot_zoom_popup_instance.popup_zoomed_image(texture_to_zoom, focused_element_before_popup)
+	else:
+		printerr("DetailsView: ScreenshotZoomPopup instance does not have 'popup_zoomed_image' method.")
+		if is_instance_valid(screenshot_zoom_popup_instance): 
+			screenshot_zoom_popup_instance.queue_free()
+			screenshot_zoom_popup_instance = null
 
 # --- Set initial focus when view becomes active ---
 func set_initial_focus():
@@ -506,3 +640,150 @@ func limited_html_to_bbcode(html_string: String) -> String:
 	# print("-------------------------")
 
 	return work_string
+
+func _on_show_reviews_button_pressed():
+	print("DetailsView: 'Show reviews' clicked for App ID: ", current_app_id)
+	if current_app_id.is_empty(): 
+		printerr("DetailsView: No current_app_id for loading reviews.")
+		return
+	const DEFAULT_REVIES_BUTTON_CAPTION: String = "Show Reviews"
+	show_reviews_button.disabled = true
+	show_reviews_button.text = REVIEWS_BUTTON_LOADING_CAPTION
+	
+	var cache_filepath = _get_detailed_reviews_cache_filepath(current_app_id)
+
+	if FileAccess.file_exists(cache_filepath):
+		print("DEBUG Using existing cache file")
+		var file = FileAccess.open(cache_filepath, FileAccess.READ)
+		if file:
+			var json_string = file.get_as_text()
+			var cache_content = JSON.parse_string(json_string)
+			file.close()
+			
+			if cache_content is Dictionary:
+				var timestamp = cache_content.get("timestamp", 0)
+				var cached_reviews_array = cache_content.get("reviews_data")
+				var cache_age_sec = (Time.get_unix_time_from_system() - timestamp)
+				
+				if cache_age_sec < ODRS_DETAILED_REVIEWS_CACHE_DURATION_SEC and cached_reviews_array is Array:
+					print("DetailsView: Loaded detailed reviews from cache ", current_app_id)
+					current_detailed_reviews = cached_reviews_array
+					_show_reviews_popup(current_detailed_reviews)
+					return
+
+	print("DetailsView: No valid cache for detailed reviews. Starting to fetch ratings for ", current_app_id)
+	_fetch_detailed_reviews(current_app_id)
+
+func _get_detailed_reviews_cache_filepath(app_id: String) -> String:
+	var request_hash = app_id.md5_text()
+	var dir_access = DirAccess.open("user://")
+	if dir_access:
+		DirAccess.make_dir_recursive_absolute(ODRS_REVIEWS_CACHE_DIR)
+	return ODRS_REVIEWS_CACHE_DIR.path_join(request_hash + ".json")
+
+func _fetch_detailed_reviews(app_id: String):
+	if app_id.is_empty(): return
+
+	var odrs_reviews_url = "https://odrs.gnome.org/1.0/reviews/api/app/%s" % app_id
+
+	print("DetailsView: Fetching detailed reviews from: ", odrs_reviews_url)
+
+	if is_instance_valid(detailed_reviews_request):
+		if detailed_reviews_request.is_connected("request_completed", Callable(self, "_on_detailed_reviews_request_completed")):
+			detailed_reviews_request.request_completed.disconnect(Callable(self, "_on_detailed_reviews_request_completed"))
+		detailed_reviews_request.queue_free()
+
+	detailed_reviews_request = HTTPRequest.new()
+	add_child(detailed_reviews_request)
+	detailed_reviews_request.request_completed.connect(
+		_on_detailed_reviews_request_completed.bind(odrs_reviews_url, app_id) # URL und app_id für Kontext binden
+	)
+	
+	var error = detailed_reviews_request.request(odrs_reviews_url)
+	if error != OK:
+		printerr("DetailsView: Starten des Detailed Reviews Request fehlgeschlagen für '%s': %s" % [odrs_reviews_url, error])
+		if is_instance_valid(detailed_reviews_request):
+			detailed_reviews_request.queue_free()
+			detailed_reviews_request = null
+		# Optional: Fehlermeldung im Popup anzeigen
+		var popup_instance = get_node_or_null("ReviewsPopupInstance") # Annahme: Popup ist schon da und heißt so
+		if is_instance_valid(popup_instance) and popup_instance.has_method("show_error"):
+			popup_instance.show_error("Fehler beim Laden der Bewertungen.")
+
+
+func _on_detailed_reviews_request_completed(result, response_code, headers, body, url: String, app_id_ctx: String):
+	var reviews_to_display: Array = []
+	var success = false
+
+	if response_code == 200 and result == HTTPRequest.RESULT_SUCCESS:
+		var response_string = body.get_string_from_utf8()
+		var odrs_json = JSON.parse_string(response_string)
+		if odrs_json is Array:
+			reviews_to_display = odrs_json
+			current_detailed_reviews = reviews_to_display # Für sofortige Anzeige merken
+			success = true
+			
+			# Daten für diese App im Cache speichern
+			var cache_content = {
+				"timestamp": Time.get_unix_time_from_system(),
+				"reviews_data": reviews_to_display
+			}
+			var cache_filepath = _get_detailed_reviews_cache_filepath(app_id_ctx) # app_id_ctx ist die gebundene app_id
+			var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
+			if file:
+				file.store_string(JSON.stringify(cache_content))
+				file.close()
+				print("DetailsView: Detaillierte Reviews für ", app_id_ctx, " gecached.")
+			else:
+				printerr("DetailsView: Fehler beim Schreiben der Cache-Datei für detaillierte Reviews: ", cache_filepath)
+		else:
+			printerr("DetailsView: JSON Parse-Fehler für detaillierte Reviews URL '%s'." % url)
+	elif response_code == 404:
+		printerr("DetailsView: Detaillierte Reviews nicht gefunden (404) für URL '%s'." % url)
+		current_detailed_reviews = [] # Leeren, falls vorher was drin war
+	else:
+		printerr("DetailsView: HTTP Fehler %d (Result %d) bei Abfrage von detaillierten Reviews von '%s'." % [response_code, result, url])
+		current_detailed_reviews = []
+
+	_show_reviews_popup(current_detailed_reviews, not success and response_code != 404) # error_flag übergeben, außer bei 404
+
+	if is_instance_valid(detailed_reviews_request):
+		detailed_reviews_request.queue_free()
+		detailed_reviews_request = null
+
+func _show_reviews_popup(reviews_array: Array, has_error: bool = false):
+	print("DEBUG Called _show_reviews_popup")
+	var popup_node_name = "ReviewsPopupInstance" 
+	var popup_instance = get_node_or_null(popup_node_name)
+
+	if not is_instance_valid(popup_instance):
+		print("DEBUG Instance not yet valid. Create instance...")
+		if not reviews_popup_scene:
+			printerr("DetailsView: reviews_popup_scene not loaded!")
+			return
+		popup_instance = reviews_popup_scene.instantiate()
+		popup_instance.name = popup_node_name
+		
+		get_tree().root.add_child(popup_instance) 
+		popup_instance.connect("close_requested", Callable(popup_instance,"queue_free"), CONNECT_ONE_SHOT)
+		if popup_instance.has_method("connect_signals"):
+			popup_instance.connect_signals()
+		show_reviews_button.disabled = false
+		show_reviews_button.text = DEFAULT_REVIEWS_BUTTON_CAPTION
+
+	if not is_instance_valid(popup_instance):
+		printerr("DetailsView: KCoudl not instantiate Review-Popup.")
+		return
+	
+	if popup_instance.has_method("display_reviews"):
+		var app_display_name = current_app_name
+		popup_instance.display_reviews(reviews_array, app_display_name, has_error)
+	else:
+		printerr("DetailsView: 'reviews_popup.tscn' hat keine Methode 'display_reviews(reviews_array, app_name, has_error)'.")
+
+	if popup_instance is Window:
+		popup_instance.popup_centered()
+	elif popup_instance.has_method("show_modal"):
+		popup_instance.show_modal()
+	elif popup_instance.has_method("show"):
+		popup_instance.show()

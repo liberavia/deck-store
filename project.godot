@@ -20,11 +20,13 @@ config/icon="res://icon.svg"
 DownloadManager="*res://scripts/DownloadManager.gd"
 SteamIntegration="*res://scripts/SteamIntegration.gd"
 GlobalBackgroundShader="*res://global_background_shader.tscn"
+OdrsRatingsCache="*res://scripts/OdrsRatingsCache.gd"
 
 [display]
 
 window/size/viewport_width=1280
 window/size/viewport_height=800
+window/per_pixel_transparency/allowed=true
 
 [editor]
 

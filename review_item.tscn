@@ -1,0 +1,60 @@
+[gd_scene load_steps=4 format=3 uid="uid://ny0jkwl7xnql"]
+
+[ext_resource type="Script" uid="uid://clsy0nom1b4ux" path="res://review_item.gd" id="1_oh6h3"]
+[ext_resource type="PackedScene" uid="uid://v076dx1dqhl3" path="res://rating_stars_display.tscn" id="2_ynt13"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_o6g5t"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+
+[node name="ReviewItem" type="PanelContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_o6g5t")
+script = ExtResource("1_oh6h3")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="ContentVBox" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/ContentVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/ContentVBox"]
+layout_mode = 2
+
+[node name="UsernameLabel" type="Label" parent="MarginContainer/ContentVBox/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DateLabel" type="Label" parent="MarginContainer/ContentVBox/HBoxContainer"]
+layout_mode = 2
+horizontal_alignment = 2
+
+[node name="RatingContainer" type="HBoxContainer" parent="MarginContainer/ContentVBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+
+[node name="ReviewRatingStars" parent="MarginContainer/ContentVBox/RatingContainer" instance=ExtResource("2_ynt13")]
+layout_mode = 2
+
+[node name="ReviewTextLabel" type="Label" parent="MarginContainer/ContentVBox"]
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+size_flags_vertical = 3
+autowrap_mode = 2

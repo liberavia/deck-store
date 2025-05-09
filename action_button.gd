@@ -1,7 +1,7 @@
 extends Button
 
-@export var install_color := Color.from_string("#51b24e", Color.GREEN)
-@export var remove_color := Color.from_string("#ff5748", Color.RED)
+@export var install_color := Color.from_string("#245322", Color.GREEN)
+@export var remove_color := Color.from_string("#5c0001", Color.RED)
 @export var busy_color := Color.from_string("#4a4a4a", Color.DARK_GRAY) # Farbe für nicht-interaktive Zustände
 @export var normal_color := Color.from_string("#626262", Color.GRAY) # Standardfarbe, wenn nichts zutrifft
 
@@ -14,6 +14,8 @@ var stylebox_normal: StyleBoxFlat
 var stylebox_install: StyleBoxFlat
 var stylebox_remove: StyleBoxFlat
 var stylebox_busy: StyleBoxFlat
+var _pressed_sound_player: AudioStreamPlayer
+
 
 var app_name: String = ""
 var icon_url: String = ""
@@ -107,47 +109,39 @@ func _on_focus_entered_sound():
 	if is_instance_valid(_focus_sound_player): _focus_sound_player.play()
 
 
-# --- Überarbeitete _on_pressed Funktion ---
 func _on_pressed():
 	print("INFO: ActionButton pressed for app: ", app_id, " (Current Text: '", self.text, "', Disabled: ", self.disabled, ")")
 	if app_id.is_empty(): printerr("ERROR: ActionButton - AppID is empty!"); return
 
-	# Keine Aktion ausführen, wenn der Button deaktiviert ist
-	# (z.B. während Installation/Entfernung oder wenn Fehler angezeigt wird, der kein Retry ist)
 	if self.disabled:
 		print("DEBUG UI: Button pressed but disabled.")
 		return
 
-	# Entscheide Aktion basierend auf dem aktuellen Button-Text
-	# Wichtig: Die Texte müssen exakt mit denen übereinstimmen, die in _update_ui gesetzt werden!
+	_pressed_sound_player = get_node_or_null("/root/App/ButtonSoundPlayer")
+	if _pressed_sound_player:
+		_pressed_sound_player.play()
+
 	match self.text:
-		TEXT_INSTALL, TEXT_ERROR, TEXT_CANCELLED: # Zustände, die eine Installation erlauben/triggern
+		TEXT_INSTALL, TEXT_ERROR, TEXT_CANCELLED: 
 			print("ActionButton: Choosing INSTALL path based on text '", self.text, "'")
-			# UI sofort aktualisieren (optional, aber gibt Feedback)
 			self.disabled = true; self.text = TEXT_WAITING; add_theme_stylebox_override("normal", stylebox_busy)
-			# Task starten
 			var app_data_for_task = {"name": app_name, "icon_url": icon_url}
 			current_operation_id = DownloadManager.queue_install(app_id, app_data_for_task)
 
-		TEXT_UNINSTALL: # Zustand, der eine Deinstallation erlaubt/triggert
+		TEXT_UNINSTALL: 
 			print("ActionButton: Choosing UNINSTALL path based on text '", self.text, "'")
-			# UI sofort aktualisieren
 			self.disabled = true; self.text = TEXT_WAITING; add_theme_stylebox_override("normal", stylebox_busy)
-			# Task starten
 			current_operation_id = DownloadManager.queue_uninstall(app_id)
 
-		TEXT_CANCEL: # Zustand, der Abbruch erlaubt (typischerweise während Download)
+		TEXT_CANCEL:
 			if not current_operation_id.is_empty():
 				print("ActionButton: Choosing CANCEL path based on text '", self.text, "' for OpID: ", current_operation_id)
-				# UI sofort aktualisieren
 				self.disabled = true; self.text = "Cancelling..."; add_theme_stylebox_override("normal", stylebox_busy)
-				# Task abbrechen
 				DownloadManager.cancel_operation(current_operation_id)
 			else:
 				printerr("ActionButton: Cannot cancel, no known operation_id for ", app_id)
 
-		_: # Unerwarteter Text oder Zustände wie "Waiting...", "Installing..." etc.
-		   # Hier sollte der Button eigentlich disabled sein, aber zur Sicherheit:
+		_: 		   
 			printerr("ActionButton: Pressed with unexpected/busy text: ", self.text)
 
 
@@ -171,7 +165,6 @@ func _on_task_finished(operation_id: String, final_status: String, operation_typ
 			if operation_type == "install": final_ui_status_data = {"status": "completed", "app_id": app_id}
 			elif operation_type == "uninstall": final_ui_status_data = {}
 			else: printerr("Unbekannter operation_type in _on_task_finished: ", operation_type); final_ui_status_data = {}
-			# Liste nur bei Erfolg refreshen
 			print("DEBUG UI: Triggering app list refresh after completed operation.")
 			var main_app_node = get_node_or_null("/root/App")
 			if main_app_node and main_app_node.has_method("_fetch_installed_apps"): 
@@ -186,9 +179,7 @@ func _on_task_finished(operation_id: String, final_status: String, operation_typ
 		current_operation_id = ""
 
 
-# Hilfsfunktion zur UI-Aktualisierung
 func _update_ui(status_data: Dictionary):
-	# Standardwerte
 	var button_text = TEXT_INSTALL; var button_disabled = false
 	var button_stylebox = stylebox_install; var show_button = true
 
@@ -213,9 +204,8 @@ func _update_ui(status_data: Dictionary):
 			_:
 				button_text = TEXT_INSTALL; button_disabled = false; button_stylebox = stylebox_install
 
-	# Setze Button-Zustand
 	self.text = button_text
 	self.disabled = button_disabled
-	self.visible = show_button # Button sollte fast immer sichtbar sein
+	self.visible = show_button
 	self.add_theme_stylebox_override("normal", button_stylebox)
 	self.add_theme_stylebox_override("disabled", stylebox_busy)

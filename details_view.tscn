@@ -1,9 +1,12 @@
-[gd_scene load_steps=12 format=3 uid="uid://cauevp0c1nuys"]
+[gd_scene load_steps=18 format=3 uid="uid://cauevp0c1nuys"]
 
 [ext_resource type="Script" uid="uid://bggmpdvub3pb" path="res://details_view.gd" id="1_wsyjd"]
+[ext_resource type="Texture2D" uid="uid://ds54ar1gj76jv" path="res://assets/icons/verified_badge.svg" id="2_u0jqg"]
 [ext_resource type="Script" uid="uid://cd3qm3wofpocw" path="res://action_button.gd" id="2_uows0"]
 [ext_resource type="Script" uid="uid://lx48drc58j14" path="res://add_to_steam_button.gd" id="3_8dtdw"]
 [ext_resource type="Script" uid="uid://c7ispvo0n3qfy" path="res://details_description_scroller.gd" id="4_8dtdw"]
+[ext_resource type="PackedScene" uid="uid://v076dx1dqhl3" path="res://rating_stars_display.tscn" id="5_283hg"]
+[ext_resource type="Script" uid="uid://b25emru7mx44x" path="res://show_reviews.gd" id="6_mufgs"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shba1"]
 bg_color = Color(0, 0, 0, 0.35)
@@ -23,7 +26,7 @@ border_width_bottom = 3
 border_color = Color(0.627451, 0.12549, 0.941176, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8dtdw"]
-bg_color = Color(0.317647, 0.698039, 0.305882, 1)
+bg_color = Color(0.141176, 0.32549, 0.133333, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_uows0"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
@@ -40,6 +43,21 @@ border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
 border_color = Color(0.627451, 0.12549, 0.941176, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_m18c8"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+draw_center = false
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3hj5f"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.627451, 0.12549, 0.941176, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fogxl"]
+bg_color = Color(0.13966, 0.326548, 0.133366, 1)
 
 [node name="DetailsView" type="Control"]
 layout_mode = 3
@@ -92,6 +110,22 @@ theme_override_fonts/normal_font = SubResource("SystemFont_wsyjd")
 theme_override_font_sizes/normal_font_size = 36
 vertical_alignment = 1
 
+[node name="VerifiedContainer" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 8
+
+[node name="Label" type="Label" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/VerifiedContainer"]
+layout_mode = 2
+text = "Verified App"
+
+[node name="AppVerified" type="TextureRect" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/VerifiedContainer"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+texture = ExtResource("2_u0jqg")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
 layout_mode = 2
 size_flags_horizontal = 8
@@ -135,8 +169,8 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_uows0")
 action_mode = 0
 text = "Loading..."
 script = ExtResource("2_uows0")
-install_color = Color(0.317647, 0.698039, 0.305882, 1)
-remove_color = Color(1, 0.341176, 0.282353, 1)
+install_color = Color(0.141176, 0.32549, 0.133333, 1)
+remove_color = Color(0.358893, 0, 0.00371533, 1)
 busy_color = Color(0.290196, 0.290196, 0.290196, 1)
 normal_color = Color(0.384314, 0.384314, 0.384314, 1)
 
@@ -206,6 +240,18 @@ custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_horizontal = 10
 
+[node name="ContainerDeveloper" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails"]
+layout_mode = 2
+
+[node name="LabelDeveloper" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerDeveloper"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+text = "Developer/Publisher:"
+
+[node name="Developer" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerDeveloper"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.159982, 0.375954, 0.699073, 1)
+
 [node name="ContainerVersion" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails"]
 layout_mode = 2
 
@@ -223,7 +269,46 @@ layout_mode = 2
 [node name="LabelReleaseDate" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate"]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
-text = "Release-Date:"
+text = "Last Release:"
 
 [node name="ReleaseDate" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate"]
 layout_mode = 2
+
+[node name="RatingContainer" type="VBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="RatingStars" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+
+[node name="LabelAvgRating" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+text = "Rating:"
+
+[node name="RatingStarsDisplayNode" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars" instance=ExtResource("5_283hg")]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 10
+
+[node name="RatingCountLabel" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_m18c8")
+text = "(123456)"
+
+[node name="ShowReviews" type="Button" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer"]
+custom_minimum_size = Vector2(0, 45)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+theme_override_styles/focus = SubResource("StyleBoxFlat_3hj5f")
+theme_override_styles/normal = SubResource("StyleBoxFlat_fogxl")
+text = "Show Reviews"
+script = ExtResource("6_mufgs")
+
+[connection signal="pressed" from="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/ShowReviews" to="." method="_on_show_reviews_pressed"]

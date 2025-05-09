@@ -6,10 +6,15 @@ extends Control
 
 signal move_to_details_view(app_id: String, installed: bool)
 
+@export var focused_scale_factor: float = 1.05
+@export var animation_duration: float = 0.1
+
 var _original_panel_style: StyleBox
 var _focus_sound_player: AudioStreamPlayer
 var app_id: String = ""
 var is_installed: bool = false
+var default_scale: Vector2 = Vector2.ONE
+var scale_tween: Tween = null
 
 func _ready():
 	if panel: _original_panel_style = panel.get_theme_stylebox("panel")
@@ -19,7 +24,9 @@ func _ready():
 	self.focus_exited.connect(_on_focus_exited_visual)
 	self.focus_entered.connect(_on_focus_entered_sound)
 	self.focus_mode = Control.FOCUS_ALL
-
+	
+	default_scale = self.scale
+	
 	_focus_sound_player = get_node_or_null("/root/App/FocusSoundPlayer")
 	if not _focus_sound_player:
 		printerr("FocusSoundPlayer not found at /root/App/FocusSoundPlayer!")
@@ -41,6 +48,10 @@ func _unhandled_input(event: InputEvent):
 
 func _on_focus_entered_visual():
 	if not is_instance_valid(panel): return
+	
+	if scale_tween and scale_tween.is_valid():
+		scale_tween.kill()	
+	
 	if _original_panel_style is StyleBoxFlat:
 		var focused_style = _original_panel_style.duplicate() as StyleBoxFlat
 		focused_style.border_color = Color.PURPLE
@@ -51,9 +62,26 @@ func _on_focus_entered_visual():
 		panel.add_theme_stylebox_override("panel", focused_style)
 	else:
 		panel.modulate = Color.REBECCA_PURPLE.lightened(0.6)
+		
+	self.pivot_offset = self.size / 2.0
+	scale_tween = create_tween()
+	var target_scale = default_scale * focused_scale_factor
+	scale_tween.tween_property(self, "scale", target_scale, animation_duration)\
+		.set_trans(Tween.TRANS_SINE)\
+		.set_ease(Tween.EASE_OUT)
 
 func _on_focus_exited_visual():
 	if not is_instance_valid(panel): return
+	
+	if scale_tween and scale_tween.is_valid():
+		scale_tween.kill()
+	self.pivot_offset = self.size / 2.0
+	scale_tween = create_tween()
+	
+	scale_tween.tween_property(self, "scale", default_scale, animation_duration)\
+		.set_trans(Tween.TRANS_SINE)\
+		.set_ease(Tween.EASE_IN)
+
 	panel.remove_theme_stylebox_override("panel")
 	panel.add_theme_stylebox_override("panel", _original_panel_style)
 
