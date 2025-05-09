@@ -25,6 +25,7 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @onready var rating_stars_display: RatingStarsDisplay = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars/RatingStarsDisplayNode
 @onready var show_reviews_button: Button = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/ShowReviews
 @onready var rating_label: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars/MarginContainer/RatingCountLabel
+@onready var verified_app: HBoxContainer = $MarginContainer/Panel/DetailsContents/DetailsNavbar/VerifiedContainer
 
 # --- Internal State ---
 var current_app_id: String = ""
@@ -88,6 +89,7 @@ func _unhandled_input(event: InputEvent):
 		return
 		
 	if event.is_action_pressed("ui_cancel"):
+		verified_app.visible = false
 		emit_signal("move_back_to_main_view")
 		get_viewport().set_input_as_handled()
 		return
@@ -286,6 +288,16 @@ func _display_details(product: Dictionary):
 		emit_signal("image_load_requested", icon_url, app_icon)
 	else:
 		app_icon.texture = null # Clear old icon if none provided
+
+	# verified
+	verified_app.visible = false
+	var metadata = product.get("metadata", false)
+	if metadata:
+		print("DEBUG App metadata: ", metadata)
+		var verified_flag = metadata.get("flathub::verification::verified", false)
+		print("DEBUG App verified_flag: ", verified_flag)
+		if verified_flag:
+			verified_app.visible = true
 
 	# description
 	var description_html = product.get("description", "")

@@ -1,6 +1,7 @@
-[gd_scene load_steps=17 format=3 uid="uid://cauevp0c1nuys"]
+[gd_scene load_steps=18 format=3 uid="uid://cauevp0c1nuys"]
 
 [ext_resource type="Script" uid="uid://bggmpdvub3pb" path="res://details_view.gd" id="1_wsyjd"]
+[ext_resource type="Texture2D" uid="uid://ds54ar1gj76jv" path="res://assets/icons/verified_badge.svg" id="2_u0jqg"]
 [ext_resource type="Script" uid="uid://cd3qm3wofpocw" path="res://action_button.gd" id="2_uows0"]
 [ext_resource type="Script" uid="uid://lx48drc58j14" path="res://add_to_steam_button.gd" id="3_8dtdw"]
 [ext_resource type="Script" uid="uid://c7ispvo0n3qfy" path="res://details_description_scroller.gd" id="4_8dtdw"]
@@ -108,6 +109,22 @@ size_flags_horizontal = 3
 theme_override_fonts/normal_font = SubResource("SystemFont_wsyjd")
 theme_override_font_sizes/normal_font_size = 36
 vertical_alignment = 1
+
+[node name="VerifiedContainer" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 8
+
+[node name="Label" type="Label" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/VerifiedContainer"]
+layout_mode = 2
+text = "Verified App"
+
+[node name="AppVerified" type="TextureRect" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/VerifiedContainer"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+texture = ExtResource("2_u0jqg")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
 layout_mode = 2
@@ -233,6 +250,7 @@ text = "Developer/Publisher:"
 
 [node name="Developer" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerDeveloper"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.159982, 0.375954, 0.699073, 1)
 
 [node name="ContainerVersion" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails"]
 layout_mode = 2
