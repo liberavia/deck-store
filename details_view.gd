@@ -43,6 +43,8 @@ const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 hour
 const ODRS_DETAILED_REVIEWS_CACHE_DURATION_SEC = 60 * 60 * 6 # 6 hours
 const API_CACHE_DIR = "user://cache/api/"
 const ODRS_REVIEWS_CACHE_DIR = "user://cache/odrs_reviews/" 
+const DEFAULT_REVIEWS_BUTTON_CAPTION: String = "Show Reviews"
+const REVIEWS_BUTTON_LOADING_CAPTION: String = "Loading..."
 
 # =============================================================================
 # BUILT-IN GODOT METHODS
@@ -104,11 +106,6 @@ func _unhandled_input(event: InputEvent):
 				_open_screenshot_zoom_popup(texture_to_zoom)
 				get_viewport().set_input_as_handled()
 				return
-		else:
-			if not focused_control is TextureRect:
-				printerr("Focused control not a TextureRect")
-			if not focused_control.is_in_group("zoomable_screenshots"):
-				printerr("Focused control is not in group zoomable_screenshots", focused_control)
 
 # =============================================================================
 # PUBLIC METHODS (called from main.gd or elsewhere)
@@ -143,11 +140,10 @@ func clear_data():
 	if is_instance_valid(action_button) and action_button.has_method("_update_ui"): action_button._update_ui({})
 	if is_instance_valid(add_to_steam_button): add_to_steam_button.visible = false
 	if progress_info: progress_info.visible = false
-	_clear_rating_ui() # NEU: Rating-UI zurücksetzen
+	_clear_rating_ui() 
 	
-	# Laufenden Review-Detail-Request abbrechen, falls vorhanden
 	if is_instance_valid(detailed_reviews_request):
-		if detailed_reviews_request.is_connected("request_completed", Callable(self, "_on_detailed_reviews_request_completed")): # Name anpassen
+		if detailed_reviews_request.is_connected("request_completed", Callable(self, "_on_detailed_reviews_request_completed")):
 			detailed_reviews_request.request_completed.disconnect(Callable(self, "_on_detailed_reviews_request_completed"))
 		detailed_reviews_request.queue_free()
 		detailed_reviews_request = null
@@ -650,10 +646,14 @@ func _on_show_reviews_button_pressed():
 	if current_app_id.is_empty(): 
 		printerr("DetailsView: No current_app_id for loading reviews.")
 		return
-
+	const DEFAULT_REVIES_BUTTON_CAPTION: String = "Show Reviews"
+	show_reviews_button.disabled = true
+	show_reviews_button.text = REVIEWS_BUTTON_LOADING_CAPTION
+	
 	var cache_filepath = _get_detailed_reviews_cache_filepath(current_app_id)
 
 	if FileAccess.file_exists(cache_filepath):
+		print("DEBUG Using existing cache file")
 		var file = FileAccess.open(cache_filepath, FileAccess.READ)
 		if file:
 			var json_string = file.get_as_text()
@@ -666,26 +666,18 @@ func _on_show_reviews_button_pressed():
 				var cache_age_sec = (Time.get_unix_time_from_system() - timestamp)
 				
 				if cache_age_sec < ODRS_DETAILED_REVIEWS_CACHE_DURATION_SEC and cached_reviews_array is Array:
-					print("DetailsView: Detaillierte Reviews aus Cache geladen für ", current_app_id)
+					print("DetailsView: Loaded detailed reviews from cache ", current_app_id)
 					current_detailed_reviews = cached_reviews_array
 					_show_reviews_popup(current_detailed_reviews)
-					return # Daten aus Cache sind gültig
+					return
 
-	# 2. Kein gültiger Cache -> Starte neuen Fetch
-	print("DetailsView: Kein gültiger Cache für detaillierte Reviews. Starte Fetch für ", current_app_id)
+	print("DetailsView: No valid cache for detailed reviews. Starting to fetch ratings for ", current_app_id)
 	_fetch_detailed_reviews(current_app_id)
-	# Optional: Ladeindikator im (noch leeren) Popup anzeigen oder Button deaktivieren
-	# Fürs Erste zeigen wir das Popup, und es wird befüllt, wenn die Daten da sind.
-	# Oder wir warten, bis die Daten da sind, und zeigen das Popup dann erst.
-	# Eleganter: Popup instanziieren, eine "Lade..." Nachricht anzeigen, und dann mit Daten befüllen.
-	_show_reviews_popup([]) # Zeigt Popup, das auf Daten wartet oder "Lade..." anzeigt
-
 
 func _get_detailed_reviews_cache_filepath(app_id: String) -> String:
-	var request_hash = app_id.md5_text() # Cache basierend auf App-ID
-	# Sicherstellen, dass das Verzeichnis existiert (wird in _ready() von OdersRatingsCache gemacht, hier ggf. auch)
+	var request_hash = app_id.md5_text()
 	var dir_access = DirAccess.open("user://")
-	if dir_access: # ODRS_REVIEWS_CACHE_DIR muss definiert sein (ist es oben)
+	if dir_access:
 		DirAccess.make_dir_recursive_absolute(ODRS_REVIEWS_CACHE_DIR)
 	return ODRS_REVIEWS_CACHE_DIR.path_join(request_hash + ".json")
 
@@ -753,7 +745,6 @@ func _on_detailed_reviews_request_completed(result, response_code, headers, body
 		printerr("DetailsView: HTTP Fehler %d (Result %d) bei Abfrage von detaillierten Reviews von '%s'." % [response_code, result, url])
 		current_detailed_reviews = []
 
-	# Popup mit den (möglicherweise leeren) Reviews aktualisieren oder anzeigen
 	_show_reviews_popup(current_detailed_reviews, not success and response_code != 404) # error_flag übergeben, außer bei 404
 
 	if is_instance_valid(detailed_reviews_request):
@@ -761,39 +752,38 @@ func _on_detailed_reviews_request_completed(result, response_code, headers, body
 		detailed_reviews_request = null
 
 func _show_reviews_popup(reviews_array: Array, has_error: bool = false):
-	# Versuche, eine existierende Instanz zu finden oder erstelle eine neue
-	var popup_node_name = "ReviewsPopupInstance" # Ein eindeutiger Name
+	print("DEBUG Called _show_reviews_popup")
+	var popup_node_name = "ReviewsPopupInstance" 
 	var popup_instance = get_node_or_null(popup_node_name)
 
 	if not is_instance_valid(popup_instance):
+		print("DEBUG Instance not yet valid. Create instance...")
 		if not reviews_popup_scene:
-			printerr("DetailsView: reviews_popup_scene ist nicht geladen!")
+			printerr("DetailsView: reviews_popup_scene not loaded!")
 			return
 		popup_instance = reviews_popup_scene.instantiate()
-		popup_instance.name = popup_node_name # Gib ihm einen Namen, um es wiederzufinden
-		# Wichtig: Popup zum Root hinzufügen oder als Child, damit es korrekt angezeigt wird
+		popup_instance.name = popup_node_name
+		
 		get_tree().root.add_child(popup_instance) 
-		# Signal verbinden, um es aus dem Baum zu entfernen, wenn es sich schließt (optional, aber gut für Speicher)
 		popup_instance.connect("close_requested", Callable(popup_instance,"queue_free"), CONNECT_ONE_SHOT)
-		if popup_instance.has_method("connect_signals"): # Falls das Popup interne Signale für Schließen hat
+		if popup_instance.has_method("connect_signals"):
 			popup_instance.connect_signals()
+		show_reviews_button.disabled = false
+		show_reviews_button.text = DEFAULT_REVIEWS_BUTTON_CAPTION
 
-
-	if not is_instance_valid(popup_instance): # Immer noch nicht gültig? Sollte nicht passieren.
-		printerr("DetailsView: Konnte ReviewsPopup nicht instanziieren.")
+	if not is_instance_valid(popup_instance):
+		printerr("DetailsView: KCoudl not instantiate Review-Popup.")
 		return
 	
-	# Methode im Popup aufrufen, um Reviews anzuzeigen
 	if popup_instance.has_method("display_reviews"):
-		var app_display_name = current_app_name # Oder app_title.text
+		var app_display_name = current_app_name
 		popup_instance.display_reviews(reviews_array, app_display_name, has_error)
 	else:
 		printerr("DetailsView: 'reviews_popup.tscn' hat keine Methode 'display_reviews(reviews_array, app_name, has_error)'.")
 
-	# Popup anzeigen (wenn es ein Window oder PopupPanel ist)
 	if popup_instance is Window:
 		popup_instance.popup_centered()
-	elif popup_instance.has_method("show_modal"): # Benutzerdefinierte Methode
+	elif popup_instance.has_method("show_modal"):
 		popup_instance.show_modal()
 	elif popup_instance.has_method("show"):
 		popup_instance.show()

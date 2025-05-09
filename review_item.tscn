@@ -22,13 +22,18 @@ script = ExtResource("1_oh6h3")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 2
-theme_override_constants/margin_left = 5
-theme_override_constants/margin_top = 5
-theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 5
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
 
 [node name="ContentVBox" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/ContentVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/ContentVBox"]
 layout_mode = 2

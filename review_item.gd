@@ -5,7 +5,7 @@ extends PanelContainer
 @onready var date_label: Label = $MarginContainer/ContentVBox/HBoxContainer/DateLabel
 @onready var review_rating_stars: RatingStarsDisplay = $MarginContainer/ContentVBox/RatingContainer/ReviewRatingStars
 @onready var review_text_label: Label = $MarginContainer/ContentVBox/ReviewTextLabel
-
+@onready var review_title_label: Label = $MarginContainer/ContentVBox/TitleLabel
 func set_review_data(data: Dictionary):
 	var username = data.get("user_display", "Anonym")
 	if username:
@@ -17,6 +17,13 @@ func set_review_data(data: Dictionary):
 		date_label.text = "%02d.%02d.%04d" % [datetime_dict.day, datetime_dict.month, datetime_dict.year]
 	else:
 		date_label.text = ""
+	
+	var summary = data.get("summary", false)
+	if summary:
+		review_title_label.visible = true
+		review_title_label.text = summary
+	else:
+		review_title_label.visible = false
 	
 	var percentage_rating = data.get("rating", -1) 
 	if percentage_rating >= 0 and percentage_rating <= 100 and is_instance_valid(review_rating_stars):
