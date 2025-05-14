@@ -102,19 +102,20 @@ def generate_appid_for_vdf_entry(exe_path_cleaned: str, app_name_cleaned: str) -
 # --- Erweiterte Artwork-Generierung ---
 
 TARGET_SIZES = {
-    "grid": (600, 900),
-    "portrait": (600, 900),
-    "hero": (1920, 620),
-    "icon_square": (512, 512),
-    "logo_steam": (640, 360)
+    "library_header_capsule": (920, 430), # NEU: Für <appid>.png (breite Kapsel)
+    "portrait": (600, 900),             # Für <appid>p.png (Hochformat Grid/Liste)
+    "hero": (1920, 620),                # Für <appid>_hero.png
+    "icon_square": (512, 512),          # Für <appid>_icon.png (quadratisches Icon)
+    "logo_steam": (640, 360)            # Max-Größe für <appid>_logo.png (transparent)
 }
 
 GRADIENT_COLOR_START = (40, 40, 60)
 GRADIENT_COLOR_END = (20, 20, 30)
 
-APP_LOGO_SCALE_FACTOR_HERO = 0.8
-APP_LOGO_SCALE_FACTOR_PORTRAIT = 0.8
-APP_LOGO_SCALE_FACTOR_ICON = 0.8
+# Skalierungsfaktor für das App-Logo auf den verschiedenen Hintergründen
+APP_LOGO_SCALE_FACTOR_LANDSCAPE = 0.75 # Für breitere Formate (Hero, Header Capsule) - bezogen auf Höhe
+APP_LOGO_SCALE_FACTOR_PORTRAIT = 0.8   # Für Hochformate
+APP_LOGO_SCALE_FACTOR_ICON = 0.8       # Für quadratische Icons
 
 def create_gradient_image(width: int, height: int, color_start_rgb: tuple, color_end_rgb: tuple, direction="vertical") -> Image.Image:
     base = Image.new("RGB", (width, height), color_start_rgb)
@@ -136,31 +137,14 @@ def create_gradient_image(width: int, height: int, color_start_rgb: tuple, color
     return base
 
 def scale_image_to_fit_bbox(image: Image.Image, bbox_width: int, bbox_height: int, resample_method) -> Image.Image:
-    """
-    Skaliert ein Bild (hoch oder runter) unter Beibehaltung des Seitenverhältnisses,
-    sodass es in die angegebene Bounding Box (bbox_width, bbox_height) passt.
-    """
     original_width, original_height = image.size
-    if original_width == 0 or original_height == 0:
-        return image.copy()
-
-    # Skalierungsfaktoren für Breite und Höhe berechnen
+    if original_width == 0 or original_height == 0: return image.copy()
     width_ratio = float(bbox_width) / original_width
     height_ratio = float(bbox_height) / original_height
-
-    # Den kleineren der beiden Faktoren verwenden, um sicherzustellen, dass das Bild in die Box passt
     scale_ratio = min(width_ratio, height_ratio)
-
-    # Neue Dimensionen berechnen
-    new_width = int(original_width * scale_ratio)
-    new_height = int(original_height * scale_ratio)
-
-    # Sicherstellen, dass Dimensionen mindestens 1px sind
-    new_width = max(1, new_width)
-    new_height = max(1, new_height)
-
+    new_width = max(1, int(original_width * scale_ratio))
+    new_height = max(1, int(original_height * scale_ratio))
     return image.resize((new_width, new_height), resample_method)
-
 
 def save_steam_artwork(
     artwork_short_appid_str: str,
@@ -193,13 +177,36 @@ def save_steam_artwork(
 
         base_name = artwork_short_appid_str
 
-        # --- 1. Library Hero (`..._hero.png`) ---
-        hero_target_size = TARGET_SIZES["hero"] # z.B. (1920, 620)
+        # --- 1. Library Header Capsule (`<appid>.png`) ---
+        # Dies ist die breite Kapsel (z.B. 920x430)
+        header_capsule_target_size = TARGET_SIZES["library_header_capsule"]
+        header_canvas = create_gradient_image(header_capsule_target_size[0], header_capsule_target_size[1], GRADIENT_COLOR_START, GRADIENT_COLOR_END, direction="horizontal")
+
+        header_app_logo_bbox_h = int(header_capsule_target_size[1] * APP_LOGO_SCALE_FACTOR_LANDSCAPE) # Skaliere basierend auf Höhe
+        header_app_logo_bbox_w = int(header_capsule_target_size[0] * 0.9) # Erlaube etwas mehr Breite
+
+        app_logo_for_header = scale_image_to_fit_bbox(app_logo_original.copy(), header_app_logo_bbox_w, header_app_logo_bbox_h, Image.Resampling.LANCZOS)
+
+        header_logo_x = (header_capsule_target_size[0] - app_logo_for_header.width) // 2
+        header_logo_y = (header_capsule_target_size[1] - app_logo_for_header.height) // 2
+        header_canvas.paste(app_logo_for_header, (header_logo_x, header_logo_y), app_logo_for_header)
+
+        if ds_logo_original:
+            ds_logo_for_header = ds_logo_original.copy()
+            ds_logo_header_height = int(header_capsule_target_size[1] * 0.15) # 15% der Kapselhöhe
+            ds_logo_for_header = scale_image_to_fit_bbox(ds_logo_for_header, int(ds_logo_header_height * (ds_logo_for_header.width / float(ds_logo_for_header.height)) if ds_logo_for_header.height > 0 else ds_logo_header_height), ds_logo_header_height, Image.Resampling.LANCZOS)
+            header_canvas.paste(ds_logo_for_header, (20, header_capsule_target_size[1] - ds_logo_for_header.height - 20), ds_logo_for_header) # Unten links
+
+        header_path_png = grid_dir / f"{base_name}.png" # Speichern als <appid>.png
+        header_canvas.save(header_path_png, "PNG"); print(f"INFO: Enhanced Library Header Capsule saved: {header_path_png}")
+
+
+        # --- 2. Library Hero (`..._hero.png`) ---
+        hero_target_size = TARGET_SIZES["hero"]
         hero_canvas = create_gradient_image(hero_target_size[0], hero_target_size[1], GRADIENT_COLOR_START, GRADIENT_COLOR_END, direction="horizontal")
 
-        # Ziel-Bounding-Box für das App-Logo auf dem Hero
-        hero_app_logo_bbox_w = int(hero_target_size[0] * APP_LOGO_SCALE_FACTOR_HERO)
-        hero_app_logo_bbox_h = int(hero_target_size[1] * APP_LOGO_SCALE_FACTOR_HERO)
+        hero_app_logo_bbox_h = int(hero_target_size[1] * APP_LOGO_SCALE_FACTOR_LANDSCAPE)
+        hero_app_logo_bbox_w = int(hero_target_size[0] * 0.7) # Etwas weniger als die volle Breite der BBox
 
         app_logo_for_hero = scale_image_to_fit_bbox(app_logo_original.copy(), hero_app_logo_bbox_w, hero_app_logo_bbox_h, Image.Resampling.LANCZOS)
 
@@ -209,16 +216,15 @@ def save_steam_artwork(
 
         if ds_logo_original:
             ds_logo_for_hero = ds_logo_original.copy()
-            ds_logo_hero_width = int(hero_target_size[0] * 0.05) # 5% der Hero-Breite
-            # Skaliere das DeckStore-Logo proportional zu dieser Breite
-            ds_logo_for_hero = scale_image_to_fit_bbox(ds_logo_for_hero, ds_logo_hero_width, int(ds_logo_hero_width * (ds_logo_for_hero.height / float(ds_logo_for_hero.width)) if ds_logo_for_hero.width > 0 else ds_logo_hero_width) , Image.Resampling.LANCZOS)
-            hero_canvas.paste(ds_logo_for_hero, (20, 20), ds_logo_for_hero)
+            ds_logo_hero_height = int(hero_target_size[1] * 0.1) # 10% der Hero-Höhe
+            ds_logo_for_hero = scale_image_to_fit_bbox(ds_logo_for_hero, int(ds_logo_hero_height * (ds_logo_for_hero.width / float(ds_logo_for_hero.height)) if ds_logo_for_hero.height > 0 else ds_logo_hero_height), ds_logo_hero_height , Image.Resampling.LANCZOS)
+            hero_canvas.paste(ds_logo_for_hero, (30, 30), ds_logo_for_hero) # Oben links mit mehr Padding
 
         hero_path_png = grid_dir / f"{base_name}_hero.png"
         hero_canvas.save(hero_path_png, "PNG"); print(f"INFO: Enhanced Hero image saved: {hero_path_png}")
 
-        # --- 2. Library Capsule / Portrait (`...p.png` und `.png`) ---
-        portrait_target_size = TARGET_SIZES["portrait"] # z.B. (600, 900)
+        # --- 3. Library Portrait (`...p.png`) --- Hochformat
+        portrait_target_size = TARGET_SIZES["portrait"]
         portrait_canvas = create_gradient_image(portrait_target_size[0], portrait_target_size[1], GRADIENT_COLOR_START, GRADIENT_COLOR_END, direction="vertical")
 
         portrait_app_logo_bbox_w = int(portrait_target_size[0] * APP_LOGO_SCALE_FACTOR_PORTRAIT)
@@ -232,18 +238,18 @@ def save_steam_artwork(
 
         if ds_logo_original:
             ds_logo_for_portrait = ds_logo_original.copy()
-            ds_logo_portrait_width = int(portrait_target_size[0] * 0.12) # 12% der Portrait-Breite
+            ds_logo_portrait_width = int(portrait_target_size[0] * 0.15) # 15% der Portrait-Breite
             ds_logo_for_portrait = scale_image_to_fit_bbox(ds_logo_for_portrait, ds_logo_portrait_width, int(ds_logo_portrait_width * (ds_logo_for_portrait.height / float(ds_logo_for_portrait.width)) if ds_logo_for_portrait.width > 0 else ds_logo_portrait_width), Image.Resampling.LANCZOS)
-            portrait_canvas.paste(ds_logo_for_portrait, (15, 15), ds_logo_for_portrait)
+            portrait_canvas.paste(ds_logo_for_portrait, (20, 20), ds_logo_for_portrait) # Oben links
 
         grid_path_p_png = grid_dir / f"{base_name}p.png"
         portrait_canvas.save(grid_path_p_png, "PNG"); print(f"INFO: Enhanced Portrait (p) image saved: {grid_path_p_png}")
 
-        grid_path_png = grid_dir / f"{base_name}.png"
-        portrait_canvas.save(grid_path_png, "PNG"); print(f"INFO: Enhanced Grid image saved: {grid_path_png}")
+        # HINWEIS: Das Speichern von portrait_canvas als <appid>.png wurde entfernt,
+        # da dies jetzt von der Library Header Capsule übernommen wird.
 
-        # --- 3. Library Icon (`..._icon.png`) ---
-        icon_target_size = TARGET_SIZES["icon_square"] # z.B. (512, 512)
+        # --- 4. Library Icon (`..._icon.png`) --- Quadratisch
+        icon_target_size = TARGET_SIZES["icon_square"]
         icon_canvas = Image.new("RGBA", icon_target_size, (0,0,0,0))
 
         icon_app_logo_bbox_w = int(icon_target_size[0] * APP_LOGO_SCALE_FACTOR_ICON)
@@ -258,17 +264,13 @@ def save_steam_artwork(
         icon_specific_png = grid_dir / f"{base_name}_icon.png"
         icon_canvas.save(icon_specific_png, "PNG"); print(f"INFO: Enhanced Icon image saved: {icon_specific_png}")
 
-        # --- 4. Library Logo (`..._logo.png`) ---
-        # Hier soll das Logo die Bounding Box (TARGET_SIZES["logo_steam"]) maximal ausnutzen.
-        logo_target_bbox_w, logo_target_bbox_h = TARGET_SIZES["logo_steam"] # z.B. (640, 360)
+        # --- 5. Library Logo (`..._logo.png`) --- Transparentes Logo
+        logo_target_bbox_w, logo_target_bbox_h = TARGET_SIZES["logo_steam"]
 
         app_logo_for_steamlogo = scale_image_to_fit_bbox(app_logo_original.copy(), logo_target_bbox_w, logo_target_bbox_h, Image.Resampling.LANCZOS)
 
-        # Das Steam-Logo ist typischerweise nur das Logo selbst auf transparentem Grund.
-        # Wir stellen sicher, dass es RGBA ist und die Größe der skalierten Version hat.
         final_steam_logo = Image.new("RGBA", app_logo_for_steamlogo.size, (0,0,0,0))
         final_steam_logo.paste(app_logo_for_steamlogo, (0,0), app_logo_for_steamlogo)
-
 
         logo_path_png = grid_dir / f"{base_name}_logo.png"
         final_steam_logo.save(logo_path_png, "PNG"); print(f"INFO: Enhanced Steam Logo image saved: {logo_path_png}")
@@ -338,7 +340,7 @@ def add_shortcut(
 
     icon_path_in_vdf = ""
     if icon_source_param:
-        icon_path_in_vdf = str(grid_path / f"{artwork_short_id_str}_icon.png")
+        icon_path_in_vdf = str(grid_path / f"{artwork_short_id_str}_icon.png") # Verweist auf das quadratische Icon
 
     shortcut_entry = {
         'appid': vdf_entry_appid_int,
