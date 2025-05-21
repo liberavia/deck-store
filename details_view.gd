@@ -37,12 +37,17 @@ var steam_check_pending: bool = false
 var screenshot_zoom_popup_instance: Window = null
 var current_detailed_reviews: Array = []
 var detailed_reviews_request: HTTPRequest = null
+var _deckstore_abs_base_path: String = ""
+var _api_cache_abs_path: String = ""
+var _odrs_reviews_cache_abs_path: String = ""
 
 # --- Constants ---
+const DECKSTORE_BASE_DIR_NAME = ".deck-store" 
+const API_CACHE_SUBDIR = "cache/api"          
+const ODRS_REVIEWS_CACHE_SUBDIR = "cache/odrs_reviews"
+
 const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 hour
 const ODRS_DETAILED_REVIEWS_CACHE_DURATION_SEC = 60 * 60 * 6 # 6 hours
-const API_CACHE_DIR = "user://cache/api/"
-const ODRS_REVIEWS_CACHE_DIR = "user://cache/odrs_reviews/" 
 const DEFAULT_REVIEWS_BUTTON_CAPTION: String = "Show Reviews"
 const REVIEWS_BUTTON_LOADING_CAPTION: String = "Loading..."
 
@@ -51,9 +56,26 @@ const REVIEWS_BUTTON_LOADING_CAPTION: String = "Loading..."
 # =============================================================================
 
 func _ready():
-	var dir_access = DirAccess.open("user://")
-	if dir_access:
-		DirAccess.make_dir_recursive_absolute(API_CACHE_DIR)
+	var home_dir = OS.get_environment("HOME")
+	if home_dir.is_empty():
+		printerr("DetailsView FATAL ERROR: Could not determine user's HOME directory. Caching will fail.")
+		return
+
+	_deckstore_abs_base_path = home_dir.path_join(DECKSTORE_BASE_DIR_NAME)
+	_api_cache_abs_path = _deckstore_abs_base_path.path_join(API_CACHE_SUBDIR)
+	_odrs_reviews_cache_abs_path = _deckstore_abs_base_path.path_join(ODRS_REVIEWS_CACHE_SUBDIR)
+
+	print("INFO DetailsView: API Cache Directory (absolute Path): ", _api_cache_abs_path)
+	print("INFO DetailsView: ODRS Reviews Cache Directory (absolute Path): ", _odrs_reviews_cache_abs_path)
+
+	var err_api_cache = DirAccess.make_dir_recursive_absolute(_api_cache_abs_path)
+	if err_api_cache != OK and err_api_cache != ERR_ALREADY_EXISTS:
+		printerr("ERROR DetailsView: Could not create API cache directory: ", _api_cache_abs_path, ", Code: ", err_api_cache)
+
+	var err_odrs_cache = DirAccess.make_dir_recursive_absolute(_odrs_reviews_cache_abs_path)
+	if err_odrs_cache != OK and err_odrs_cache != ERR_ALREADY_EXISTS:
+		printerr("ERROR DetailsView: Could not create ODRS reviews cache directory: ", _odrs_reviews_cache_abs_path, ", Code: ", err_odrs_cache)
+		
 	if ProjectSettings.has_setting("autoload/DownloadManager"):
 		if DownloadManager.has_signal("task_updated"):
 			DownloadManager.task_updated.connect(_on_task_updated_for_progress)
@@ -177,9 +199,12 @@ func _on_shortcut_action_completed(action: String, app_id: String, success: bool
 
 # --- Helper function to get cache file path ---
 func _get_api_cache_filepath(url: String) -> String:
+	if _api_cache_abs_path.is_empty():
+		printerr("ERROR DetailsView: _get_api_cache_filepath - API Cache Path not initialized!")
+		return "" 
 	var request_hash = url.md5_text()
-	return API_CACHE_DIR.path_join(request_hash + ".json")
-
+	return _api_cache_abs_path.path_join(request_hash + ".json")
+	
 # --- Load details: Check cache or start request ---
 func _load_details_data(app_id_to_load: String):
 	var detail_api_url = "https://flathub.org/api/v2/appstream/%s?locale=en" % app_id_to_load
@@ -675,11 +700,11 @@ func _on_show_reviews_button_pressed():
 	_fetch_detailed_reviews(current_app_id)
 
 func _get_detailed_reviews_cache_filepath(app_id: String) -> String:
+	if _odrs_reviews_cache_abs_path.is_empty():
+		printerr("ERROR DetailsView: _get_detailed_reviews_cache_filepath - ODRS Reviews Cache Path not initialized!")
+		return ""
 	var request_hash = app_id.md5_text()
-	var dir_access = DirAccess.open("user://")
-	if dir_access:
-		DirAccess.make_dir_recursive_absolute(ODRS_REVIEWS_CACHE_DIR)
-	return ODRS_REVIEWS_CACHE_DIR.path_join(request_hash + ".json")
+	return _odrs_reviews_cache_abs_path.path_join(request_hash + ".json")
 
 func _fetch_detailed_reviews(app_id: String):
 	if app_id.is_empty(): return

@@ -20,39 +20,50 @@ var _flatpak_thread: Thread = null
 var _last_focused_product_box: Control = null
 
 # --- Cache-Constants ---
-const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 hour
-const CACHE_DURATION_SEC: int = 3600
-const API_CACHE_DIR = "user://cache/api/"
-const IMAGE_CACHE_DIR = "user://cache/images/"
-const IMAGE_CACHE_DURATION_SEC: int = 7 * 24 * 60 * 60 # 1 week in seconds
+const DECKSTORE_BASE_DIR_NAME = ".deck-store"
+const API_CACHE_SUBDIR = "cache/api"
+const IMAGE_CACHE_SUBDIR = "cache/images"
+
+const CACHE_DURATION_SEC: int = 3600 # 1 hour
+const IMAGE_CACHE_DURATION_SEC: int = 7 * 24 * 60 * 60 # 1 week
+
 var transition_time := 0.5
 
-signal installed_apps_updated
+# Absolute paths, will be initialized in _ready()
+var _deckstore_abs_base_path: String = ""
+var _api_cache_abs_path: String = ""
+var _image_cache_abs_path: String = ""
 
+signal installed_apps_updated
 
 # =============================================================================
 # LIFECYCLE METHODS
 # =============================================================================
 
 func _ready():
-	var dir_access = DirAccess.open("user://")
-	if dir_access:
-		var absolute_cache_dir = ProjectSettings.globalize_path(API_CACHE_DIR)
-		print("INFO: Cache-Directory (absolute Path): ", absolute_cache_dir)
-		var err = DirAccess.make_dir_recursive_absolute(API_CACHE_DIR)
-		if err != OK and err != ERR_ALREADY_EXISTS:
-			printerr("Could not create cache directory: ", API_CACHE_DIR, ", Code: ", err)
-	else:
-		printerr("Could not open user:// directory.")
-		
-	var image_dir_access = DirAccess.open("user://")
-	if image_dir_access:
-		var err = DirAccess.make_dir_recursive_absolute(IMAGE_CACHE_DIR)
-		if err != OK and err != ERR_ALREADY_EXISTS:
-			printerr("ERROR: Could not create image cache directory: ", IMAGE_CACHE_DIR, ", Code: ", err)
-		# Optional: Clean up very old cache files here if needed
-	else:
-		printerr("ERROR: Could not open user:// directory for image cache.")
+	var home_dir = OS.get_environment("HOME")
+	if home_dir.is_empty():
+		printerr("FATAL ERROR: Could not determine user's HOME directory. Caching will fail.")
+		return
+
+	# Construct absolute paths for DeckStore data
+	_deckstore_abs_base_path = home_dir.path_join(DECKSTORE_BASE_DIR_NAME)
+	_api_cache_abs_path = _deckstore_abs_base_path.path_join(API_CACHE_SUBDIR)
+	_image_cache_abs_path = _deckstore_abs_base_path.path_join(IMAGE_CACHE_SUBDIR)
+	
+	print("INFO: DeckStore Base Path (absolute): ", _deckstore_abs_base_path)
+	print("INFO: API Cache Directory (absolute Path): ", _api_cache_abs_path)
+	print("INFO: Image Cache Directory (absolute Path): ", _image_cache_abs_path)
+
+	# Create API cache directory
+	var err_api_cache = DirAccess.make_dir_recursive_absolute(_api_cache_abs_path)
+	if err_api_cache != OK and err_api_cache != ERR_ALREADY_EXISTS:
+		printerr("ERROR: Could not create API cache directory: ", _api_cache_abs_path, ", Code: ", err_api_cache)
+	
+	# Create Image cache directory
+	var err_img_cache = DirAccess.make_dir_recursive_absolute(_image_cache_abs_path)
+	if err_img_cache != OK and err_img_cache != ERR_ALREADY_EXISTS:
+		printerr("ERROR: Could not create image cache directory: ", _image_cache_abs_path, ", Code: ", err_img_cache)
 			
 	if not popular_product_list.product_box_scene:
 		popular_product_list.product_box_scene = product_box
@@ -108,8 +119,11 @@ func _unhandled_input(event: InputEvent):
 # HELPER FUNCTIONS
 # =============================================================================
 func get_image_cache_dir():
-	return IMAGE_CACHE_DIR
+	return _image_cache_abs_path
 
+func get_api_cache_dir() -> String:
+	return _api_cache_abs_path
+	
 func is_app_installed(app_id: String) -> bool:
 	return _installed_flatpak_ids.has(app_id)
 
@@ -118,8 +132,15 @@ func get_installed_ids() -> Dictionary:
 
 func _get_api_cache_filepath(url: String) -> String:
 	var hash = url.md5_text() 
-	return API_CACHE_DIR.path_join(hash + ".json")
+	return get_api_cache_dir().path_join(hash + ".json")
 
+func _get_image_cache_filepath(image_url: String, file_extension: String) -> String:
+	if _image_cache_abs_path.is_empty():
+		printerr("ERROR: _get_image_cache_filepath - Image Cache Path not initialized!")
+		return ""
+	var url_hash = image_url.md5_text()
+	return _image_cache_abs_path.path_join(url_hash + file_extension)
+	
 func _on_product_list_image_load_requested(url: String, texture_rect: TextureRect):
 	if not is_instance_valid(texture_rect):
 		printerr("ERROR: Image request for invalid texture_rect, URL: ", url)
@@ -129,8 +150,8 @@ func _on_product_list_image_load_requested(url: String, texture_rect: TextureRec
 		return
 
 	var url_hash = url.md5_text()
-	var cache_filepath_png = IMAGE_CACHE_DIR.path_join(url_hash + ".png")
-	var cache_filepath_webp = IMAGE_CACHE_DIR.path_join(url_hash + ".webp")
+	var cache_filepath_png = _get_image_cache_filepath(url, ".png")
+	var cache_filepath_webp = _get_image_cache_filepath(url, ".webp")
 
 	var cache_filepath_to_load = ""
 	var file_extension = ""
@@ -278,7 +299,9 @@ func _on_image_request_completed(result, response_code, headers, body: PackedByt
 
 			if not file_extension.is_empty():
 				var url_hash = image_url.md5_text()
-				var cache_filepath = IMAGE_CACHE_DIR.path_join(url_hash + file_extension)
+				var cache_filepath = _get_image_cache_filepath(image_url, file_extension)
+				if not cache_filepath.is_empty():
+					var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
 				var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
 				var open_error = FileAccess.get_open_error()
 				if open_error == OK:
@@ -479,8 +502,8 @@ func get_cached_image_path(image_url: String) -> String:
 		return ""
 
 	var url_hash = image_url.md5_text()
-	var path_png = IMAGE_CACHE_DIR.path_join(url_hash + ".png")
-	var path_webp = IMAGE_CACHE_DIR.path_join(url_hash + ".webp")
+	var path_png = _get_image_cache_filepath(image_url, ".png")
+	var path_webp = _get_image_cache_filepath(image_url, ".webp")
 
 	if FileAccess.file_exists(path_png):
 		return path_png
