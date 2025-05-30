@@ -63,6 +63,7 @@ func load_trending_products_in_view():
 			main_node._load_product_list("https://flathub.org/api/v2/collection/trending?page=1&per_page=10&locale=en", trending_product_list)
 
 func update_internal_list_install_status(installed_ids: Dictionary):
+	print("INFO: Update installed state in home view lists...")
 	if is_instance_valid(popular_product_list):
 		popular_product_list.update_installed_status(installed_ids)
 	if is_instance_valid(trending_product_list):
@@ -104,3 +105,8 @@ func on_view_entered():
 # Placeholder for any specific logic this view might need when it's about to be hidden
 func on_view_exiting():
 	print("HomeView exiting")
+	
+func scroll_to_top():
+	if is_instance_valid(content_scroll_container):
+		content_scroll_container.scroll_vertical = 0
+		print("HomeView: Scrolled to top.")	

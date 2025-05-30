@@ -470,6 +470,12 @@ func _finish_task(op_id: String, exit_code: int, cancelled: bool = false, error_
 		print("INFO DownloadManager: Removing log file: ", task.output_file)
 		da.remove(task.output_file.get_file())
 
+		var main_node = get_node_or_null("/root/App")
+		if is_instance_valid(main_node) and main_node.has_method("refresh_installed_apps_list"):
+			main_node.refresh_installed_apps_list()
+		else:
+			printerr("DownloadManager: Could not call refresh_installed_apps_list on Main node.")
+
 	# Aufräumen und nächsten Task starten, falls vorhanden
 	if was_current:
 		current_op_id = ""

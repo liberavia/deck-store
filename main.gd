@@ -19,6 +19,16 @@ var _flatpak_list_output: String = ""
 var _flatpak_thread: Thread = null
 var _last_focused_product_box: Control = null
 var _current_home_view_instance: Control = null
+var _sections: Array[Dictionary] = [
+	{"name": "Home", "scene_path": "res://sections/home_view.tscn", "button_node_name": "ButtonHome", "instance": null},
+	{"name": "Categories", "scene_path": "res://sections/categories_view.tscn", "button_node_name": "ButtonCategories", "instance": null},
+	{"name": "Installed", "scene_path": "res://sections/installed_view.tscn", "button_node_name": "ButtonInstalled", "instance": null},
+	{"name": "Updates", "scene_path": "res://sections/updates_view.tscn", "button_node_name": "ButtonUpdates", "instance": null},
+	{"name": "Extensions", "scene_path": "res://sections/extensions_view.tscn", "button_node_name": "ButtonExtensions", "instance": null},
+	{"name": "Search", "scene_path": "res://sections/search_view.tscn", "button_node_name": "ButtonSearch", "instance": null}
+]
+var _current_section_index: int = 0
+var _is_switching_section: bool = false # To prevent multiple switches at once
 
 # --- Cache-Constants ---
 const DECKSTORE_BASE_DIR_NAME = ".deck-store"
@@ -66,38 +76,40 @@ func _ready():
 	if err_img_cache != OK and err_img_cache != ERR_ALREADY_EXISTS:
 		printerr("ERROR: Could not create image cache directory: ", _image_cache_abs_path, ", Code: ", err_img_cache)
 			
-	var home_view_scene = preload("res://sections/home_view.tscn")
-	if home_view_scene:
-		_current_home_view_instance = home_view_scene.instantiate()
-		if _current_home_view_instance.has_method("set_product_box_scene_path") or "product_box_scene" in _current_home_view_instance:
-			_current_home_view_instance.product_box_scene = product_box
-		else:
-			printerr("main.gd ERROR: HomeView instance does not have 'product_box_scene' export var.")
-
-		if _current_home_view_instance.has_signal("move_to_details_view_requested"):
-			_current_home_view_instance.move_to_details_view_requested.connect(_on_move_to_details_view)
-		if _current_home_view_instance.has_signal("image_load_requested"):
-			_current_home_view_instance.image_load_requested.connect(_on_product_list_image_load_requested) # Dein Handler bleibt gleich
-		if _current_home_view_instance.has_signal("focus_exited_up_from_lists"):
-			_current_home_view_instance.focus_exited_up_from_lists.connect(_on_product_list_focus_exited_up)
-		if _current_home_view_instance.has_signal("load_new_page_requested"):
-			_current_home_view_instance.load_new_page_requested.connect(_load_product_list) # Dein Handler bleibt gleich
-
-		section_view_container.add_child(_current_home_view_instance)
-		_current_home_view_instance.visible = true 
-		
-		# Optional: Rufe eine Methode in HomeView auf, um initiale Daten zu laden,
-		# oder die load_popular/trending_products Funktionen unten rufen Methoden in HomeView auf.
-		# Für den Moment lassen wir die load_... Funktionen unten die Logik steuern.
-	else:
-		printerr("ERROR: HomeView.tscn could not be preloaded!")
-
 	home_button.focus_mode = Control.FOCUS_ALL
 	for btn in top_button_bar.get_children():
 		if btn is Button: btn.focus_mode = Control.FOCUS_ALL
 
-	home_button.pressed.connect(load_popular_products)
-	home_button.pressed.connect(load_trending_products)
+	# Lade und instanziiere ALLE Sektions-Szenen beim Start
+	for i in range(_sections.size()):
+		var section_data = _sections[i]
+		var scene = load(section_data.scene_path) as PackedScene
+		if scene:
+			var instance = scene.instantiate()
+			_sections[i].instance = instance # Speichere die Instanz im Array
+			
+			# Übergib product_box, falls es die HomeView ist
+			if section_data.name == "Home" and "product_box_scene" in instance:
+				instance.product_box_scene = product_box
+				# Verbinde die Signale von der HomeView-Instanz
+				_connect_home_view_signals(instance)
+			
+			instance.visible = (i == 0) # Mache nur die erste Sektion (Home) sichtbar
+			section_view_container.add_child(instance)
+		else:
+			printerr("ERROR: Could not load scene for section: ", section_data.name)
+
+	for i in range(_sections.size()):
+		var section_data = _sections[i]
+		var button_node = top_button_bar.get_node_or_null(section_data.button_node_name) as Button
+		if is_instance_valid(button_node):
+			button_node.pressed.connect(_on_top_bar_button_pressed.bind(i))
+		else:
+			printerr("ERROR: Button node not found for section: ", section_data.name)
+
+	load_popular_products()
+	load_trending_products()
+	
 	Input.joy_connection_changed.connect(_on_joy_connection_changed) # Beibehalten
 
 	details_view.move_back_to_main_view.connect(_on_move_back_to_main_view)
@@ -105,8 +117,7 @@ func _ready():
 
 	_check_connected_controllers() 
 	print("-----------------------------------------")
-	load_popular_products()
-	load_trending_products()
+	_switch_to_section(0)
 	_fetch_installed_apps()
 	
 # =============================================================================
@@ -134,12 +145,21 @@ func _unhandled_input(event: InputEvent):
 # HELPER FUNCTIONS
 # =============================================================================
 func load_popular_products():
-	if is_instance_valid(_current_home_view_instance) and _current_home_view_instance.has_method("load_popular_products_in_view"):
-		_current_home_view_instance.load_popular_products_in_view()
+	# Get the instance of the home view from our sections array
+	var home_view_node = _sections[0].instance # Index 0 is "Home"
+	if is_instance_valid(home_view_node) and home_view_node.has_node("ContentScrollContainer/VBoxContainer/PopularProductList"):
+		var popular_list = home_view_node.get_node("ContentScrollContainer/VBoxContainer/PopularProductList")
+		_load_product_list("https://flathub.org/api/v2/collection/popular?page=1&per_page=10&locale=en", popular_list)
+	else:
+		printerr("ERROR: Could not find PopularProductList in HomeView instance.")
 
 func load_trending_products():
-	if is_instance_valid(_current_home_view_instance) and _current_home_view_instance.has_method("load_trending_products_in_view"):
-		_current_home_view_instance.load_trending_products_in_view()
+	var home_view_node = _sections[0].instance
+	if is_instance_valid(home_view_node) and home_view_node.has_node("ContentScrollContainer/VBoxContainer/TrendingProductList"):
+		var trending_list = home_view_node.get_node("ContentScrollContainer/VBoxContainer/TrendingProductList")
+		_load_product_list("https://flathub.org/api/v2/collection/trending?page=1&per_page=10&locale=en", trending_list)
+	else:
+		printerr("ERROR: Could not find TrendingProductList in HomeView instance.")
 
 func get_image_cache_dir():
 	return _image_cache_abs_path
@@ -241,14 +261,36 @@ func _on_product_list_focus_exited_up():
 		print("Main: Received focus_exited_up, focusing Home button.") # Debug
 		home_button.grab_focus()
 
-		if is_instance_valid(global_scroll_container):
-			global_scroll_container.scroll_vertical = 0
-			print("Main: Reset global scroll position to top.") # Debug
+		if is_instance_valid(_current_home_view_instance) and \
+			_current_home_view_instance.name == "HomeView" and \
+			_current_home_view_instance.has_method("scroll_to_top"):
+			
+			_current_home_view_instance.scroll_to_top()
 		else:
-			printerr("Main: GlobalScrollContainer nicht gefunden zum Zurücksetzen!")
-
+			# Fallback, falls der global_scroll_container noch relevant ist oder als Notlösung
+			if is_instance_valid(global_scroll_container): # global_scroll_container ist der alte in main.tscn
+				global_scroll_container.scroll_vertical = 0
+				print("Main: Reset global scroll position to top (fallback).") 
+			
 func _on_move_to_details_view(app_id: String, installed: bool):
 	var focused_control = get_viewport().gui_get_focus_owner()
+	if is_instance_valid(focused_control) and is_instance_valid(_sections[_current_section_index].instance) and \
+		_sections[_current_section_index].instance.is_ancestor_of(focused_control):
+		# Try to get the ProductBox itself if focused_control is a child
+		var product_box_candidate = focused_control
+		while is_instance_valid(product_box_candidate) and not product_box_candidate is ProductBox and is_instance_valid(product_box_candidate.get_parent()):
+			product_box_candidate = product_box_candidate.get_parent()
+
+			if is_instance_valid(product_box_candidate) and product_box_candidate is ProductBox:
+				_last_focused_product_box = product_box_candidate
+				print("INFO Main: Stored last focused product box: ", _last_focused_product_box.name if _last_focused_product_box else "null")
+			else:
+				_last_focused_product_box = null # Fallback if we couldn't find the ProductBox
+				print("WARN Main: Could not determine ProductBox from focused element.")
+	else:
+		_last_focused_product_box = null
+		print("INFO Main: Focus was not on a product box when moving to details.")
+		
 	# Check if the focused control is within the currently active section view
 	if is_instance_valid(focused_control) and is_instance_valid(_current_home_view_instance) and \
 	   _current_home_view_instance.is_ancestor_of(focused_control):
@@ -278,16 +320,18 @@ func _on_move_back_to_main_view():
 	await tween.finished
 	details_view.clear_data()
 	
-	if is_instance_valid(_last_focused_product_box):
+	if is_instance_valid(_last_focused_product_box) and _last_focused_product_box.is_inside_tree():
 		_last_focused_product_box.grab_focus()
-		_last_focused_product_box = null
+		print("INFO Main: Restored focus to: ", _last_focused_product_box.name)
 	else:
-		# Delegate focus back to the home view instance
-		if is_instance_valid(_current_home_view_instance) and _current_home_view_instance.has_method("focus_first_product_in_popular_list"):
-			_current_home_view_instance.focus_first_product_in_popular_list()
-		elif is_instance_valid(home_button): 
+		print("INFO Main: _last_focused_product_box is invalid or not in tree. Focusing default.")
+		if is_instance_valid(_sections[_current_section_index].instance) and \
+			_sections[_current_section_index].instance.has_method("focus_first_product_in_popular_list"): # Or a more generic "focus_default_element"
+			_sections[_current_section_index].instance.focus_first_product_in_popular_list()
+		elif is_instance_valid(home_button):
 			home_button.grab_focus()
-			
+	_last_focused_product_box = null 
+
 # =============================================================================
 # PRODUCT LOADING & CALLBACKS 
 # =============================================================================
@@ -538,6 +582,79 @@ func _process_flatpak_result(output: String, exit_code: int):
 	_flatpak_thread = null
 
 func _update_all_lists_install_status():
-	print("INFO: Update installed state in lists...")
-	if is_instance_valid(_current_home_view_instance) and _current_home_view_instance.has_method("update_internal_list_install_status"):
-		_current_home_view_instance.update_internal_list_install_status(_installed_flatpak_ids)
+	print("INFO Main: Updating install status in current section...")
+	if _current_section_index >= 0 and _current_section_index < _sections.size():
+		var current_section_node = _sections[_current_section_index].instance
+		if is_instance_valid(current_section_node) and current_section_node.has_method("update_internal_list_install_status"):
+			# The current section's script (e.g., home_view.gd, categories_view.gd)
+			# must implement update_internal_list_install_status(installed_ids_dict)
+			current_section_node.update_internal_list_install_status(_installed_flatpak_ids)
+			print("INFO Main: Called update_internal_list_install_status on: ", current_section_node.name)
+		elif is_instance_valid(current_section_node):
+			print("DEBUG Main: Current section '", current_section_node.name, "' does not have 'update_internal_list_install_status' method.")
+		else:
+			print("DEBUG Main: Current section instance is invalid.")
+	else:
+		print("DEBUG Main: No valid current section index to update install status for.")
+# Switches to the section at the given index by toggling visibility
+func _switch_to_section(target_index: int):
+	if target_index == _current_section_index or target_index < 0 or target_index >= _sections.size():
+		return # Do nothing if already on the same section or index is invalid
+
+	# Call the exiting hook for the old section
+	var old_section_instance = _sections[_current_section_index].instance
+	if is_instance_valid(old_section_instance) and old_section_instance.has_method("on_view_exiting"):
+		old_section_instance.on_view_exiting()
+	
+	# Hide all section instances
+	for section_data in _sections:
+		if is_instance_valid(section_data.instance):
+			section_data.instance.visible = false
+
+	# Show the new section instance
+	var new_section_instance = _sections[target_index].instance
+	if is_instance_valid(new_section_instance):
+		new_section_instance.visible = true
+		if new_section_instance.has_method("on_view_entered"):
+			new_section_instance.on_view_entered()
+	
+	_current_section_index = target_index
+	_update_top_bar_button_focus()
+
+# Called when a button in the top bar is pressed
+func _on_top_bar_button_pressed(target_index: int):
+	if is_instance_valid(select_sound):
+		select_sound.play()
+	_switch_to_section(target_index)
+
+# Helper to connect signals for HomeView
+func _connect_home_view_signals(home_view_node: Control):
+	if not is_instance_valid(home_view_node): return
+
+	if home_view_node.has_signal("move_to_details_view_requested"):
+		home_view_node.move_to_details_view_requested.connect(_on_move_to_details_view)
+	if home_view_node.has_signal("image_load_requested"):
+		home_view_node.image_load_requested.connect(_on_product_list_image_load_requested)
+	if home_view_node.has_signal("focus_exited_up_from_lists"):
+		home_view_node.focus_exited_up_from_lists.connect(_on_product_list_focus_exited_up)
+	if home_view_node.has_signal("load_new_page_requested"):
+		home_view_node.load_new_page_requested.connect(_load_product_list)
+
+# Helper to update focus on top bar buttons
+func _update_top_bar_button_focus():
+	for i in range(_sections.size()):
+		var button_name = _sections[i].button_node_name
+		var button_node = top_button_bar.get_node_or_null(button_name) as Button
+		if is_instance_valid(button_node):
+			if i == _current_section_index:
+				# Optional: Add a visual style for the active button
+				# button_node.set_pressed_no_signal(true) # Or a custom style
+				if get_viewport().gui_get_focus_owner() == null or not top_button_bar.is_ancestor_of(get_viewport().gui_get_focus_owner()):
+					button_node.grab_focus() # Grab focus if focus is not already in top bar
+			else:
+				pass
+				# button_node.set_pressed_no_signal(false) # Reset style for inactive buttons
+
+func refresh_installed_apps_list():
+	print("INFO Main: Refreshing installed apps list due to recent install/uninstall.")
+	_fetch_installed_apps()
