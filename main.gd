@@ -5,11 +5,11 @@ extends Control
 
 @onready var details_view: Control = $DetailsView
 @onready var main_view: VBoxContainer = $CanvasLayer/VBoxContainer
-@onready var popular_product_list: ProductList = $CanvasLayer/VBoxContainer/ContentScrollContainer/VBoxContainer/PopularProductList
-@onready var trending_product_list: ProductList = $CanvasLayer/VBoxContainer/ContentScrollContainer/VBoxContainer/TrendingProductList
 
-@onready var home_button: Button = $CanvasLayer/VBoxContainer/HBoxContainer/ButtonHome
-@onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/HBoxContainer
+@onready var section_view_container: Control = $CanvasLayer/VBoxContainer/SectionViewContainer
+
+@onready var home_button: Button = $CanvasLayer/VBoxContainer/TopButtonBar/ButtonHome
+@onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/TopButtonBar
 @onready var global_scroll_container: ScrollContainer = $CanvasLayer/VBoxContainer/ContentScrollContainer
 @onready var select_sound: AudioStreamPlayer = $SelectSoundPlayer
 @onready var back_sound: AudioStreamPlayer = $BackSoundPlayer
@@ -18,6 +18,7 @@ var _installed_flatpak_ids: Dictionary = {}
 var _flatpak_list_output: String = ""
 var _flatpak_thread: Thread = null
 var _last_focused_product_box: Control = null
+var _current_home_view_instance: Control = null
 
 # --- Cache-Constants ---
 const DECKSTORE_BASE_DIR_NAME = ".deck-store"
@@ -65,10 +66,31 @@ func _ready():
 	if err_img_cache != OK and err_img_cache != ERR_ALREADY_EXISTS:
 		printerr("ERROR: Could not create image cache directory: ", _image_cache_abs_path, ", Code: ", err_img_cache)
 			
-	if not popular_product_list.product_box_scene:
-		popular_product_list.product_box_scene = product_box
-	if not trending_product_list.product_box_scene:
-		trending_product_list.product_box_scene = product_box
+	var home_view_scene = preload("res://sections/home_view.tscn")
+	if home_view_scene:
+		_current_home_view_instance = home_view_scene.instantiate()
+		if _current_home_view_instance.has_method("set_product_box_scene_path") or "product_box_scene" in _current_home_view_instance:
+			_current_home_view_instance.product_box_scene = product_box
+		else:
+			printerr("main.gd ERROR: HomeView instance does not have 'product_box_scene' export var.")
+
+		if _current_home_view_instance.has_signal("move_to_details_view_requested"):
+			_current_home_view_instance.move_to_details_view_requested.connect(_on_move_to_details_view)
+		if _current_home_view_instance.has_signal("image_load_requested"):
+			_current_home_view_instance.image_load_requested.connect(_on_product_list_image_load_requested) # Dein Handler bleibt gleich
+		if _current_home_view_instance.has_signal("focus_exited_up_from_lists"):
+			_current_home_view_instance.focus_exited_up_from_lists.connect(_on_product_list_focus_exited_up)
+		if _current_home_view_instance.has_signal("load_new_page_requested"):
+			_current_home_view_instance.load_new_page_requested.connect(_load_product_list) # Dein Handler bleibt gleich
+
+		section_view_container.add_child(_current_home_view_instance)
+		_current_home_view_instance.visible = true 
+		
+		# Optional: Rufe eine Methode in HomeView auf, um initiale Daten zu laden,
+		# oder die load_popular/trending_products Funktionen unten rufen Methoden in HomeView auf.
+		# Für den Moment lassen wir die load_... Funktionen unten die Logik steuern.
+	else:
+		printerr("ERROR: HomeView.tscn could not be preloaded!")
 
 	home_button.focus_mode = Control.FOCUS_ALL
 	for btn in top_button_bar.get_children():
@@ -80,14 +102,6 @@ func _ready():
 
 	details_view.move_back_to_main_view.connect(_on_move_back_to_main_view)
 	details_view.image_load_requested.connect(_on_product_list_image_load_requested)
-	popular_product_list.move_to_details_view.connect(_on_move_to_details_view)
-	trending_product_list.move_to_details_view.connect(_on_move_to_details_view)
-	popular_product_list.image_load_requested.connect(_on_product_list_image_load_requested)
-	popular_product_list.focus_exited_up.connect(_on_product_list_focus_exited_up)
-	popular_product_list.load_new_page.connect(_load_product_list)
-	trending_product_list.image_load_requested.connect(_on_product_list_image_load_requested)
-	trending_product_list.focus_exited_up.connect(_on_product_list_focus_exited_up)
-	trending_product_list.load_new_page.connect(_load_product_list)
 
 	_check_connected_controllers() 
 	print("-----------------------------------------")
@@ -110,7 +124,8 @@ func _unhandled_input(event: InputEvent):
 		elif event.is_action_pressed("ui_right"): action_string = "ui_right" # Für Navigation innerhalb der Buttons
 
 		if action_string == "ui_down":
-			popular_product_list.focus_first_product()
+			if is_instance_valid(_current_home_view_instance) and _current_home_view_instance.has_method("focus_first_product_in_popular_list"):
+				_current_home_view_instance.focus_first_product_in_popular_list()
 			get_viewport().set_input_as_handled()
 		elif action_string == "ui_left" or action_string == "ui_right":
 			pass
@@ -118,6 +133,14 @@ func _unhandled_input(event: InputEvent):
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+func load_popular_products():
+	if is_instance_valid(_current_home_view_instance) and _current_home_view_instance.has_method("load_popular_products_in_view"):
+		_current_home_view_instance.load_popular_products_in_view()
+
+func load_trending_products():
+	if is_instance_valid(_current_home_view_instance) and _current_home_view_instance.has_method("load_trending_products_in_view"):
+		_current_home_view_instance.load_trending_products_in_view()
+
 func get_image_cache_dir():
 	return _image_cache_abs_path
 
@@ -226,10 +249,10 @@ func _on_product_list_focus_exited_up():
 
 func _on_move_to_details_view(app_id: String, installed: bool):
 	var focused_control = get_viewport().gui_get_focus_owner()
-	if is_instance_valid(focused_control) and \
-	   (popular_product_list.is_ancestor_of(focused_control) or \
-		trending_product_list.is_ancestor_of(focused_control)):
-			_last_focused_product_box = focused_control
+	# Check if the focused control is within the currently active section view
+	if is_instance_valid(focused_control) and is_instance_valid(_current_home_view_instance) and \
+	   _current_home_view_instance.is_ancestor_of(focused_control):
+		_last_focused_product_box = focused_control
 	else:
 		_last_focused_product_box = null
 			
@@ -259,9 +282,12 @@ func _on_move_back_to_main_view():
 		_last_focused_product_box.grab_focus()
 		_last_focused_product_box = null
 	else:
-		if is_instance_valid(popular_product_list):
-			popular_product_list.focus_first_product()
-	
+		# Delegate focus back to the home view instance
+		if is_instance_valid(_current_home_view_instance) and _current_home_view_instance.has_method("focus_first_product_in_popular_list"):
+			_current_home_view_instance.focus_first_product_in_popular_list()
+		elif is_instance_valid(home_button): 
+			home_button.grab_focus()
+			
 # =============================================================================
 # PRODUCT LOADING & CALLBACKS 
 # =============================================================================
@@ -318,25 +344,6 @@ func _on_image_request_completed(result, response_code, headers, body: PackedByt
 	if is_instance_valid(http_request_node):
 		http_request_node.queue_free()
 				
-func process_home_popular_products_result(result, response_code, headers, body, http_request_list: HTTPRequest):
-	if response_code == 200:
-		var response_string = body.get_string_from_utf8(); var json = JSON.parse_string(response_string)
-		if json is Dictionary and json.has('hits') and json['hits'] is Array:
-			if is_instance_valid(popular_product_list):
-				popular_product_list.set_products(json['hits'])
-			else:
-				printerr("PopularProductList is invalid!")
-	if is_instance_valid(http_request_list): http_request_list.queue_free()
-
-func process_home_trending_products_result(result, response_code, headers, body, http_request_list: HTTPRequest):
-	if response_code == 200:
-		var response_string = body.get_string_from_utf8(); var json = JSON.parse_string(response_string)
-		if json is Dictionary and json.has('hits') and json['hits'] is Array:
-			if is_instance_valid(popular_product_list):
-				trending_product_list.set_products(json['hits'])
-			else:
-				printerr("TrendingProductList is invalid!")
-	if is_instance_valid(http_request_list): http_request_list.queue_free()
 
 # =============================================================================
 # DATA LOADING (Mit File Cache Logik)
@@ -385,8 +392,8 @@ func _load_product_list(url: String, target_list: ProductList):
 	var http_request = HTTPRequest.new()
 	add_child(http_request)
 	http_request.request_completed.connect(
-		_on_product_list_request_completed.bind(http_request, url, target_list) # URL und Ziel binden
-	)
+		_on_product_list_request_completed.bind(http_request, url, target_list)
+	)	
 	var error = http_request.request(url)
 	if error != OK:
 		printerr("Error starting request for '%s' (%s): %s" % [target_list.title, url, error])
@@ -437,12 +444,6 @@ func _process_product_list_data(json_data, target_list: ProductList, url: String
 		target_list.set_pagination_data(int(json_data['hitsPerPage']), int(json_data['page']), int(json_data['totalPages']))
 		print("Productlist '%s' updated." % target_list.title)
 	else: printerr("Unexpected data structure for list '%s'." % target_list.title)
-
-func load_popular_products():
-	_load_product_list("https://flathub.org/api/v2/collection/popular?page=1&per_page=10&locale=en", popular_product_list)
-
-func load_trending_products():
-	_load_product_list("https://flathub.org/api/v2/collection/trending?page=1&per_page=10&locale=en", trending_product_list)
 
 # =============================================================================
 # JOY CONNECTION CALLBACKS
@@ -538,7 +539,5 @@ func _process_flatpak_result(output: String, exit_code: int):
 
 func _update_all_lists_install_status():
 	print("INFO: Update installed state in lists...")
-	if is_instance_valid(popular_product_list):
-		popular_product_list.update_installed_status(_installed_flatpak_ids)
-	if is_instance_valid(trending_product_list):
-		trending_product_list.update_installed_status(_installed_flatpak_ids)
+	if is_instance_valid(_current_home_view_instance) and _current_home_view_instance.has_method("update_internal_list_install_status"):
+		_current_home_view_instance.update_internal_list_install_status(_installed_flatpak_ids)
