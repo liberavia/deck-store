@@ -510,7 +510,7 @@ func _on_joy_connection_changed(device_id: int, connected: bool):
 # =============================================================================
 
 func _fetch_installed_apps():
-	if _flatpak_thread != null and _flatpak_thread.is_started() and not _flatpak_thread.is_finished():
+	if _flatpak_thread != null and _flatpak_thread.is_alive():
 		return
 
 	print("INFO: Start Thread for fetching installed flatpaks...")
