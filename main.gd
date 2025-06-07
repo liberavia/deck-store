@@ -272,43 +272,62 @@ func _on_product_list_focus_exited_up():
 				global_scroll_container.scroll_vertical = 0
 				print("Main: Reset global scroll position to top (fallback).") 
 			
+# In main.gd
+
 func _on_move_to_details_view(app_id: String, installed: bool):
 	var focused_control = get_viewport().gui_get_focus_owner()
-	if is_instance_valid(focused_control) and is_instance_valid(_sections[_current_section_index].instance) and \
-		_sections[_current_section_index].instance.is_ancestor_of(focused_control):
-		# Try to get the ProductBox itself if focused_control is a child
-		var product_box_candidate = focused_control
-		while is_instance_valid(product_box_candidate) and not product_box_candidate is ProductBox and is_instance_valid(product_box_candidate.get_parent()):
-			product_box_candidate = product_box_candidate.get_parent()
+	_last_focused_product_box = null # Reset before attempting to set
 
-			if is_instance_valid(product_box_candidate) and product_box_candidate is ProductBox:
-				_last_focused_product_box = product_box_candidate
-				print("INFO Main: Stored last focused product box: ", _last_focused_product_box.name if _last_focused_product_box else "null")
-			else:
-				_last_focused_product_box = null # Fallback if we couldn't find the ProductBox
-				print("WARN Main: Could not determine ProductBox from focused element.")
-	else:
-		_last_focused_product_box = null
-		print("INFO Main: Focus was not on a product box when moving to details.")
-		
-	# Check if the focused control is within the currently active section view
-	if is_instance_valid(focused_control) and is_instance_valid(_current_home_view_instance) and \
-	   _current_home_view_instance.is_ancestor_of(focused_control):
-		_last_focused_product_box = focused_control
-	else:
-		_last_focused_product_box = null
-			
+	if is_instance_valid(focused_control):
+		var current_section_node = _sections[_current_section_index].instance
+		if is_instance_valid(current_section_node) and current_section_node.is_ancestor_of(focused_control):
+			var candidate = focused_control
+			# Traverse up the scene tree from the focused_control
+			# until we either find a node of type ProductBox
+			# or we reach the current_section_node itself (meaning focused_control was not inside a ProductBox)
+			# or we have no parent left within the section.
+			while is_instance_valid(candidate):
+				if candidate is ProductBox: # This requires 'class_name ProductBox' in your product_box.gd
+					_last_focused_product_box = candidate
+					print("INFO Main: Stored last focused ProductBox: ", candidate.name if "name" in candidate else "Unnamed ProductBox")
+					break # Found it!
+				
+				# Stop if the parent is the section container itself or if there's no parent
+				var parent = candidate.get_parent()
+				if not is_instance_valid(parent) or parent == current_section_node:
+					# If we reached here, focused_control was not inside a ProductBox,
+					# or ProductBox itself was focused (and the 'is ProductBox' check above caught it).
+					# If the originally focused control is what we want to re-focus and it's not a ProductBox,
+					# we could store 'focused_control' directly, but it's usually better to focus its ProductBox container.
+					if _last_focused_product_box == null: # Only if we haven't found a ProductBox yet
+						print("WARN Main: Focused control was not a ProductBox or child of one. Storing direct focused_control for fallback: ", focused_control)
+						_last_focused_product_box = focused_control # Fallback to the actual focused item
+					break 
+				candidate = parent
+	
+	if not is_instance_valid(_last_focused_product_box):
+		print("INFO Main: Could not determine a specific control to re-focus within the current section.")
+
+	# The rest of your function to switch to details_view
 	details_view.set_initial_state(app_id, installed)
 	details_view.load_details()
-	select_sound.play()
+	if is_instance_valid(select_sound): select_sound.play() # Check if sound player is valid
+	
+	# --- Transition Logic (simplified for now, focus on the problem) ---
+	# Your tweening logic for main_view and details_view
 	var tween = create_tween()
 	var main_view_height = main_view.size.y
-	var target_y = main_view_height
-	tween.tween_property(main_view, "position:y", target_y, transition_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	# var target_y = main_view_height # This moves main_view down, was it intended to move up?
+	var target_y_main_out = -main_view_height # Example: move main_view up and out
+	
+	tween.tween_property(main_view, "position:y", target_y_main_out, transition_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	await tween.finished
+	main_view.visible = false # Hide after animation
+
+	details_view.position.y = 0 # Ensure details_view is at its correct position
 	details_view.visible = true
 	details_view.set_initial_focus()
-	
+		
 func _on_move_back_to_main_view():
 	back_sound.play()
 	var tween = create_tween()
@@ -322,16 +341,15 @@ func _on_move_back_to_main_view():
 	
 	if is_instance_valid(_last_focused_product_box) and _last_focused_product_box.is_inside_tree():
 		_last_focused_product_box.grab_focus()
-		print("INFO Main: Restored focus to: ", _last_focused_product_box.name)
+		print("INFO Main: Restored focus to: ", _last_focused_product_box.name if _last_focused_product_box and "name" in _last_focused_product_box else "unnamed or null")
 	else:
 		print("INFO Main: _last_focused_product_box is invalid or not in tree. Focusing default.")
-		if is_instance_valid(_sections[_current_section_index].instance) and \
-			_sections[_current_section_index].instance.has_method("focus_first_product_in_popular_list"): # Or a more generic "focus_default_element"
-			_sections[_current_section_index].instance.focus_first_product_in_popular_list()
-		elif is_instance_valid(home_button):
+		var current_section_instance = _sections[_current_section_index].instance
+		if is_instance_valid(current_section_instance) and current_section_instance.has_method("focus_default_element"):
+			current_section_instance.focus_default_element()
+		elif is_instance_valid(home_button): # Absolute fallback
 			home_button.grab_focus()
 	_last_focused_product_box = null 
-
 # =============================================================================
 # PRODUCT LOADING & CALLBACKS 
 # =============================================================================
@@ -518,7 +536,7 @@ func _fetch_installed_apps():
 	var callable = Callable(self, "_execute_flatpak_in_thread")
 	var err = _flatpak_thread.start(callable)
 	if err != OK:
-		printerr("FEHLER: Could not start flatpak thread! Code: ", err)
+		printerr("ERROR: Could not start flatpak thread! Code: ", err)
 		_flatpak_thread = null
 
 
