@@ -1,0 +1,38 @@
+[gd_scene load_steps=2 format=3 uid="uid://fe6lep5lsw1e"]
+
+[ext_resource type="Script" uid="uid://bffa0g6t007sf" path="res://extensions/extension_list_item.gd" id="1_6pa83"]
+
+[node name="ExtensionListItem" type="PanelContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_6pa83")
+
+[node name="ExtensionContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Control" type="Control" parent="ExtensionContainer"]
+custom_minimum_size = Vector2(128, 128)
+layout_mode = 2
+
+[node name="ExtensionIcon" type="TextureRect" parent="ExtensionContainer/Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ExtensionInfoContainer" type="VBoxContainer" parent="ExtensionContainer"]
+layout_mode = 2
+
+[node name="ExtensionName" type="Label" parent="ExtensionContainer/ExtensionInfoContainer"]
+layout_mode = 2
+
+[node name="ExtensionDescription" type="Label" parent="ExtensionContainer/ExtensionInfoContainer"]
+layout_mode = 2
+
+[node name="ExtensionStatus" type="Label" parent="ExtensionContainer/ExtensionInfoContainer"]
+layout_mode = 2

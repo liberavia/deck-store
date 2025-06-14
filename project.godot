@@ -21,6 +21,7 @@ DownloadManager="*res://scripts/DownloadManager.gd"
 SteamIntegration="*res://scripts/SteamIntegration.gd"
 GlobalBackgroundShader="*res://global_background_shader.tscn"
 OdrsRatingsCache="*res://scripts/OdrsRatingsCache.gd"
+ExtensionsManager="*res://scripts/ExtensionsManager.gd"
 
 [display]
 

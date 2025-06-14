@@ -1,8 +1,8 @@
 [
   {
 	"id": "steam_shortcut_manager_installer",
-	"name": "Steam Shortcut Manager Installation",
-	"description": "Installs or manages the Steam Shortcut Manager Flatpak application. This tool allows adding non-Steam games to your library with proper artwork.",
+	"name": "Steam Shortcut Manager",
+	"description": "Installs the Steam Shortcut Manager Flatpak application. This tool allows adding non-Steam games to your library with proper artwork.",
 	"version": "1.0.0",
 	"author": "Liberavia",
 	"script_name": "steam_shortcut_manager.sh",
