@@ -125,6 +125,25 @@ func _ready():
 # =============================================================================
 
 func _unhandled_input(event: InputEvent):
+	var new_section_index = _current_section_index
+	var switched = false
+	if event.is_action_pressed("section_next"): # R1 / RB
+		new_section_index += 1
+		if new_section_index >= _sections.size():
+			new_section_index = 0 # Wrap around to the start
+		switched = true
+		
+	elif event.is_action_pressed("section_previous"): # L1 / LB
+		new_section_index -= 1
+		if new_section_index < 0:
+			new_section_index = _sections.size() - 1 # Wrap around to the end
+		switched = true
+	
+	if switched:
+		_on_top_bar_button_pressed(new_section_index) # Call the same function as the button press
+		get_viewport().set_input_as_handled()
+		return # Stop further input processing for this event
+			
 	var focused_control = get_viewport().gui_get_focus_owner()
 	if not is_instance_valid(focused_control): return
 
@@ -615,30 +634,73 @@ func _update_all_lists_install_status():
 			print("DEBUG Main: Current section instance is invalid.")
 	else:
 		print("DEBUG Main: No valid current section index to update install status for.")
+
 # Switches to the section at the given index by toggling visibility
+# In main.gd
+
+# Switches to the section at the given index with a carousel animation
 func _switch_to_section(target_index: int):
-	if target_index == _current_section_index or target_index < 0 or target_index >= _sections.size():
-		return # Do nothing if already on the same section or index is invalid
+	if _is_switching_section: return
+	if target_index < 0 or target_index >= _sections.size(): return
+	if target_index == _current_section_index and is_instance_valid(_sections[target_index].instance): return
 
-	# Call the exiting hook for the old section
-	var old_section_instance = _sections[_current_section_index].instance
-	if is_instance_valid(old_section_instance) and old_section_instance.has_method("on_view_exiting"):
-		old_section_instance.on_view_exiting()
+	_is_switching_section = true
+
+	var old_section_index = _current_section_index
+	var old_section_instance = _sections[old_section_index].instance
 	
-	# Hide all section instances
-	for section_data in _sections:
-		if is_instance_valid(section_data.instance):
-			section_data.instance.visible = false
+	_current_section_index = target_index # Update the index immediately
+	
+	var new_section_instance = _sections[_current_section_index].instance
+	
+	# Determine animation direction
+	# Direction > 0 means the new section comes from the right (R1 pressed)
+	# Direction < 0 means the new section comes from the left (L1 pressed)
+	var direction = 1
+	if target_index < old_section_index:
+		# Handle wrap-around case for L1 (e.g., from Home to Search)
+		if not (target_index == 0 and old_section_index == _sections.size() - 1):
+			direction = -1
+	# Handle wrap-around case for R1 (e.g., from Search to Home)
+	if target_index == 0 and old_section_index == _sections.size() - 1:
+		direction = 1
+	
+	var container_width = section_view_container.size.x
 
-	# Show the new section instance
-	var new_section_instance = _sections[target_index].instance
+	# Prepare and show the new section off-screen
 	if is_instance_valid(new_section_instance):
+		new_section_instance.position.x = container_width * direction
 		new_section_instance.visible = true
 		if new_section_instance.has_method("on_view_entered"):
 			new_section_instance.on_view_entered()
+	else:
+		# Fallback if somehow the instance is invalid (should not happen with our _ready logic)
+		printerr("ERROR: New section instance is invalid for index ", _current_section_index)
+		_is_switching_section = false
+		return
+		
+	# Create and configure the tween for the animation
+	var tween = create_tween()
+	tween.set_parallel(true) # Animate old and new section at the same time
+	tween.set_trans(Tween.TRANS_SINE)
+	tween.set_ease(Tween.EASE_OUT)
+
+	# Animate the new section into view
+	tween.tween_property(new_section_instance, "position:x", 0, transition_time)
+
+	# Animate the old section out of view
+	if is_instance_valid(old_section_instance):
+		if old_section_instance.has_method("on_view_exiting"):
+			old_section_instance.on_view_exiting()
+		# Move it in the opposite direction
+		tween.tween_property(old_section_instance, "position:x", -container_width * direction, transition_time)
+		# Hide the old section after the animation completes
+		tween.chain().tween_callback(func(): old_section_instance.visible = false)
 	
-	_current_section_index = target_index
+	# Update the top bar focus and re-enable switching after animation
+	await tween.finished
 	_update_top_bar_button_focus()
+	_is_switching_section = false
 
 # Called when a button in the top bar is pressed
 func _on_top_bar_button_pressed(target_index: int):
@@ -659,21 +721,25 @@ func _connect_home_view_signals(home_view_node: Control):
 	if home_view_node.has_signal("load_new_page_requested"):
 		home_view_node.load_new_page_requested.connect(_load_product_list)
 
-# Helper to update focus on top bar buttons
+# Helper to update focus and style on top bar buttons
 func _update_top_bar_button_focus():
 	for i in range(_sections.size()):
-		var button_name = _sections[i].button_node_name
-		var button_node = top_button_bar.get_node_or_null(button_name) as Button
-		if is_instance_valid(button_node):
-			if i == _current_section_index:
-				# Optional: Add a visual style for the active button
-				# button_node.set_pressed_no_signal(true) # Or a custom style
-				if get_viewport().gui_get_focus_owner() == null or not top_button_bar.is_ancestor_of(get_viewport().gui_get_focus_owner()):
-					button_node.grab_focus() # Grab focus if focus is not already in top bar
-			else:
-				pass
-				# button_node.set_pressed_no_signal(false) # Reset style for inactive buttons
+		var section_data = _sections[i]
+		var button_node = top_button_bar.get_node_or_null(section_data.button_node_name) as Button
+		
+		if not is_instance_valid(button_node):
+			continue # Skip if button is not found
 
+		if i == _current_section_index:
+			# This is the active section's button
+			button_node.grab_focus()
+			# Optional: Visually mark the active button.
+			# Using 'pressed' state is a simple way to do this.
+			button_node.set_pressed_no_signal(true) 
+		else:
+			# This is an inactive section's button
+			button_node.set_pressed_no_signal(false) # Reset style for inactive buttons
+			
 func refresh_installed_apps_list():
 	print("INFO Main: Refreshing installed apps list due to recent install/uninstall.")
 	_fetch_installed_apps()
