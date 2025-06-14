@@ -336,6 +336,7 @@ func _on_move_back_to_main_view():
 	var target_y = 0
 	tween.tween_property(main_view, "position:y", target_y, transition_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	details_view.visible = false
+	main_view.visible = true
 	await tween.finished
 	details_view.clear_data()
 	
