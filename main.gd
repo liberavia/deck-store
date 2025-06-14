@@ -728,17 +728,13 @@ func _update_top_bar_button_focus():
 		var button_node = top_button_bar.get_node_or_null(section_data.button_node_name) as Button
 		
 		if not is_instance_valid(button_node):
-			continue # Skip if button is not found
+			continue
 
 		if i == _current_section_index:
-			# This is the active section's button
 			button_node.grab_focus()
-			# Optional: Visually mark the active button.
-			# Using 'pressed' state is a simple way to do this.
 			button_node.set_pressed_no_signal(true) 
 		else:
-			# This is an inactive section's button
-			button_node.set_pressed_no_signal(false) # Reset style for inactive buttons
+			button_node.set_pressed_no_signal(false)
 			
 func refresh_installed_apps_list():
 	print("INFO Main: Refreshing installed apps list due to recent install/uninstall.")
