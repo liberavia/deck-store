@@ -9,7 +9,7 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @export var reviews_popup_scene: PackedScene = preload("res://reviews_popup.tscn")
 
 @onready var app_icon: TextureRect = $MarginContainer/Panel/DetailsContents/DetailsNavbar/AppIcon
-@onready var app_title: RichTextLabel = $MarginContainer/Panel/DetailsContents/DetailsNavbar/AppTitle
+@onready var app_title: RichTextLabel = $MarginContainer/Panel/DetailsContents/DetailsNavbar/TitleGroup/AppTitle
 @onready var app_desc: RichTextLabel = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/DetailsDescriptionScroller/AppDescription
 @onready var screenshot_container: HBoxContainer = $MarginContainer/Panel/DetailsContents/ScreenshotClipContainer/ScrollContainer/ContainerScreenshots
 @onready var app_developer: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerDeveloper/Developer
@@ -25,7 +25,7 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @onready var rating_stars_display: RatingStarsDisplay = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars/RatingStarsDisplayNode
 @onready var show_reviews_button: Button = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/ShowReviews
 @onready var rating_label: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars/MarginContainer/RatingCountLabel
-@onready var verified_app: HBoxContainer = $MarginContainer/Panel/DetailsContents/DetailsNavbar/VerifiedContainer
+@onready var verified_app: HBoxContainer = $MarginContainer/Panel/DetailsContents/DetailsNavbar/TitleGroup/MarginContainer/VerifiedContainer
 
 # --- Internal State ---
 var current_app_id: String = ""
