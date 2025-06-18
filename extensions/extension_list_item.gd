@@ -1,10 +1,10 @@
 # extension_list_item.gd
 extends PanelContainer
 
-@onready var name_label: Label = $ExtensionContainer/ExtensionInfoContainer/ExtensionName
-@onready var description_label: Label = $ExtensionContainer/ExtensionInfoContainer/ExtensionDescription
-@onready var status_label: Label = $ExtensionContainer/ExtensionInfoContainer/ExtensionStatus
-@onready var icon_texture: TextureRect = $ExtensionContainer/Control/ExtensionIcon
+@onready var name_label: Label = $MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer/ExtensionName
+@onready var description_label: Label = $MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer/ExtensionDescription
+@onready var status_label: Label = $MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer/ExtensionStatus
+@onready var icon_texture: TextureRect = $MarginContainer/ExtensionContainer/Control/ExtensionIcon
 
 # --- Constants ---
 const EXTENSION_ICON_DIR = "res://extensions/icons/"

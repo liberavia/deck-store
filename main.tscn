@@ -1,12 +1,8 @@
-[gd_scene load_steps=14 format=3 uid="uid://bl8qcy5u1yua6"]
+[gd_scene load_steps=10 format=3 uid="uid://bl8qcy5u1yua6"]
 
 [ext_resource type="Script" uid="uid://rn4h4pbvc6e3" path="res://main.gd" id="1_0xm2m"]
-[ext_resource type="Script" uid="uid://bgg8x1gfr8iq3" path="res://button_home.gd" id="1_ig7tw"]
-[ext_resource type="Script" uid="uid://c2mu6vd55fxyi" path="res://button_categories.gd" id="3_7mycd"]
 [ext_resource type="AudioStream" uid="uid://r8t57ckbbncu" path="res://assets/change.mp3" id="3_h2yge"]
-[ext_resource type="Script" uid="uid://d2kbc3lqsoti4" path="res://button_installed.gd" id="4_272bh"]
-[ext_resource type="Script" uid="uid://xnm8r76xvk1v" path="res://button_updates.gd" id="6_efxa6"]
-[ext_resource type="Script" uid="uid://ojsrehda02tv" path="res://button_extensions.gd" id="7_dg77c"]
+[ext_resource type="AudioStream" uid="uid://cy40v7n0xwtdr" path="res://assets/zoom.mp3" id="7_272bh"]
 [ext_resource type="AudioStream" uid="uid://crqv67kcd0gii" path="res://assets/back.wav" id="9_4c57u"]
 [ext_resource type="AudioStream" uid="uid://bqyhdiitobub2" path="res://assets/menuback.wav" id="9_efxa6"]
 [ext_resource type="PackedScene" uid="uid://cauevp0c1nuys" path="res://details_view.tscn" id="9_kek77"]
@@ -70,7 +66,6 @@ layout_mode = 2
 theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 text = "Home"
-script = ExtResource("1_ig7tw")
 
 [node name="ButtonCategories" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
@@ -79,7 +74,6 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 text = "Categories
 "
-script = ExtResource("3_7mycd")
 
 [node name="ButtonInstalled" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
@@ -87,7 +81,6 @@ layout_mode = 2
 theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 text = "Installed"
-script = ExtResource("4_272bh")
 
 [node name="ButtonUpdates" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
@@ -95,7 +88,6 @@ layout_mode = 2
 theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 text = "Updates"
-script = ExtResource("6_efxa6")
 
 [node name="ButtonExtensions" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
@@ -103,10 +95,13 @@ layout_mode = 2
 theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 text = "Extensions"
-script = ExtResource("7_dg77c")
 
-[node name="ButtonSearch" type="TextureButton" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
+[node name="ButtonSearch" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
+custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
+theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
+theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
+text = "Search"
 
 [node name="SectionViewContainer" type="Control" parent="CanvasLayer/VBoxContainer"]
 layout_mode = 2
@@ -127,3 +122,6 @@ stream = ExtResource("10_4c57u")
 
 [node name="ZoomSoundPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("10_4c57u")
+
+[node name="SwitchSoundPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("7_272bh")

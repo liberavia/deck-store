@@ -10,14 +10,21 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_6pa83")
 
-[node name="ExtensionContainer" type="HBoxContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="ExtensionContainer" type="HBoxContainer" parent="MarginContainer"]
 layout_mode = 2
 
-[node name="Control" type="Control" parent="ExtensionContainer"]
+[node name="Control" type="Control" parent="MarginContainer/ExtensionContainer"]
 custom_minimum_size = Vector2(128, 128)
 layout_mode = 2
 
-[node name="ExtensionIcon" type="TextureRect" parent="ExtensionContainer/Control"]
+[node name="ExtensionIcon" type="TextureRect" parent="MarginContainer/ExtensionContainer/Control"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -25,14 +32,23 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ExtensionInfoContainer" type="VBoxContainer" parent="ExtensionContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/ExtensionContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="ExtensionInfoContainer" type="VBoxContainer" parent="MarginContainer/ExtensionContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="ExtensionName" type="Label" parent="MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer"]
 layout_mode = 2
 
-[node name="ExtensionName" type="Label" parent="ExtensionContainer/ExtensionInfoContainer"]
+[node name="ExtensionDescription" type="Label" parent="MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer"]
 layout_mode = 2
 
-[node name="ExtensionDescription" type="Label" parent="ExtensionContainer/ExtensionInfoContainer"]
-layout_mode = 2
-
-[node name="ExtensionStatus" type="Label" parent="ExtensionContainer/ExtensionInfoContainer"]
+[node name="ExtensionStatus" type="Label" parent="MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer"]
 layout_mode = 2

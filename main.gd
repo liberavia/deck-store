@@ -12,7 +12,9 @@ extends Control
 @onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/TopButtonBar
 @onready var global_scroll_container: ScrollContainer = $CanvasLayer/VBoxContainer/ContentScrollContainer
 @onready var select_sound: AudioStreamPlayer = $SelectSoundPlayer
+@onready var focus_sound: AudioStreamPlayer = $FocusSoundPlayer
 @onready var back_sound: AudioStreamPlayer = $BackSoundPlayer
+@onready var switch_sound: AudioStreamPlayer = $SwitchSoundPlayer
 
 var _installed_flatpak_ids: Dictionary = {}
 var _flatpak_list_output: String = ""
@@ -28,7 +30,8 @@ var _sections: Array[Dictionary] = [
 	{"name": "Search", "scene_path": "res://sections/search_view.tscn", "button_node_name": "ButtonSearch", "instance": null}
 ]
 var _current_section_index: int = 0
-var _is_switching_section: bool = false # To prevent multiple switches at once
+var _is_switching_section: bool = false
+var _suppress_focus_sound: bool = false
 
 # --- Cache-Constants ---
 const DECKSTORE_BASE_DIR_NAME = ".deck-store"
@@ -39,6 +42,7 @@ const CACHE_DURATION_SEC: int = 3600 # 1 hour
 const IMAGE_CACHE_DURATION_SEC: int = 7 * 24 * 60 * 60 # 1 week
 
 var transition_time := 0.5
+var transition_time_section_change := 0.2
 
 # Absolute paths, will be initialized in _ready()
 var _deckstore_abs_base_path: String = ""
@@ -80,18 +84,15 @@ func _ready():
 	for btn in top_button_bar.get_children():
 		if btn is Button: btn.focus_mode = Control.FOCUS_ALL
 
-	# Lade und instanziiere ALLE Sektions-Szenen beim Start
 	for i in range(_sections.size()):
 		var section_data = _sections[i]
 		var scene = load(section_data.scene_path) as PackedScene
 		if scene:
 			var instance = scene.instantiate()
-			_sections[i].instance = instance # Speichere die Instanz im Array
+			_sections[i].instance = instance 
 			
-			# Übergib product_box, falls es die HomeView ist
 			if section_data.name == "Home" and "product_box_scene" in instance:
 				instance.product_box_scene = product_box
-				# Verbinde die Signale von der HomeView-Instanz
 				_connect_home_view_signals(instance)
 			
 			instance.visible = (i == 0) # Mache nur die erste Sektion (Home) sichtbar
@@ -107,6 +108,10 @@ func _ready():
 		else:
 			printerr("ERROR: Button node not found for section: ", section_data.name)
 
+	for btn_node in top_button_bar.get_children():
+		if btn_node is Button:
+			btn_node.focus_entered.connect(_on_top_bar_button_focus_entered)
+			
 	load_popular_products()
 	load_trending_products()
 	
@@ -118,6 +123,7 @@ func _ready():
 	_check_connected_controllers() 
 	print("-----------------------------------------")
 	_switch_to_section(0)
+	home_button.grab_focus()
 	_fetch_installed_apps()
 	
 # =============================================================================
@@ -140,9 +146,9 @@ func _unhandled_input(event: InputEvent):
 		switched = true
 	
 	if switched:
-		_on_top_bar_button_pressed(new_section_index) # Call the same function as the button press
+		_on_top_bar_button_pressed(new_section_index)
 		get_viewport().set_input_as_handled()
-		return # Stop further input processing for this event
+		return
 			
 	var focused_control = get_viewport().gui_get_focus_owner()
 	if not is_instance_valid(focused_control): return
@@ -163,6 +169,13 @@ func _unhandled_input(event: InputEvent):
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+func _on_top_bar_button_focus_entered():
+	if _suppress_focus_sound:
+		return
+
+	if is_instance_valid(focus_sound):
+		focus_sound.play()
+
 func load_popular_products():
 	# Get the instance of the home view from our sections array
 	var home_view_node = _sections[0].instance # Index 0 is "Home"
@@ -635,9 +648,6 @@ func _update_all_lists_install_status():
 	else:
 		print("DEBUG Main: No valid current section index to update install status for.")
 
-# Switches to the section at the given index by toggling visibility
-# In main.gd
-
 # Switches to the section at the given index with a carousel animation
 func _switch_to_section(target_index: int):
 	if _is_switching_section: return
@@ -649,21 +659,25 @@ func _switch_to_section(target_index: int):
 	var old_section_index = _current_section_index
 	var old_section_instance = _sections[old_section_index].instance
 	
-	_current_section_index = target_index # Update the index immediately
+	var new_section_instance = _sections[target_index].instance
 	
-	var new_section_instance = _sections[_current_section_index].instance
+	# --- START: Corrected Animation Direction Logic ---
+	var direction = 1 # Default: "next" animation (new view from the right)
 	
-	# Determine animation direction
-	# Direction > 0 means the new section comes from the right (R1 pressed)
-	# Direction < 0 means the new section comes from the left (L1 pressed)
-	var direction = 1
+	# Determine direction based on index change
 	if target_index < old_section_index:
-		# Handle wrap-around case for L1 (e.g., from Home to Search)
-		if not (target_index == 0 and old_section_index == _sections.size() - 1):
-			direction = -1
-	# Handle wrap-around case for R1 (e.g., from Search to Home)
-	if target_index == 0 and old_section_index == _sections.size() - 1:
+		# This is a normal "previous" press (e.g., from index 3 to 2)
+		direction = -1
+	
+	# Now, specifically handle the wrap-around cases to get the correct "feel"
+	if old_section_index == _sections.size() - 1 and target_index == 0:
+		# Case: Moving forward from the last section (e.g., Search) to the first (Home)
+		# This is a "next" action.
 		direction = 1
+	elif old_section_index == 0 and target_index == _sections.size() - 1:
+		# Case: Moving backward from the first section (Home) to the last (Search)
+		# This is a "previous" action.
+		direction = -1
 	
 	var container_width = section_view_container.size.x
 
@@ -674,38 +688,40 @@ func _switch_to_section(target_index: int):
 		if new_section_instance.has_method("on_view_entered"):
 			new_section_instance.on_view_entered()
 	else:
-		# Fallback if somehow the instance is invalid (should not happen with our _ready logic)
-		printerr("ERROR: New section instance is invalid for index ", _current_section_index)
+		printerr("ERROR: New section instance is invalid for index: ", target_index)
 		_is_switching_section = false
 		return
 		
 	# Create and configure the tween for the animation
 	var tween = create_tween()
-	tween.set_parallel(true) # Animate old and new section at the same time
+	tween.set_parallel(true)
 	tween.set_trans(Tween.TRANS_SINE)
 	tween.set_ease(Tween.EASE_OUT)
 
 	# Animate the new section into view
-	tween.tween_property(new_section_instance, "position:x", 0, transition_time)
+	tween.tween_property(new_section_instance, "position:x", 0, transition_time_section_change)
 
 	# Animate the old section out of view
 	if is_instance_valid(old_section_instance):
 		if old_section_instance.has_method("on_view_exiting"):
 			old_section_instance.on_view_exiting()
 		# Move it in the opposite direction
-		tween.tween_property(old_section_instance, "position:x", -container_width * direction, transition_time)
+		tween.tween_property(old_section_instance, "position:x", -container_width * direction, transition_time_section_change)
 		# Hide the old section after the animation completes
 		tween.chain().tween_callback(func(): old_section_instance.visible = false)
+	
+	# Update the current index *after* the direction has been calculated
+	_current_section_index = target_index
 	
 	# Update the top bar focus and re-enable switching after animation
 	await tween.finished
 	_update_top_bar_button_focus()
 	_is_switching_section = false
-
+	
 # Called when a button in the top bar is pressed
 func _on_top_bar_button_pressed(target_index: int):
-	if is_instance_valid(select_sound):
-		select_sound.play()
+	if is_instance_valid(switch_sound) and _is_switching_section == false:
+		switch_sound.play()
 	_switch_to_section(target_index)
 
 # Helper to connect signals for HomeView
@@ -724,15 +740,20 @@ func _connect_home_view_signals(home_view_node: Control):
 # Helper to update focus and style on top bar buttons
 func _update_top_bar_button_focus():
 	for i in range(_sections.size()):
-		var section_data = _sections[i]
-		var button_node = top_button_bar.get_node_or_null(section_data.button_node_name) as Button
-		
+		var button_name = _sections[i].button_node_name
+		var button_node = top_button_bar.get_node_or_null(button_name) as Button
+
 		if not is_instance_valid(button_node):
 			continue
 
 		if i == _current_section_index:
+			# Suppress the sound *before* grabbing focus
+			_suppress_focus_sound = true
 			button_node.grab_focus()
-			button_node.set_pressed_no_signal(true) 
+			button_node.set_pressed_no_signal(true)
+
+			await get_tree().process_frame
+			_suppress_focus_sound = false
 		else:
 			button_node.set_pressed_no_signal(false)
 			
