@@ -8,6 +8,7 @@ signal extension_update_available(extension_id, latest_version)
 
 const EXTENSIONS_JSON_PATH = "res://extensions/extensions.json"
 const EXTENSION_SCRIPTS_DIR = "res://extensions/scripts/"
+const TMP_LOG_FILE = "user://tmp_ext_log.txt"
 
 var _extensions_data: Array[Dictionary] = []
 var _extensions_status: Dictionary = {} # Stores the current installation status, e.g., {"steam_shortcut_manager_installer": true}
@@ -73,8 +74,25 @@ func _execute_operation_script_in_thread(extension_data: Dictionary, operation: 
 		return
 
 	var script_path = ProjectSettings.globalize_path(EXTENSION_SCRIPTS_DIR.path_join(script_name))
-	var output: PackedStringArray = []
-	var exit_code = OS.execute("sh", [script_path, operation], output, true, true)
+	var log_file_path = ProjectSettings.globalize_path(TMP_LOG_FILE)
+	
+	# Ensure log file is empty before execution
+	if FileAccess.file_exists(log_file_path):
+		DirAccess.remove_absolute(log_file_path)
+
+	var exit_code = OS.execute("sh", [script_path, operation, log_file_path], [], true, true)
+	
+	# Read and print log file
+	if FileAccess.file_exists(log_file_path):
+		var file = FileAccess.open(log_file_path, FileAccess.READ)
+		print("INFO ExtensionManager: --- Script Output ---")
+		while not file.eof_reached():
+			var line = file.get_line()
+			if not line.is_empty():
+				print("  ", line)
+		print("INFO ExtensionManager: --- End Script Output ---")
+		file.close()
+		DirAccess.remove_absolute(log_file_path)
 	
 	call_deferred("_process_operation_result", extension_data, operation, exit_code)
 
@@ -103,10 +121,9 @@ func _load_extensions_from_json():
 	
 	var parse_result = JSON.parse_string(json_string)
 
-	# CORRECTED: Instead of casting, manually build the typed array.
 	if parse_result is Array:
 		var parsed_array = parse_result as Array
-		var temp_extensions_data: Array[Dictionary] = [] # Create a new, correctly typed array
+		var temp_extensions_data: Array[Dictionary] = []
 		
 		for item in parsed_array:
 			if item is Dictionary:
@@ -114,7 +131,7 @@ func _load_extensions_from_json():
 			else:
 				printerr("ExtensionManager WARNING: Found a non-Dictionary item in extensions.json, skipping it. Item: ", item)
 		
-		_extensions_data = temp_extensions_data # Assign the newly built, type-safe array
+		_extensions_data = temp_extensions_data
 		print("INFO ExtensionManager: Successfully loaded %d extensions." % _extensions_data.size())
 	else:
 		printerr("ExtensionManager ERROR: Failed to parse extensions.json. Content is not a valid JSON array.")
@@ -126,7 +143,7 @@ func check_all_extensions_status():
 		return
 	
 	print("INFO ExtensionManager: Queuing all extensions for status check.")
-	_check_queue.clear() # Clear existing queue
+	_check_queue.clear()
 	for ext_data in _extensions_data:
 		_check_queue.append(ext_data)
 	
@@ -134,8 +151,8 @@ func check_all_extensions_status():
 
 func _start_next_check():
 	if _is_checking or _check_queue.is_empty():
-		_is_checking = false # Reset flag if queue is empty
-		check_for_updates_for_all_installed_extensions() # Trigger update checks after all status checks are done
+		_is_checking = false
+		check_for_updates_for_all_installed_extensions()
 		return
 		
 	_is_checking = true
@@ -155,10 +172,23 @@ func _execute_check_script_in_thread(extension_data: Dictionary):
 		return
 		
 	var script_path = ProjectSettings.globalize_path(EXTENSION_SCRIPTS_DIR.path_join(script_name))
+	var log_file_path = ProjectSettings.globalize_path(TMP_LOG_FILE)
 	
-	var output_array: PackedStringArray = []
-	# The script needs to be executed via 'sh' as it's a bash script
-	var exit_code = OS.execute("sh", [script_path, "check"], output_array, true, true)
+	if FileAccess.file_exists(log_file_path):
+		DirAccess.remove_absolute(log_file_path)
+		
+	var exit_code = OS.execute("sh", [script_path, "check", log_file_path], [], true, true)
+	
+	if FileAccess.file_exists(log_file_path):
+		var file = FileAccess.open(log_file_path, FileAccess.READ)
+		print("INFO ExtensionManager: --- Script Output (check) ---")
+		while not file.eof_reached():
+			var line = file.get_line()
+			if not line.is_empty():
+				print("  ", line)
+		print("INFO ExtensionManager: --- End Script Output (check) ---")
+		file.close()
+		DirAccess.remove_absolute(log_file_path)
 	
 	call_deferred("_process_check_result", extension_data, exit_code)
 
@@ -167,13 +197,13 @@ func _process_check_result(extension_data: Dictionary, exit_code: int):
 	if extension_id.is_empty():
 		printerr("ExtensionManager ERROR: Processed a check for an extension without an ID.")
 	else:
-		var is_installed = (exit_code == 0) # Bash script exits 0 if installed, 1 if not
+		var is_installed = (exit_code == 0)
 		_extensions_status[extension_id] = is_installed
 		print("INFO ExtensionManager: Status for '", extension_id, "' is Installed=", is_installed)
 		emit_signal("extension_status_updated", extension_id, is_installed)
 	
 	_is_checking = false
-	_start_next_check() # Check if there are more extensions in the queue
+	_start_next_check()
 
 
 # --- Update Check Logic ---
@@ -184,18 +214,18 @@ func check_for_updates_for_all_installed_extensions():
 		return
 	
 	print("INFO ExtensionManager: Starting update check for installed extensions.")
-	_extensions_update_available.clear() # Clear previous update info
+	_extensions_update_available.clear()
 
 	_update_check_queue.clear()
 	for ext_data in _extensions_data:
-		if _extensions_status.get(ext_data.get("id"), false): # Only check installed extensions
+		if _extensions_status.get(ext_data.get("id"), false):
 			_update_check_queue.append(ext_data)
 	
 	_start_next_update_check()
 
 func _start_next_update_check():
 	if _is_checking_updates or _update_check_queue.is_empty():
-		_is_checking_updates = false # Reset flag if queue is empty
+		_is_checking_updates = false
 		print("INFO ExtensionManager: All update checks completed.")
 		return
 	
@@ -218,14 +248,13 @@ func _start_next_update_check():
 	var api_url = repository_url.replace("https://github.com/", "https://api.github.com/repos/") + "/releases/latest"
 	print("INFO ExtensionManager: Requesting latest release info for '", extension_to_check.get("id"), "' from ", api_url)
 	
-	# GitHub API best practices: User-Agent header is often required
 	var headers = ["User-Agent: GodotDeckStore/1.0", "Accept: application/vnd.github.v3+json"]
 	http_request.request(api_url, headers)
 
 func _on_github_release_request_completed(extension_data: Dictionary, result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray):
-	var http_request_node = get_children().filter(func(child): return child is HTTPRequest && child.is_connected("request_completed", func(r,c,h,b): _on_github_release_request_completed(extension_data, r,c,h,b))).front()
+	var http_request_node = get_children().filter(func(child): return child is HTTPRequest and child.is_connected("request_completed", func(r,c,h,b): _on_github_release_request_completed(extension_data, r,c,h,b))).front()
 	if http_request_node:
-		http_request_node.queue_free() # Clean up the HTTPRequest node
+		http_request_node.queue_free()
 	
 	var extension_id = extension_data.get("id", "")
 	
@@ -251,10 +280,8 @@ func _on_github_release_request_completed(extension_data: Dictionary, result: in
 		_start_next_update_check()
 		return
 	
-	# Clean version string (e.g., remove 'v' prefix)
 	var latest_version = latest_tag_name.lstrip("v")
 	
-	# Get currently installed version by executing the script
 	var script_name = extension_data.get("script_name", "")
 	if script_name.is_empty():
 		printerr("ExtensionManager ERROR: Script name missing for '", extension_id, "' to get current version.")
@@ -263,38 +290,47 @@ func _on_github_release_request_completed(extension_data: Dictionary, result: in
 		return
 	
 	var script_path = ProjectSettings.globalize_path(EXTENSION_SCRIPTS_DIR.path_join(script_name))
-	var output_array: PackedStringArray = []
-	var exit_code = OS.execute("sh", [script_path, "version"], output_array, true, true)
+	var log_file_path = ProjectSettings.globalize_path(TMP_LOG_FILE)
+	
+	if FileAccess.file_exists(log_file_path):
+		DirAccess.remove_absolute(log_file_path)
+		
+	var exit_code = OS.execute("sh", [script_path, "version", log_file_path], [], true, true)
 	
 	var current_version = "0.0.0"
-	if exit_code == 0 && output_array.size() > 0:
-		current_version = output_array[0].strip_edges()
-	
+	if exit_code == 0:
+		if FileAccess.file_exists(log_file_path):
+			var file = FileAccess.open(log_file_path, FileAccess.READ)
+			var version_from_file = file.get_as_text().strip_edges()
+			if not version_from_file.is_empty():
+				current_version = version_from_file
+			file.close()
+			DirAccess.remove_absolute(log_file_path)
+
 	print("INFO ExtensionManager: '", extension_id, "' - Current: ", current_version, ", Latest: ", latest_version)
 
-	if _compare_versions(current_version, latest_version) < 0: # current < latest
+	if _compare_versions(current_version, latest_version) < 0:
 		_extensions_update_available[extension_id] = latest_version
 		emit_signal("extension_update_available", extension_id, latest_version)
 		print("INFO ExtensionManager: Update available for '", extension_id, "' to version ", latest_version)
 	else:
-		_extensions_update_available.erase(extension_id) # No update needed
+		_extensions_update_available.erase(extension_id)
 	
 	_is_checking_updates = false
 	_start_next_update_check()
 
 
 func _compare_versions(version1: String, version2: String) -> int:
-	# Returns -1 if version1 < version2, 0 if version1 == version2, 1 if version1 > version2
 	var v1_parts = version1.split(".")
 	var v2_parts = version2.split(".")
 
 	for i in range(max(v1_parts.size(), v2_parts.size())):
 		var p1 = 0
-		if i < v1_parts.size():
+		if i < v1_parts.size() and v1_parts[i].is_valid_int():
 			p1 = int(v1_parts[i])
 		
 		var p2 = 0
-		if i < v2_parts.size():
+		if i < v2_parts.size() and v2_parts[i].is_valid_int():
 			p2 = int(v2_parts[i])
 		
 		if p1 < p2:
