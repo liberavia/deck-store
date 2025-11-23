@@ -66,3 +66,7 @@ text = "Install"
 [node name="UninstallButton" type="Button" parent="MarginContainer/ExtensionContainer/ActionButtonsContainer"]
 layout_mode = 2
 text = "Uninstall"
+
+[node name="UpdateButton" type="Button" parent="MarginContainer/ExtensionContainer/ActionButtonsContainer"]
+layout_mode = 2
+text = "Update"

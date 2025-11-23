@@ -8,5 +8,7 @@
 	"script_name": "steam_shortcut_manager.sh",
 	"icon": "steam_shortcut_manager_icon.png",
 	"tags": ["steam", "utility", "artwork", "flatpak", "tools"],
+	"repository_url": "https://github.com/liberavia/steam-shortcut-manager",
+	"release_asset_name": "steam_shortcut_manager.zip"
   }
 ]
