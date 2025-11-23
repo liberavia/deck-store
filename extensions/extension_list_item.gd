@@ -5,12 +5,48 @@ extends PanelContainer
 @onready var description_label: Label = $MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer/ExtensionDescription
 @onready var status_label: Label = $MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer/ExtensionStatus
 @onready var icon_texture: TextureRect = $MarginContainer/ExtensionContainer/Control/ExtensionIcon
+@onready var install_button: Button = $MarginContainer/ExtensionContainer/ActionButtonsContainer/InstallButton
+@onready var uninstall_button: Button = $MarginContainer/ExtensionContainer/ActionButtonsContainer/UninstallButton
 
 # --- Constants ---
 const EXTENSION_ICON_DIR = "res://extensions/icons/"
 
 # --- Internal State ---
 var _extension_id: String = ""
+var _operation_in_progress: bool = false
+
+
+func _ready():
+	install_button.pressed.connect(_on_install_button_pressed)
+	uninstall_button.pressed.connect(_on_uninstall_button_pressed)
+	
+	# Connect to manager signals to know when to disable buttons
+	ExtensionsManager.extension_operation_started.connect(_on_operation_started)
+	ExtensionsManager.extension_operation_finished.connect(_on_operation_finished)
+
+
+func _on_install_button_pressed():
+	if _operation_in_progress: return
+	print("INFO: Requesting install for ", _extension_id)
+	ExtensionsManager.install_extension(_extension_id)
+
+func _on_uninstall_button_pressed():
+	if _operation_in_progress: return
+	print("INFO: Requesting uninstall for ", _extension_id)
+	ExtensionsManager.uninstall_extension(_extension_id)
+
+func _on_operation_started(extension_id: String, operation: String):
+	if extension_id == _extension_id:
+		_operation_in_progress = true
+		update_status(ExtensionsManager.get_extension_status(_extension_id)) # Re-render buttons
+
+func _on_operation_finished(extension_id: String, operation: String):
+	if extension_id == _extension_id:
+		_operation_in_progress = false
+		# The manager will emit 'extension_status_updated' which will trigger the final UI update
+		# so we don't strictly need to call update_status here, but it can make the UI feel more responsive.
+		update_status(ExtensionsManager.get_extension_status(_extension_id))
+
 
 # This function is called from extensions_view.gd to populate the data
 func set_data(extension_data: Dictionary):
@@ -40,10 +76,30 @@ func set_data(extension_data: Dictionary):
 
 # This function is called via a signal from ExtensionsManager
 func update_status(is_installed: bool):
+	# Update status label
 	if is_installed:
 		status_label.text = "Installed"
 	else:
 		status_label.text = "Not Installed"
+		
+	# Update button visibility and state
+	install_button.visible = not is_installed
+	uninstall_button.visible = is_installed
+	
+	# Disable both buttons if an operation is running for this item
+	install_button.disabled = _operation_in_progress
+	uninstall_button.disabled = _operation_in_progress
+	
+	# Update button text to show activity
+	if _operation_in_progress:
+		if is_installed:
+			uninstall_button.text = "Uninstalling..."
+		else:
+			install_button.text = "Installing..."
+	else:
+		uninstall_button.text = "Uninstall"
+		install_button.text = "Install"
+
 
 # Getter to allow the parent node (ExtensionsView) to identify this item
 func get_extension_id() -> String:

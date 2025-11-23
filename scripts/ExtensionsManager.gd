@@ -2,6 +2,8 @@
 extends Node
 
 signal extension_status_updated(extension_id, is_installed)
+signal extension_operation_started(extension_id, operation)
+signal extension_operation_finished(extension_id, operation)
 
 const EXTENSIONS_JSON_PATH = "res://extensions/extensions.json"
 const EXTENSION_SCRIPTS_DIR = "res://extensions/scripts/"
@@ -25,7 +27,56 @@ func get_all_extensions() -> Array[Dictionary]:
 func get_extension_status(extension_id: String) -> bool:
 	return _extensions_status.get(extension_id, false)
 
+func install_extension(extension_id: String):
+	_execute_operation(extension_id, "install")
+
+func uninstall_extension(extension_id: String):
+	_execute_operation(extension_id, "remove")
+
+
 # --- Internal Logic ---
+
+func _execute_operation(extension_id: String, operation: String):
+	var extension_data: Dictionary
+	for ext in _extensions_data:
+		if ext.get("id") == extension_id:
+			extension_data = ext
+			break
+	
+	if extension_data.is_empty():
+		printerr("ExtensionManager ERROR: Could not find extension data for id: ", extension_id)
+		return
+
+	emit_signal("extension_operation_started", extension_id, operation)
+	
+	# Create and start a new thread for the operation
+	var operation_thread = Thread.new()
+	var callable_func = func():
+		_execute_operation_script_in_thread(extension_data, operation)
+	operation_thread.start(callable_func)
+
+
+func _execute_operation_script_in_thread(extension_data: Dictionary, operation: String):
+	var script_name = extension_data.get("script_name", "")
+	if script_name.is_empty():
+		call_deferred("_process_operation_result", extension_data, operation, -1)
+		return
+
+	var script_path = ProjectSettings.globalize_path(EXTENSION_SCRIPTS_DIR.path_join(script_name))
+	var output: PackedStringArray = []
+	var exit_code = OS.execute("sh", [script_path, operation], output, true, true)
+	
+	call_deferred("_process_operation_result", extension_data, operation, exit_code)
+
+
+func _process_operation_result(extension_data: Dictionary, operation: String, exit_code: int):
+	var extension_id = extension_data.get("id", "")
+	print("INFO ExtensionManager: Operation '", operation, "' for '", extension_id, "' finished with exit code ", exit_code)
+
+	# After install/remove, we need to re-check the status
+	check_all_extensions_status()
+	emit_signal("extension_operation_finished", extension_id, operation)
+
 
 # Loads the list of available extensions from the JSON file.
 func _load_extensions_from_json():

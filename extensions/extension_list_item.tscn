@@ -52,3 +52,17 @@ layout_mode = 2
 
 [node name="ExtensionStatus" type="Label" parent="MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer"]
 layout_mode = 2
+
+[node name="ActionButtonsContainer" type="VBoxContainer" parent="MarginContainer/ExtensionContainer"]
+layout_mode = 2
+size_flags_horizontal = 8
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="InstallButton" type="Button" parent="MarginContainer/ExtensionContainer/ActionButtonsContainer"]
+layout_mode = 2
+text = "Install"
+
+[node name="UninstallButton" type="Button" parent="MarginContainer/ExtensionContainer/ActionButtonsContainer"]
+layout_mode = 2
+text = "Uninstall"
