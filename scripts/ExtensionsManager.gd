@@ -46,7 +46,6 @@ func update_extension(extension_id: String):
 
 
 # --- Internal Logic ---
-
 func _execute_operation(extension_id: String, operation: String):
 	var extension_data: Dictionary
 	for ext in _extensions_data:
