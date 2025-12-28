@@ -17,6 +17,7 @@ var _extension_id: String = ""
 var _operation_in_progress: bool = false
 var _update_available: bool = false
 var _latest_version: String = ""
+var _pending_focus_grab: bool = false
 
 
 func _ready():
@@ -53,9 +54,20 @@ func _on_operation_started(extension_id: String, operation: String):
 func _on_operation_finished(extension_id: String, operation: String):
 	if extension_id == _extension_id:
 		_operation_in_progress = false
-		# The manager will emit 'extension_status_updated' which will trigger the final UI update
-		# so we don't strictly need to call update_status here, but it can make the UI feel more responsive.
-		update_status(ExtensionsManager.get_extension_status(_extension_id))
+		_pending_focus_grab = true
+		# We intentionally do NOT call update_status here.
+		# We wait for the 'extension_status_updated' signal from the manager
+		# to ensure we render the final state (Installed vs Not Installed)
+		# and not a stale state. This also keeps the "Installing..." text
+		# visible until the verification check is complete.
+
+func _grab_appropriate_focus():
+	if install_button.visible and not install_button.disabled:
+		install_button.grab_focus()
+	elif uninstall_button.visible and not uninstall_button.disabled:
+		uninstall_button.grab_focus()
+	elif update_button.visible and not update_button.disabled:
+		update_button.grab_focus()
 
 func _on_extension_update_available(extension_id: String, latest_version: String):
 	if extension_id == _extension_id:
@@ -123,6 +135,10 @@ func update_status(is_installed: bool):
 		install_button.text = "Install"
 		uninstall_button.text = "Uninstall"
 		update_button.text = "Update"
+		
+	if _pending_focus_grab:
+		_grab_appropriate_focus.call_deferred()
+		_pending_focus_grab = false
 
 
 # Getter to allow the parent node (ExtensionsView) to identify this item

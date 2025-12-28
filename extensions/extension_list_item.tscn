@@ -46,9 +46,14 @@ theme_override_constants/separation = 5
 
 [node name="ExtensionName" type="Label" parent="MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Extension Name"
+autowrap_mode = 3
 
 [node name="ExtensionDescription" type="Label" parent="MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer"]
 layout_mode = 2
+text = "Extension Description goes here. It should wrap if it is too long to fit in the container."
+autowrap_mode = 3
 
 [node name="ExtensionStatus" type="Label" parent="MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer"]
 layout_mode = 2
