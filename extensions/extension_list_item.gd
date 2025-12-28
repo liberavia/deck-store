@@ -5,6 +5,7 @@ extends PanelContainer
 @onready var description_label: Label = $MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer/ExtensionDescription
 @onready var status_label: Label = $MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer/ExtensionStatus
 @onready var icon_texture: TextureRect = $MarginContainer/ExtensionContainer/Control/ExtensionIcon
+@onready var status_indicator: TextureRect = $MarginContainer/ExtensionContainer/Control/StatusIndicator
 
 @onready var action_button: Button = $MarginContainer/ExtensionContainer/ActionContainer/ActionButton
 @onready var progress_info: VBoxContainer = $MarginContainer/ExtensionContainer/ActionContainer/ProgressInfo
@@ -19,6 +20,7 @@ const COLOR_INSTALL = Color("#245322") # Greenish
 const COLOR_REMOVE = Color("#5c0001")  # Reddish
 const COLOR_BUSY = Color("#4a4a4a")    # Dark Gray
 const COLOR_NORMAL = Color("#626262")  # Gray
+const COLOR_PURPLE_BORDER = Color(0.627451, 0.12549, 0.941176, 1)
 
 # --- Internal State ---
 var _extension_id: String
@@ -26,21 +28,15 @@ var _operation_in_progress: bool = false
 var _update_available: bool = false
 var _latest_version: String = ""
 var _pending_focus_grab: bool = false
-var _last_known_id: String = "INITIAL_UNSET"
 
 # Styleboxes for the button
 var stylebox_install: StyleBoxFlat
 var stylebox_remove: StyleBoxFlat
 var stylebox_busy: StyleBoxFlat
 var stylebox_normal: StyleBoxFlat
-
-func _process(delta):
-	if _extension_id != _last_known_id:
-		print("DEBUG WATCHDOG: _extension_id changed from '", _last_known_id, "' to '", _extension_id, "' on instance ", get_instance_id())
-		_last_known_id = _extension_id
+var stylebox_focus: StyleBoxFlat
 
 func get_extension_id() -> String:
-	print("DEBUG ExtensionListItem: get_extension_id called on instance ", get_instance_id(), ". Returning: '", _extension_id, "'")
 	return _extension_id
 
 func _ready():
@@ -73,6 +69,16 @@ func _setup_styles():
 	stylebox_busy.bg_color = COLOR_BUSY
 	
 	stylebox_normal.bg_color = COLOR_NORMAL
+	
+	# Setup focus style
+	stylebox_focus = stylebox_normal.duplicate()
+	stylebox_focus.draw_center = false
+	stylebox_focus.border_width_left = 3
+	stylebox_focus.border_width_top = 3
+	stylebox_focus.border_width_right = 3
+	stylebox_focus.border_width_bottom = 3
+	stylebox_focus.border_color = COLOR_PURPLE_BORDER
+	action_button.add_theme_stylebox_override("focus", stylebox_focus)
 
 func _on_action_button_pressed():
 	if _operation_in_progress: return
@@ -102,32 +108,17 @@ func _start_fake_progress(label_text: String):
 
 func _on_operation_started(extension_id: String, operation: String):
 	if extension_id == _extension_id:
-		print("DEBUG ExtensionListItem: Operation started for ", extension_id)
 		_operation_in_progress = true
 		update_status(ExtensionsManager.get_extension_status(_extension_id))
 
 func _on_operation_finished(extension_id: String, operation: String):
 	if extension_id == _extension_id:
-		print("DEBUG ExtensionListItem: Operation finished for ", extension_id)
 		_operation_in_progress = false
 		_pending_focus_grab = true
 		progress_bar.value = 100
 		
-		# Force a status update here if needed, but usually we wait for the signal.
-		# However, if the operation failed (exit code != 0), the status might NOT change,
-		# and thus 'extension_status_updated' might NOT be emitted if the value is same?
-		# ExtensionsManager emits 'extension_status_updated' inside '_process_check_result'.
-		# It does: `_extensions_status[extension_id] = is_installed`.
-		# And `emit_signal("extension_status_updated", extension_id, is_installed)`.
-		# It emits it UNCONDITIONALLY. So we should be good.
-		
-		# Give a moment to see 100%
 		get_tree().create_timer(0.5).timeout.connect(func():
 			progress_info.visible = false
-			# If for some reason update_status wasn't called (e.g. signal missed),
-			# we might want to ensure consistent state. 
-			# But calling update_status here might use stale data if check isn't done.
-			# Let's rely on the flow for now, the debug prints will tell us more.
 		)
 
 func _grab_appropriate_focus():
@@ -140,14 +131,7 @@ func _on_extension_update_available(extension_id: String, latest_version: String
 		_latest_version = latest_version
 		update_status(ExtensionsManager.get_extension_status(_extension_id))
 
-func _init():
-	print("DEBUG ExtensionListItem: _init ", get_instance_id())
-
-func _exit_tree():
-	print("DEBUG ExtensionListItem: _exit_tree ", get_instance_id())
-
 func set_data(extension_data: Dictionary):
-	print("DEBUG ExtensionListItem: set_data called on ", get_instance_id(), " with data: ", extension_data)
 	_extension_id = extension_data.get("id", "unknown_id")
 	name_label.text = extension_data.get("name", "Unknown Extension")
 	description_label.text = extension_data.get("description", "No description available.")
@@ -167,7 +151,8 @@ func set_data(extension_data: Dictionary):
 			icon_texture.texture = null
 
 func update_status(is_installed: bool):
-	print("DEBUG ExtensionListItem: update_status called for ", _extension_id, ". Installed: ", is_installed, ", OpInProgress: ", _operation_in_progress)
+	status_indicator.visible = is_installed
+	
 	if is_installed:
 		if _update_available:
 			status_label.text = "Update Available (v" + _latest_version + ")"
