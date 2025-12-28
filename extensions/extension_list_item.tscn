@@ -58,20 +58,29 @@ autowrap_mode = 3
 [node name="ExtensionStatus" type="Label" parent="MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer"]
 layout_mode = 2
 
-[node name="ActionButtonsContainer" type="VBoxContainer" parent="MarginContainer/ExtensionContainer"]
+[node name="ActionContainer" type="VBoxContainer" parent="MarginContainer/ExtensionContainer"]
 layout_mode = 2
 size_flags_horizontal = 8
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="InstallButton" type="Button" parent="MarginContainer/ExtensionContainer/ActionButtonsContainer"]
+[node name="ProgressInfo" type="VBoxContainer" parent="MarginContainer/ExtensionContainer/ActionContainer"]
+visible = false
+custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
+
+[node name="ProgressLabel" type="Label" parent="MarginContainer/ExtensionContainer/ActionContainer/ProgressInfo"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Preparing..."
+horizontal_alignment = 1
+
+[node name="ProgressBar" type="ProgressBar" parent="MarginContainer/ExtensionContainer/ActionContainer/ProgressInfo"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ActionButton" type="Button" parent="MarginContainer/ExtensionContainer/ActionContainer"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
 text = "Install"
-
-[node name="UninstallButton" type="Button" parent="MarginContainer/ExtensionContainer/ActionButtonsContainer"]
-layout_mode = 2
-text = "Uninstall"
-
-[node name="UpdateButton" type="Button" parent="MarginContainer/ExtensionContainer/ActionButtonsContainer"]
-layout_mode = 2
-text = "Update"

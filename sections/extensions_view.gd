@@ -52,10 +52,23 @@ func _populate_list():
 # Called when an extension's status has been updated by the manager
 func _on_extension_status_updated(extension_id: String, is_installed: bool):
 	print("INFO ExtensionsView: Received status update for ", extension_id, ", Installed: ", is_installed)
+	
+	var children = list_container.get_children()
+	print("DEBUG ExtensionsView: Checking ", children.size(), " items in list.")
+	
 	# Find the list item corresponding to the extension_id and update its UI
-	for item in list_container.get_children():
-		# This assumes extension_list_item.gd has a variable '_extension_id'
-		if is_instance_valid(item) and item.has_method("get_extension_id") and item.get_extension_id() == extension_id:
+	for item in children:
+		if not is_instance_valid(item):
+			continue
+			
+		var item_id = ""
+		if item.has_method("get_extension_id"):
+			item_id = item.get_extension_id()
+		
+		print("DEBUG ExtensionsView: Item ", item.name, " (Instance: ", item.get_instance_id(), ") has ID: '", item_id, "'")
+		
+		if item_id == extension_id:
 			if item.has_method("update_status"):
+				print("DEBUG ExtensionsView: Calling update_status on item.")
 				item.update_status(is_installed)
 				break # Found and updated, no need to continue loop
