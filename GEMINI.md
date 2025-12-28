@@ -54,3 +54,20 @@ This section documents issues encountered and their resolutions.
 *   **Symptom:** The extension update process fails with `ERROR: Could not find download URL for asset 'io.github.liberavia.steamshortcutmanager.zip' in the latest release.`
 *   **Root Cause:** The script was hardcoded to look for a specific `.zip` file in the GitHub release's assets. An API check revealed that the target repository's releases do not contain any assets, only source code `zipball` and `tarball` links.
 *   **Resolution:** The update script was modified to download the source code using the `zipball_url` provided by the GitHub API. The logic was also updated to handle the folder structure created when extracting a GitHub source archive.
+
+## 6. Recent Session Log (2025-12-28)
+
+### 6.1. Extensions UI Overhaul
+*   **Objective:** Bring the "Extensions" view visually and functionally in line with the main application ("Details View").
+*   **Changes:**
+    *   **Unified Action Button:** Refactored `extension_list_item.tscn` to use a single `ActionButton` instead of separate Install/Uninstall/Update buttons.
+    *   **Styles:** Applied application-wide styles (Purple focus border, Green Install, Red Uninstall, Grey Busy) to the extensions action button.
+    *   **Progress Feedback:** Added a `ProgressInfo` container (Label + ProgressBar) to the list item. Implemented a simulated progress animation in `extension_list_item.gd` since the shell script backends don't provide real-time progress.
+    *   **Status Indicator:** Added a green checkmark icon to the extension logo when installed, matching the `ProductBox` style.
+    *   **Focus Management:** Fixed focus loss issues after installation/uninstallation by ensuring focus is logically restored to the visible action button after the status update.
+    *   **Bug Fix (Variable Loss):** Resolved a bug where `_extension_id` in `ExtensionListItem` was being reset (empty string), causing status updates to fail in the UI. Removed default initialization of `_extension_id` to prevent this.
+    *   **Layout Fixes:** Corrected width overflow issues in `ExtensionsView` and `main.tscn` for 1280x800 resolution.
+
+### 6.2. Known State
+*   **Extensions:** The `steam_shortcut_manager` extension installs, updates, and uninstalls correctly with visual feedback.
+*   **Codebase:** `extension_list_item.gd` has been cleaned of debug prints and watchdogs. `.gitignore` was updated to un-ignore `GEMINI.md`.
