@@ -22,52 +22,48 @@ This document summarizes the key aspects of the DeckStore application based on a
     *   `details_view.tscn`
     *   `product_list.tscn`
     *   `reviews_popup.tscn`
-*   **Python Integration:** A Python script, `steam_shortcut_manager.py`, is used to manage Steam shortcuts. It is packaged into an executable using PyInstaller, as indicated by the `.spec` file.
+*   **Extensions System:** A modular system allows adding functionality via external scripts. Each extension resides in `extensions/<id>/` and contains its own `extension.json`, script, and assets.
 
 ## 3. Key Features & Development Focus
 
-*   **Steam Shortcut Management:** A primary feature is the ability to add/remove shortcuts for installed Flatpak applications directly in the Steam client.
-*   **Extensions System:** The application features a nascent extension system. The `steam_shortcut_manager` is being refactored to be the first official extension, as seen in the `extract_shortcut_manager` branch.
-*   **Active Development:** Recent commits show a focus on:
-    *   Refactoring and modularizing code (e.g., "Extract Home-View into seperate section").
-    *   UI/UX polishing ("Polish details navbar").
-    *   Bug fixing, including threading issues related to installations.
+*   **Extensions Refactoring (Dec 2025):** Major overhaul of the extension system.
+    *   **Bundle Structure:** Extensions are now self-contained folders.
+    *   **Dependencies:** Recursive dependency resolution (`dependencies` array in JSON) is implemented. Installing an extension automatically prompts to install missing dependencies via a `DependencyPopup`. Uninstalling warns about breaking dependent extensions.
+    *   **Updates:** Robust update mechanism. The system checks for GitHub releases, compares versions, and handles updates by cleanly uninstalling the old version before installing the new one (to bypass Flatpak bundle limitations).
+    *   **Progress Reporting:** Real-time feedback from bash scripts to Godot via file polling (`ds_send_progress`).
+    *   **Steam Shortcut Manager:** Migrated from a hardcoded binary to a proper Extension. The local binary was removed. `SteamIntegration` and `AddToSteamButton` were updated to rely solely on the extension, prompting for installation if missing.
+*   **UI/UX:**
+    *   Extensions list now has separate buttons for "Install", "Uninstall", and "Update" (blue).
+    *   Sound feedback added for list interactions and popups.
+    *   Scrolling issues in lists fixed (`follow_focus`).
 
 ## 4. Git Repository Information
 
-*   **Current Branch:** `extract_shortcut_manager`
+*   **Current Branch:** `extract_shortcut_manager` (Merged features likely to be pushed to main soon).
 *   **Main Branch:** `main`
-*   **Recent Activity:** Refactoring of the shortcut manager, UI enhancements, and the creation of an extensions system.
+*   **Recent Activity:** Complete rewrite of ExtensionsManager, removal of legacy binary code, implementation of dependency management UI.
 
-## 5. Troubleshooting
+## 5. Troubleshooting & Known Issues
 
-This section documents issues encountered and their resolutions.
+### 5.1. Update Logic
+*   **Issue:** `flatpak install --reinstall` failed for bundles.
+*   **Fix:** Updates are now handled by explicit `uninstall` followed by `install` in the extension scripts. The `ExtensionsManager` clears the "update available" flag immediately upon success to reflect changes in the UI.
 
-### 5.1. `flatpak: command not found` Error
+### 5.2. Missing Extension Dependency
+*   **Feature:** If a user clicks "Add to Steam" but the extension is missing, a modal appears.
+*   **Implementation:** `add_to_steam_button.gd` checks via `ExtensionsManager` and instantiates `dependency_popup.tscn` if needed.
 
-*   **Symptom:** Scripts executed by the `ExtensionsManager` fail with errors like `flatpak: command not found`.
-*   **Root Cause:** The DeckStore application itself is running as a Flatpak. When Godot's `OS.execute` function runs a script, that script runs inside the DeckStore's own sandbox, which does not have direct access to the host system's `flatpak` command.
-*   **Resolution:** The script was modified to use `flatpak-spawn --host` for all `flatpak` and `flatpak-builder` commands. This is the standard and correct way for a Flatpak application to interact with the host's Flatpak daemon.
+## 6. Recent Session Log (Dec 31, 2025)
 
-### 5.2. Update Fails to Find Download URL
+### 6.1. Accomplishments
+*   **Refactoring:** Moved all extension logic to `extensions/<id>` structure.
+*   **Dependencies:** Implemented recursive dependency resolution (Leaf -> Middle -> Root) and safety checks.
+*   **Cleanup:** Removed `bin/steam_shortcut_manager` and Python sources.
+*   **UI:** Fixed scrolling, added sounds, improved "Update" visibility.
+*   **Testing:** Validated with a set of Dummy extensions (`dummy_core`, `dummy_utils`, `dummy_app`, `dummy_standalone`) which are currently still present in the repo for future testing.
 
-*   **Symptom:** The extension update process fails with `ERROR: Could not find download URL for asset 'io.github.liberavia.steamshortcutmanager.zip' in the latest release.`
-*   **Root Cause:** The script was hardcoded to look for a specific `.zip` file in the GitHub release's assets. An API check revealed that the target repository's releases do not contain any assets, only source code `zipball` and `tarball` links.
-*   **Resolution:** The update script was modified to download the source code using the `zipball_url` provided by the GitHub API. The logic was also updated to handle the folder structure created when extracting a GitHub source archive.
-
-## 6. Recent Session Log (2025-12-28)
-
-### 6.1. Extensions UI Overhaul
-*   **Objective:** Bring the "Extensions" view visually and functionally in line with the main application ("Details View").
-*   **Changes:**
-    *   **Unified Action Button:** Refactored `extension_list_item.tscn` to use a single `ActionButton` instead of separate Install/Uninstall/Update buttons.
-    *   **Styles:** Applied application-wide styles (Purple focus border, Green Install, Red Uninstall, Grey Busy) to the extensions action button.
-    *   **Progress Feedback:** Added a `ProgressInfo` container (Label + ProgressBar) to the list item. Implemented a simulated progress animation in `extension_list_item.gd` since the shell script backends don't provide real-time progress.
-    *   **Status Indicator:** Added a green checkmark icon to the extension logo when installed, matching the `ProductBox` style.
-    *   **Focus Management:** Fixed focus loss issues after installation/uninstallation by ensuring focus is logically restored to the visible action button after the status update.
-    *   **Bug Fix (Variable Loss):** Resolved a bug where `_extension_id` in `ExtensionListItem` was being reset (empty string), causing status updates to fail in the UI. Removed default initialization of `_extension_id` to prevent this.
-    *   **Layout Fixes:** Corrected width overflow issues in `ExtensionsView` and `main.tscn` for 1280x800 resolution.
-
-### 6.2. Known State
-*   **Extensions:** The `steam_shortcut_manager` extension installs, updates, and uninstalls correctly with visual feedback.
-*   **Codebase:** `extension_list_item.gd` has been cleaned of debug prints and watchdogs. `.gitignore` was updated to un-ignore `GEMINI.md`.
+### 6.2. Next Steps
+*   **UI Sounds:** The user noted that UI sounds might need further refinement in a separate branch.
+*   **Dummy Cleanup:** The dummy extensions (`extensions/dummy_*`) are kept for now but should be removed before a final release.
+*   **Push:** Current state is committed and pushed.
+--- End of Context from: GEMINI.md ---
