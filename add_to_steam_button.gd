@@ -19,6 +19,9 @@ func _ready():
 		_focus_sound_player = get_node("/root/App/FocusSoundPlayer")
 	else:
 		print("AddToSteamButton WARN: FocusSoundPlayer nicht gefunden unter /root/App/FocusSoundPlayer")
+		
+	if ExtensionsManager:
+		ExtensionsManager.extension_operation_finished.connect(_on_extension_operation_finished)
 
 
 func _on_focus_entered_sound():
@@ -35,7 +38,31 @@ func set_app_info(p_app_id: String, p_app_name: String, p_icon_url: String):
 	disabled = false
 
 
+func _on_extension_operation_finished(extension_id: String, operation: String):
+	if extension_id == "steam_shortcut_manager_installer" and operation == "install":
+		text = "Add to Steam"
+		disabled = false
+
+
 func _on_pressed():
+	# 1. Check for Extension Dependency
+	if not ExtensionsManager.get_extension_status("steam_shortcut_manager_installer"):
+		print("AddToSteamButton: Extension missing. Showing dependency popup.")
+		var popup_scene = load("res://sections/dependency_popup.tscn")
+		if popup_scene:
+			var popup = popup_scene.instantiate()
+			get_tree().root.add_child(popup)
+			popup.setup("install", "Steam Shortcuts", ["steam_shortcut_manager_installer"])
+			popup.confirmed.connect(func():
+				print("AddToSteamButton: User confirmed extension install.")
+				text = "Installing Tool..."
+				disabled = true
+				ExtensionsManager.install_extension("steam_shortcut_manager_installer")
+			)
+		else:
+			printerr("AddToSteamButton ERROR: Could not load dependency_popup.tscn")
+		return
+
 	if app_id.is_empty() or app_name.is_empty():
 		printerr("AddToSteamButton ERROR: app_id or app_name is empty! Cannot add to Steam.")
 		return
