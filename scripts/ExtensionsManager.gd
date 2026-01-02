@@ -6,26 +6,22 @@ signal extension_operation_finished(extension_id, operation)
 signal extension_update_available(extension_id, latest_version)
 signal extension_progress_updated(extension_id, percent, message)
 
-const EXTENSIONS_JSON_PATH = "res://extensions/extensions.json"
-const EXTENSION_SCRIPTS_DIR = "res://extensions/scripts/"
+const EXTENSIONS_ROOT_DIR = "res://extensions/"
 const TMP_LOG_FILE = "user://tmp_ext_log.txt"
 
 var _extensions_data: Array[Dictionary] = []
-var _extensions_status: Dictionary = {} # Stores the current installation status, e.g., {"steam_shortcut_manager_installer": true}
-var _extensions_update_available: Dictionary = {} # Stores which extensions have an update available, {"extension_id": "latest_version"}
+var _extensions_status: Dictionary = {} 
+var _extensions_update_available: Dictionary = {}
 
 var _check_thread: Thread = null
 var _check_queue: Array[Dictionary] = []
 var _is_checking: bool = false
-var _update_check_queue: Array[Dictionary] = [] # Queue for update checks
-var _is_checking_updates: bool = false # Flag to prevent concurrent update checks
+var _update_check_queue: Array[Dictionary] = []
+var _is_checking_updates: bool = false 
 
 # Transaction Queue
-# Stores a list of operations to be performed sequentially.
-# Format: { "extension_id": "...", "operation": "install"|"remove"|"update" }
 var _transaction_queue: Array[Dictionary] = []
 var _transaction_active: bool = false
-var _current_transaction_operation: String = "" # Track what the overall goal is
 
 # Progress Monitoring
 var _progress_timer: Timer
@@ -35,7 +31,7 @@ var _progress_base_path: String = ""
 func _ready():
 	_setup_paths()
 	_setup_timer()
-	_load_extensions_from_json()
+	_load_extensions()
 	check_all_extensions_status()
 
 func _setup_paths():
@@ -60,7 +56,7 @@ func _check_progress_files():
 				var content = file.get_as_text().strip_edges()
 				file.close()
 				if not content.is_empty():
-					var parts = content.split("|", true, 1) # Split only on first pipe
+					var parts = content.split("|", true, 1) 
 					if parts.size() >= 2:
 						var percent_str = parts[0]
 						var message = parts[1]
@@ -76,7 +72,7 @@ func get_extension_status(extension_id: String) -> bool:
 	return _extensions_status.get(extension_id, false)
 
 func get_update_status(extension_id: String) -> String:
-	return _extensions_update_available.get(extension_id, "") # Returns latest_version string if update available, else empty
+	return _extensions_update_available.get(extension_id, "") 
 
 func get_extension_data(extension_id: String) -> Dictionary:
 	for ext in _extensions_data:
@@ -141,8 +137,6 @@ func _collect_installed_dependents_recursive(target_id: String, dependents_list:
 			dependents_list.append(dep_id)
 
 # Starts a batch transaction.
-# ids: Array of extension IDs to process in order.
-# operation: "install", "remove", or "update"
 func execute_transaction(ids: Array, operation: String):
 	if _transaction_active:
 		printerr("ExtensionsManager: Transaction already active. Cannot start new one.")
@@ -160,8 +154,6 @@ func execute_transaction(ids: Array, operation: String):
 	_process_next_transaction_item()
 
 func install_extension(extension_id: String):
-	# Default behavior: Just install this one. 
-	# UI should check dependencies and call execute_transaction if needed.
 	execute_transaction([extension_id], "install")
 
 func uninstall_extension(extension_id: String):
@@ -190,20 +182,17 @@ func _execute_operation(extension_id: String, operation: String):
 	
 	if extension_data.is_empty():
 		printerr("ExtensionManager ERROR: Could not find extension data for id: ", extension_id)
-		# Skip to next item in transaction
 		if _transaction_active:
 			_process_next_transaction_item()
 		return
 
 	emit_signal("extension_operation_started", extension_id, operation)
 	
-	# Start monitoring progress
 	if not _monitored_extensions.has(extension_id):
 		_monitored_extensions.append(extension_id)
 	if _progress_timer.is_stopped():
 		_progress_timer.start()
 	
-	# Create and start a new thread for the operation
 	var operation_thread = Thread.new()
 	var callable_func = func():
 		_execute_operation_script_in_thread(extension_data, operation)
@@ -212,21 +201,21 @@ func _execute_operation(extension_id: String, operation: String):
 
 func _execute_operation_script_in_thread(extension_data: Dictionary, operation: String):
 	var script_name = extension_data.get("script_name", "")
-	if script_name.is_empty():
+	var internal_path = extension_data.get("internal_path", "") # Added internal path
+	
+	if script_name.is_empty() or internal_path.is_empty():
+		printerr("ExtensionManager ERROR: Missing script name or internal path for ", extension_data.get("id"))
 		call_deferred("_process_operation_result", extension_data, operation, -1)
 		return
 
-	var script_path = ProjectSettings.globalize_path(EXTENSION_SCRIPTS_DIR.path_join(script_name))
+	var script_path = ProjectSettings.globalize_path(internal_path.path_join(script_name))
 	var log_file_path = ProjectSettings.globalize_path(TMP_LOG_FILE)
 	
-	# Ensure log file is empty before execution
 	if FileAccess.file_exists(log_file_path):
 		DirAccess.remove_absolute(log_file_path)
 
-	# In update or install, script path is vital.
 	var exit_code = OS.execute("sh", [script_path, operation, log_file_path], [], true, true)
 	
-	# Read and print log file
 	if FileAccess.file_exists(log_file_path):
 		var file = FileAccess.open(log_file_path, FileAccess.READ)
 		print("INFO ExtensionManager: --- Script Output ---")
@@ -245,11 +234,9 @@ func _process_operation_result(extension_data: Dictionary, operation: String, ex
 	var extension_id = extension_data.get("id", "")
 	print("INFO ExtensionManager: Operation '", operation, "' for '", extension_id, "' finished with exit code ", exit_code)
 
-	# Stop monitoring
 	if _monitored_extensions.has(extension_id):
 		_monitored_extensions.erase(extension_id)
 	
-	# Clean up progress file
 	var progress_file = _progress_base_path.path_join(extension_id + ".txt")
 	if FileAccess.file_exists(progress_file):
 		DirAccess.remove_absolute(progress_file)
@@ -257,11 +244,15 @@ func _process_operation_result(extension_data: Dictionary, operation: String, ex
 	if _monitored_extensions.is_empty():
 		_progress_timer.stop()
 
-	# After install/remove/update, we need to re-check the status and updates
 	check_all_extensions_status() 
+	
+	# If update was successful, clear the update flag immediately
+	if operation == "update" and exit_code == 0:
+		if _extensions_update_available.has(extension_id):
+			_extensions_update_available.erase(extension_id)
+			
 	emit_signal("extension_operation_finished", extension_id, operation)
 	
-	# Continue Transaction
 	if _transaction_active:
 		if exit_code != 0:
 			print("ERROR ExtensionManager: Transaction aborted due to failure in step: ", extension_id)
@@ -271,45 +262,51 @@ func _process_operation_result(extension_data: Dictionary, operation: String, ex
 			_process_next_transaction_item()
 
 
-# Loads the list of available extensions from the JSON file.
-func _load_extensions_from_json():
-	if not FileAccess.file_exists(EXTENSIONS_JSON_PATH):
-		printerr("ExtensionManager ERROR: extensions.json not found at ", EXTENSIONS_JSON_PATH)
+# Scans the extensions folder for extension.json files.
+func _load_extensions():
+	_extensions_data.clear()
+	var dir = DirAccess.open(EXTENSIONS_ROOT_DIR)
+	if not dir:
+		printerr("ExtensionManager ERROR: Could not open extensions root directory: ", EXTENSIONS_ROOT_DIR)
 		return
+	
+	dir.list_dir_begin()
+	var file_name = dir.get_next()
+	
+	while file_name != "":
+		if dir.current_is_dir() and not file_name.begins_with("."):
+			var extension_dir_path = EXTENSIONS_ROOT_DIR.path_join(file_name)
+			var json_path = extension_dir_path.path_join("extension.json")
+			
+			if FileAccess.file_exists(json_path):
+				_load_single_extension(json_path, extension_dir_path)
+				
+		file_name = dir.get_next()
+	
+	print("INFO ExtensionManager: Successfully loaded %d extensions." % _extensions_data.size())
 
-	var file = FileAccess.open(EXTENSIONS_JSON_PATH, FileAccess.READ)
+func _load_single_extension(json_path: String, dir_path: String):
+	var file = FileAccess.open(json_path, FileAccess.READ)
 	if not file:
-		printerr("ExtensionManager ERROR: Could not open extensions.json for reading.")
 		return
 	var json_string = file.get_as_text()
-	file.close() # Close the file immediately after reading
+	file.close()
 	
 	var parse_result = JSON.parse_string(json_string)
-
-	if parse_result is Array:
-		var parsed_array = parse_result as Array
-		var temp_extensions_data: Array[Dictionary] = []
-		
-		for item in parsed_array:
-			if item is Dictionary:
-				temp_extensions_data.append(item)
-			else:
-				printerr("ExtensionManager WARNING: Found a non-Dictionary item in extensions.json, skipping it. Item: ", item)
-		
-		_extensions_data = temp_extensions_data
-		print("INFO ExtensionManager: Successfully loaded %d extensions." % _extensions_data.size())
+	if parse_result is Dictionary:
+		var ext_data = parse_result as Dictionary
+		# Inject the internal path so we know where assets are located
+		ext_data["internal_path"] = dir_path
+		_extensions_data.append(ext_data)
 	else:
-		printerr("ExtensionManager ERROR: Failed to parse extensions.json. Content is not a valid JSON array.")
+		printerr("ExtensionManager WARNING: Invalid JSON in ", json_path)
+
 
 # Queues up all extensions to have their installation status checked.
 func check_all_extensions_status():
 	if _is_checking:
 		print("INFO ExtensionManager: A check is already in progress.")
 		return
-	
-	# If a transaction is active (e.g. installing multiple things), we might want to suppress the global check
-	# OR handle it gracefully. The check runs in a thread.
-	# For now, we queue it.
 	
 	print("INFO ExtensionManager: Queuing all extensions for status check.")
 	_check_queue.clear()
@@ -319,7 +316,7 @@ func check_all_extensions_status():
 	_start_next_check()
 
 func _start_next_check():
-	if _is_checking or _check_queue.is_empty():
+	if _check_queue.is_empty():
 		_is_checking = false
 		check_for_updates_for_all_installed_extensions()
 		return
@@ -336,11 +333,13 @@ func _start_next_check():
 
 func _execute_check_script_in_thread(extension_data: Dictionary):
 	var script_name = extension_data.get("script_name", "")
-	if script_name.is_empty():
+	var internal_path = extension_data.get("internal_path", "")
+	
+	if script_name.is_empty() or internal_path.is_empty():
 		call_deferred("_process_check_result", extension_data, -1)
 		return
 		
-	var script_path = ProjectSettings.globalize_path(EXTENSION_SCRIPTS_DIR.path_join(script_name))
+	var script_path = ProjectSettings.globalize_path(internal_path.path_join(script_name))
 	var log_file_path = ProjectSettings.globalize_path(TMP_LOG_FILE)
 	
 	if FileAccess.file_exists(log_file_path):
@@ -348,7 +347,6 @@ func _execute_check_script_in_thread(extension_data: Dictionary):
 		
 	var exit_code = OS.execute("sh", [script_path, "check", log_file_path], [], true, true)
 	
-	# Clean up logs for check silently
 	if FileAccess.file_exists(log_file_path):
 		DirAccess.remove_absolute(log_file_path)
 	
@@ -356,16 +354,12 @@ func _execute_check_script_in_thread(extension_data: Dictionary):
 
 func _process_check_result(extension_data: Dictionary, exit_code: int):
 	var extension_id = extension_data.get("id", "")
-	if extension_id.is_empty():
-		printerr("ExtensionManager ERROR: Processed a check for an extension without an ID.")
-	else:
+	if not extension_id.is_empty():
 		var is_installed = (exit_code == 0)
 		_extensions_status[extension_id] = is_installed
-		# Only log state changes or initial load to reduce noise, but here we log everything for debug
-		# print("INFO ExtensionManager: Status for '", extension_id, "' is Installed=", is_installed)
 		emit_signal("extension_status_updated", extension_id, is_installed)
 	
-	_is_checking = false
+	# We don't set _is_checking to false here, _start_next_check handles it
 	_start_next_check()
 
 
@@ -373,32 +367,39 @@ func _process_check_result(extension_data: Dictionary, exit_code: int):
 
 func check_for_updates_for_all_installed_extensions():
 	if _is_checking_updates:
-		# print("INFO ExtensionManager: Update check is already in progress.")
+		print("INFO ExtensionManager: Update check is already in progress.")
 		return
 	
-	# print("INFO ExtensionManager: Starting update check for installed extensions.")
-	_extensions_update_available.clear()
+	print("INFO ExtensionManager: Starting update check for installed extensions.")
+	# We don't clear all updates here, only when a check succeeds we update the status.
+	# Actually, clearing is fine if we check everything.
 
 	_update_check_queue.clear()
 	for ext_data in _extensions_data:
-		if _extensions_status.get(ext_data.get("id"), false):
+		var ext_id = ext_data.get("id")
+		var is_installed = _extensions_status.get(ext_id, false)
+		if is_installed:
 			_update_check_queue.append(ext_data)
 	
+	if _update_check_queue.is_empty():
+		print("INFO ExtensionManager: No installed extensions to check for updates.")
+		return
+
 	_start_next_update_check()
 
 func _start_next_update_check():
-	if _is_checking_updates or _update_check_queue.is_empty():
+	if _update_check_queue.is_empty():
 		_is_checking_updates = false
-		# print("INFO ExtensionManager: All update checks completed.")
+		print("INFO ExtensionManager: All update checks completed.")
 		return
 	
 	_is_checking_updates = true
 	var extension_to_check = _update_check_queue.pop_front()
+	var ext_id = extension_to_check.get("id", "unknown")
 	
 	var repository_url = extension_to_check.get("repository_url", "")
+	
 	if repository_url.is_empty() or not repository_url.begins_with("https://github.com/"):
-		# printerr("ExtensionManager ERROR: Missing or invalid repository_url for update check for '", extension_to_check.get("id"), "'.")
-		_is_checking_updates = false
 		_start_next_update_check()
 		return
 	
@@ -409,21 +410,15 @@ func _start_next_update_check():
 	)
 	
 	var api_url = repository_url.replace("https://github.com/", "https://api.github.com/repos/") + "/releases/latest"
-	# print("INFO ExtensionManager: Requesting latest release info for '", extension_to_check.get("id"), "' from ", api_url)
-	
 	var headers = ["User-Agent: GodotDeckStore/1.0", "Accept: application/vnd.github.v3+json"]
 	http_request.request(api_url, headers)
 
 func _on_github_release_request_completed(extension_data: Dictionary, result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray):
-	var http_request_node = get_children().filter(func(child): return child is HTTPRequest and child.is_connected("request_completed", func(r,c,h,b): _on_github_release_request_completed(extension_data, r,c,h,b))).front()
-	if http_request_node:
-		http_request_node.queue_free()
+	# Request cleanup handled via queue_free in a safer way
 	
 	var extension_id = extension_data.get("id", "")
 	
 	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
-		# printerr("ExtensionManager ERROR: Failed to fetch latest release for '", extension_id, "'. Result: ", result, ", Code: ", response_code)
-		_is_checking_updates = false
 		_start_next_update_check()
 		return
 
@@ -431,33 +426,21 @@ func _on_github_release_request_completed(extension_data: Dictionary, result: in
 	var parse_result = JSON.parse_string(json_string)
 
 	if not parse_result is Dictionary:
-		# printerr("ExtensionManager ERROR: Invalid JSON response for GitHub release for '", extension_id, "'.")
-		_is_checking_updates = false
 		_start_next_update_check()
 		return
 	
 	var latest_tag_name = parse_result.get("tag_name", "")
 	if latest_tag_name.is_empty():
-		# printerr("ExtensionManager WARNING: 'tag_name' not found in GitHub release response for '", extension_id, "'. Assuming no version info.")
-		_is_checking_updates = false
 		_start_next_update_check()
 		return
 	
 	var latest_version = latest_tag_name.lstrip("v")
-	
 	var script_name = extension_data.get("script_name", "")
-	if script_name.is_empty():
-		# printerr("ExtensionManager ERROR: Script name missing for '", extension_id, "' to get current version.")
-		_is_checking_updates = false
-		_start_next_update_check()
-		return
+	var internal_path = extension_data.get("internal_path", "")
 	
-	var script_path = ProjectSettings.globalize_path(EXTENSION_SCRIPTS_DIR.path_join(script_name))
+	var script_path = ProjectSettings.globalize_path(internal_path.path_join(script_name))
 	var log_file_path = ProjectSettings.globalize_path(TMP_LOG_FILE)
 	
-	if FileAccess.file_exists(log_file_path):
-		DirAccess.remove_absolute(log_file_path)
-		
 	var exit_code = OS.execute("sh", [script_path, "version", log_file_path], [], true, true)
 	
 	var current_version = "0.0.0"
@@ -470,8 +453,6 @@ func _on_github_release_request_completed(extension_data: Dictionary, result: in
 			file.close()
 			DirAccess.remove_absolute(log_file_path)
 
-	# print("INFO ExtensionManager: '", extension_id, "' - Current: ", current_version, ", Latest: ", latest_version)
-
 	if _compare_versions(current_version, latest_version) < 0:
 		_extensions_update_available[extension_id] = latest_version
 		emit_signal("extension_update_available", extension_id, latest_version)
@@ -479,7 +460,6 @@ func _on_github_release_request_completed(extension_data: Dictionary, result: in
 	else:
 		_extensions_update_available.erase(extension_id)
 	
-	_is_checking_updates = false
 	_start_next_update_check()
 
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b1bjp5mqs7mye"
-path="res://.godot/imported/steam_shortcut_manager_icon.png-afa2f6fa3f010f2dba5854b7c1d66569.ctex"
+uid="uid://dgdfgxe2skbt3"
+path="res://.godot/imported/steam_shortcut_manager_icon.png-f2ec025220ac3a16a94451569ac65c20.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://extensions/icons/steam_shortcut_manager_icon.png"
-dest_files=["res://.godot/imported/steam_shortcut_manager_icon.png-afa2f6fa3f010f2dba5854b7c1d66569.ctex"]
+source_file="res://extensions/steam_shortcut_manager_installer/steam_shortcut_manager_icon.png"
+dest_files=["res://.godot/imported/steam_shortcut_manager_icon.png-f2ec025220ac3a16a94451569ac65c20.ctex"]
 
 [params]
 

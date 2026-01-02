@@ -6,7 +6,7 @@ set -e
 # Source base functionality
 # Use absolute path resolving relative to this script location
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
-source "${SCRIPT_DIR}/deckstore_base.sh"
+source "${SCRIPT_DIR}/../deckstore_base.sh"
 
 ACTION="$1"
 OUT_FILE="$2"
@@ -79,6 +79,13 @@ install_ssm() {
 
     ds_send_progress 60 "Installing Flatpak..."
     ds_log "Installing bundle..."
+
+    # Explicitly remove existing version to force update/reinstall
+    if flatpak-spawn --host flatpak info "${FLATPAK_APP_ID}" &> /dev/null; then
+         ds_log "Removing existing version to ensure clean install..."
+         flatpak-spawn --host flatpak uninstall --user --assumeyes "${FLATPAK_APP_ID}" >> "$OUT_FILE" 2>&1
+    fi
+
     flatpak-spawn --host flatpak install --user -y "$temp_bundle_path" >> "$OUT_FILE" 2>&1
     
     rm "$temp_bundle_path"

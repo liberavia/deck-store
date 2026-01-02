@@ -10,8 +10,6 @@ signal cancelled
 @onready var confirm_button: Button = $DependencyPopup/MarginContainer/VBoxContainer/HBoxContainer/ConfirmButton
 @onready var cancel_button: Button = $DependencyPopup/MarginContainer/VBoxContainer/HBoxContainer/CancelButton
 
-const EXTENSION_ICON_DIR = "res://extensions/icons/"
-
 var _previous_focus_owner: Control = null
 
 func _ready():
@@ -85,8 +83,10 @@ func _add_extension_item(extension_id: String):
 	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	
 	var icon_filename = data.get("icon", "")
-	if not icon_filename.is_empty():
-		var icon_path = EXTENSION_ICON_DIR.path_join(icon_filename)
+	var internal_path = data.get("internal_path", "")
+	
+	if not icon_filename.is_empty() and not internal_path.is_empty():
+		var icon_path = internal_path.path_join(icon_filename)
 		if FileAccess.file_exists(icon_path):
 			icon_rect.texture = load(icon_path)
 	

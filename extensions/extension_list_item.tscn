@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://fe6lep5lsw1e"]
+[gd_scene load_steps=5 format=3 uid="uid://fe6lep5lsw1e"]
 
 [ext_resource type="Script" uid="uid://bffa0g6t007sf" path="res://extensions/extension_list_item.gd" id="1_6pa83"]
 [ext_resource type="Texture2D" uid="uid://cyceumguanpq3" path="res://assets/check_green.png" id="2_mvps1"]
@@ -97,7 +97,19 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/fill = SubResource("StyleBoxFlat_u0jqg")
 
-[node name="ActionButton" type="Button" parent="MarginContainer/ExtensionContainer/ActionContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="MarginContainer/ExtensionContainer/ActionContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 2
+
+[node name="UpdateButton" type="Button" parent="MarginContainer/ExtensionContainer/ActionContainer/ButtonsContainer"]
+visible = false
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Update"
+
+[node name="ActionButton" type="Button" parent="MarginContainer/ExtensionContainer/ActionContainer/ButtonsContainer"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 theme_override_font_sizes/font_size = 16

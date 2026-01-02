@@ -1,92 +1,117 @@
 # DeckStore Extensions System
 
-This directory contains the extensions system for DeckStore. Extensions allow adding external functionality to the application, usually by installing applications or managing system configurations.
+The extensions system allows developers to add external functionality to DeckStore. Each extension is a self-contained bundle residing in its own directory within `extensions/`.
 
-## Structure
+## Directory Structure
 
-*   `extensions.json`: The central registry of all available extensions.
-*   `scripts/`: Contains the bash scripts executed for each extension operation.
-*   `icons/`: Contains the icons displayed in the UI.
-*   `deckstore_base.sh`: A library of common functions for extension scripts.
+Each extension MUST be in its own subdirectory inside `extensions/`. The name of the directory does not matter, but using the extension ID is recommended for clarity.
+
+```
+extensions/
+├── my_extension_id/
+│   ├── extension.json   (Metadata)
+│   ├── main_script.sh   (Logic)
+│   └── icon.png         (Display Icon)
+├── deckstore_base.sh    (Shared Library)
+└── README.md
+```
 
 ## Creating a New Extension
 
-To add a new extension, follow these steps:
+### 1. The Metadata (`extension.json`)
+Create a folder and add an `extension.json` file.
 
-### 1. Create the Script
+```json
+{
+  "id": "my_extension_id",
+  "name": "My Extension Name",
+  "description": "A clear description of what this extension adds or manages.",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "script_name": "main_script.sh",
+  "icon": "icon.png",
+  "tags": ["utility", "tool"],
+  "repository_url": "https://github.com/user/repo",
+  "dependencies": ["other_extension_id"]
+}
+```
+*   **id**: Unique identifier (string).
+*   **script_name**: The filename of your bash script within the same folder.
+*   **icon**: The filename of your icon within the same folder.
+*   **dependencies**: Array of IDs of other extensions that MUST be installed for this one to work.
 
-Create a new bash script in `scripts/`. It **MUST** source `deckstore_base.sh` and implement the standard interface.
+### 2. The Logic (`main_script.sh`)
+Your script handles all operations. It **MUST** source `../deckstore_base.sh` to access progress and logging functions.
 
-**Template:**
+**Full Template:**
 
 ```bash
 #!/bin/bash
+# 1. Setup paths
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
-source "${SCRIPT_DIR}/deckstore_base.sh"
+source "${SCRIPT_DIR}/../deckstore_base.sh"
 
+# 2. Get arguments from DeckStore
 ACTION="$1"
 OUT_FILE="$2"
-EXTENSION_ID="my_new_extension"
+EXTENSION_ID="my_extension_id"
 
-# Initialize
+# 3. Initialize DeckStore Context
 ds_init "$EXTENSION_ID" "$OUT_FILE"
 
 install_ext() {
-    ds_send_progress 0 "Starting..."
-    # ... your installation logic ...
-    ds_send_progress 100 "Done"
+    ds_send_progress 0 "Starting installation..."
+    ds_log "Installing..."
+    
+    # Perform your logic (e.g., flatpak install, file copy)
+    # Use ds_send_progress to update the UI
+    ds_send_progress 50 "Halfway there..."
+    
+    # Always end with 100%
+    ds_send_progress 100 "Installation Complete"
 }
 
 remove_ext() {
-    # ... removal logic ...
+    ds_send_progress 0 "Preparing removal..."
+    # Cleanup logic
+    ds_send_progress 100 "Removal Complete"
+}
+
+update_ext() {
+    ds_log "Update requested..."
+    # Usually, an update is just a clean re-installation
+    install_ext
 }
 
 check_ext() {
-    # Exit 0 if installed, 1 if not
+    # DeckStore calls this to see if the extension is currently active/installed.
+    # Exit with 0 if installed, 1 if not.
+    if [ -f "$HOME/.my_tool_check" ]; then
+        exit 0
+    else
+        exit 1
+    fi
 }
 
 case "$ACTION" in
-    install|update) install_ext ;;
-    remove) remove_ext ;;
-    check) check_ext ;;
+    install) install_ext ;;
+    update)  update_ext ;;
+    remove)  remove_ext ;;
+    check)   check_ext ;;
     version) echo "1.0.0" > "$OUT_FILE" ;;
+    *)       exit 2 ;;
 esac
 exit 0
 ```
 
-### 2. Register in `extensions.json`
+## Built-in Functions (`deckstore_base.sh`)
 
-Add an entry to `extensions.json`:
+*   `ds_init "id" "logfile"`: Initializes the environment. Call this first.
+*   `ds_log "message"`: Writes a timestamped message to the DeckStore log.
+*   `ds_send_progress <percent> "message"`: Updates the real-time progress bar and status text in the UI (0-100).
+*   `ds_check_dependencies`: Automatically checks for `curl`, `jq`, and `flatpak-spawn`.
 
-```json
-{
-  "id": "my_new_extension",
-  "name": "My New Extension",
-  "description": "Description of what it does.",
-  "version": "1.0.0",
-  "author": "Your Name",
-  "script_name": "my_new_extension.sh",
-  "icon": "my_icon.png",
-  "tags": ["tool"],
-  "repository_url": "https://github.com/...",
-  "dependencies": []
-}
-```
+## Behavior Notes
 
-### 3. Dependencies
-
-You can define dependencies by adding their IDs to the `dependencies` array.
-*   When a user installs your extension, all missing dependencies will be installed first (recursively).
-*   When a user uninstalls a dependency, your extension will also be removed.
-
-### 4. Progress Reporting
-
-Use `ds_send_progress <percent> "<message>"` in your script to update the UI in real-time.
-
-```bash
-ds_send_progress 50 "Downloading resources..."
-```
-
-### 5. Logging
-
-Use `ds_log "<message>"` to write to the debug log.
+*   **Recursion:** If you define dependencies, DeckStore will automatically prompt the user to install them before your extension. Conversely, if a dependency is removed, your extension will also be flagged for removal.
+*   **Updates:** DeckStore checks the `repository_url` (GitHub only) for new releases. If a newer version is found, the "Update" button appears.

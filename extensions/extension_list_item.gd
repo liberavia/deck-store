@@ -6,19 +6,19 @@ extends PanelContainer
 @onready var icon_texture: TextureRect = $MarginContainer/ExtensionContainer/Control/ExtensionIcon
 @onready var status_indicator: TextureRect = $MarginContainer/ExtensionContainer/Control/StatusIndicator
 
-@onready var action_button: Button = $MarginContainer/ExtensionContainer/ActionContainer/ActionButton
+@onready var action_button: Button = $MarginContainer/ExtensionContainer/ActionContainer/ButtonsContainer/ActionButton
+@onready var update_button: Button = $MarginContainer/ExtensionContainer/ActionContainer/ButtonsContainer/UpdateButton
 @onready var progress_info: VBoxContainer = $MarginContainer/ExtensionContainer/ActionContainer/ProgressInfo
 @onready var progress_label: Label = $MarginContainer/ExtensionContainer/ActionContainer/ProgressInfo/ProgressLabel
 @onready var progress_bar: ProgressBar = $MarginContainer/ExtensionContainer/ActionContainer/ProgressInfo/ProgressBar
 
 # --- Constants ---
-const EXTENSION_ICON_DIR = "res://extensions/icons/"
-
 # Colors matching ActionButton.gd
 const COLOR_INSTALL = Color("#245322") # Greenish
 const COLOR_REMOVE = Color("#5c0001")  # Reddish
 const COLOR_BUSY = Color("#4a4a4a")    # Dark Gray
 const COLOR_NORMAL = Color("#626262")  # Gray
+const COLOR_UPDATE = Color("#005cc5")  # GitHub Blue-ish for Update
 const COLOR_PURPLE_BORDER = Color(0.627451, 0.12549, 0.941176, 1)
 
 # --- Internal State ---
@@ -33,6 +33,7 @@ var stylebox_install: StyleBoxFlat
 var stylebox_remove: StyleBoxFlat
 var stylebox_busy: StyleBoxFlat
 var stylebox_normal: StyleBoxFlat
+var stylebox_update: StyleBoxFlat
 var stylebox_focus: StyleBoxFlat
 
 func get_extension_id() -> String:
@@ -41,6 +42,7 @@ func get_extension_id() -> String:
 func _ready():
 	_setup_styles()
 	action_button.pressed.connect(_on_action_button_pressed)
+	update_button.pressed.connect(_on_update_button_pressed)
 	
 	ExtensionsManager.extension_operation_started.connect(_on_operation_started)
 	ExtensionsManager.extension_operation_finished.connect(_on_operation_finished)
@@ -68,6 +70,9 @@ func _setup_styles():
 	stylebox_busy = stylebox_normal.duplicate()
 	stylebox_busy.bg_color = COLOR_BUSY
 	
+	stylebox_update = stylebox_normal.duplicate()
+	stylebox_update.bg_color = COLOR_UPDATE
+	
 	stylebox_normal.bg_color = COLOR_NORMAL
 	
 	# Setup focus style
@@ -78,25 +83,39 @@ func _setup_styles():
 	stylebox_focus.border_width_right = 3
 	stylebox_focus.border_width_bottom = 3
 	stylebox_focus.border_color = COLOR_PURPLE_BORDER
+	
 	action_button.add_theme_stylebox_override("focus", stylebox_focus)
+	update_button.add_theme_stylebox_override("focus", stylebox_focus)
+	# Set update button normal style permanently
+	update_button.add_theme_stylebox_override("normal", stylebox_update)
+
+func _on_update_button_pressed():
+	if _operation_in_progress: return
+	
+	# Dependency check for update (might need new dependencies?)
+	var missing_deps = ExtensionsManager.get_missing_dependencies(_extension_id)
+	if not missing_deps.is_empty():
+		_show_dependency_popup("install", missing_deps) # Update is effectively install
+		return
+	
+	print("INFO: Requesting update for ", _extension_id)
+	_start_progress_display("Updating...")
+	ExtensionsManager.update_extension(_extension_id)
 
 func _on_action_button_pressed():
 	if _operation_in_progress: return
 	
 	var current_text = action_button.text
-	if current_text == "Install" or current_text == "Update":
+	if current_text == "Install":
 		# Check dependencies for Install
 		var missing_deps = ExtensionsManager.get_missing_dependencies(_extension_id)
 		if not missing_deps.is_empty():
 			_show_dependency_popup("install", missing_deps)
 			return
 
-		print("INFO: Requesting install/update for ", _extension_id)
-		_start_progress_display("Initializing..." if current_text == "Install" else "Updating...")
-		if current_text == "Update":
-			ExtensionsManager.update_extension(_extension_id)
-		else:
-			ExtensionsManager.install_extension(_extension_id)
+		print("INFO: Requesting install for ", _extension_id)
+		_start_progress_display("Initializing...")
+		ExtensionsManager.install_extension(_extension_id)
 			
 	elif current_text == "Uninstall":
 		# Check dependents for Uninstall
@@ -125,9 +144,9 @@ func _show_dependency_popup(mode: String, dependency_ids: Array):
 			install_list.append(_extension_id)
 			print("INFO: Batch install confirmed: ", install_list)
 			
-			# We need to trigger progress display on OUR item, but the manager handles the sequence.
-			# The manager will emit operation_started for each item.
-			ExtensionsManager.execute_transaction(install_list, "install")
+			# Check if it's an update (already installed) or fresh install
+			var op = "update" if ExtensionsManager.get_extension_status(_extension_id) else "install"
+			ExtensionsManager.execute_transaction(install_list, op)
 			
 		elif mode == "uninstall":
 			# Order: Dependents first, then target
@@ -159,12 +178,20 @@ func _on_operation_finished(extension_id: String, operation: String):
 		_pending_focus_grab = true
 		progress_bar.value = 100
 		
+		# If update finished, re-check status to hide update button if necessary
+		if operation == "update":
+			_update_available = not ExtensionsManager.get_update_status(_extension_id).is_empty()
+		
+		update_status(ExtensionsManager.get_extension_status(_extension_id))
+		
 		get_tree().create_timer(0.5).timeout.connect(func():
 			progress_info.visible = false
 		)
 
 func _grab_appropriate_focus():
-	if action_button.visible and not action_button.disabled:
+	if update_button.visible and not update_button.disabled:
+		update_button.grab_focus()
+	elif action_button.visible and not action_button.disabled:
 		action_button.grab_focus()
 
 func _on_extension_update_available(extension_id: String, latest_version: String):
@@ -179,8 +206,10 @@ func set_data(extension_data: Dictionary):
 	description_label.text = extension_data.get("description", "No description available.")
 	
 	var icon_filename = extension_data.get("icon", "")
-	if not icon_filename.is_empty():
-		var icon_path = EXTENSION_ICON_DIR.path_join(icon_filename)
+	var internal_path = extension_data.get("internal_path", "")
+	
+	if not icon_filename.is_empty() and not internal_path.is_empty():
+		var icon_path = internal_path.path_join(icon_filename)
 		if FileAccess.file_exists(icon_path):
 			var texture = load(icon_path) as Texture2D
 			if texture:
@@ -191,32 +220,47 @@ func set_data(extension_data: Dictionary):
 				icon_texture.texture = null
 		else:
 			icon_texture.texture = null
+			
+	# Check if an update is already known for this extension
+	var known_update = ExtensionsManager.get_update_status(_extension_id)
+	if not known_update.is_empty():
+		_update_available = true
+		_latest_version = known_update
+	
+	# Initial status update
+	update_status(ExtensionsManager.get_extension_status(_extension_id))
 
 func update_status(is_installed: bool):
 	status_indicator.visible = is_installed
 	
 	if is_installed:
+		action_button.text = "Uninstall"
+		action_button.add_theme_stylebox_override("normal", stylebox_remove)
+		
 		if _update_available:
 			status_label.text = "Update Available (v" + _latest_version + ")"
-			action_button.text = "Update"
-			action_button.add_theme_stylebox_override("normal", stylebox_install) # Update is like install
+			update_button.visible = true
+			update_button.text = "Update v" + _latest_version
 		else:
 			status_label.text = "Installed"
-			action_button.text = "Uninstall"
-			action_button.add_theme_stylebox_override("normal", stylebox_remove)
+			update_button.visible = false
 	else:
 		status_label.text = "Not Installed"
 		action_button.text = "Install"
 		action_button.add_theme_stylebox_override("normal", stylebox_install)
+		update_button.visible = false
 	
 	if _operation_in_progress:
 		action_button.disabled = true
-		action_button.text = "Please Wait..."
+		update_button.disabled = true
+		action_button.text = "..."
+		update_button.visible = false 
+		# If busy, hide update button to avoid confusion, focus on progress bar
 		action_button.add_theme_stylebox_override("normal", stylebox_busy)
-		# Progress bar handles the detailed text
 	else:
 		action_button.disabled = false
-		progress_info.visible = false # Ensure hidden if not busy
+		update_button.disabled = false
+		progress_info.visible = false 
 
 	if _pending_focus_grab:
 		_grab_appropriate_focus.call_deferred()
