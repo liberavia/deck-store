@@ -1,10 +1,10 @@
-# ExtensionsManager.gd
 extends Node
 
 signal extension_status_updated(extension_id, is_installed)
 signal extension_operation_started(extension_id, operation)
 signal extension_operation_finished(extension_id, operation)
 signal extension_update_available(extension_id, latest_version)
+signal extension_progress_updated(extension_id, percent, message)
 
 const EXTENSIONS_JSON_PATH = "res://extensions/extensions.json"
 const EXTENSION_SCRIPTS_DIR = "res://extensions/scripts/"
@@ -20,9 +20,45 @@ var _is_checking: bool = false
 var _update_check_queue: Array[Dictionary] = [] # Queue for update checks
 var _is_checking_updates: bool = false # Flag to prevent concurrent update checks
 
+# Progress Monitoring
+var _progress_timer: Timer
+var _monitored_extensions: Array[String] = []
+var _progress_base_path: String = ""
+
 func _ready():
+	_setup_paths()
+	_setup_timer()
 	_load_extensions_from_json()
 	check_all_extensions_status()
+
+func _setup_paths():
+	var home = OS.get_environment("HOME")
+	if home.is_empty():
+		home = "user://" # Fallback
+	_progress_base_path = home.path_join(".deck-store/tmp/progress/extensions")
+
+func _setup_timer():
+	_progress_timer = Timer.new()
+	_progress_timer.wait_time = 0.1 # Check every 100ms
+	_progress_timer.one_shot = false
+	_progress_timer.timeout.connect(_check_progress_files)
+	add_child(_progress_timer)
+
+func _check_progress_files():
+	for ext_id in _monitored_extensions:
+		var file_path = _progress_base_path.path_join(ext_id + ".txt")
+		if FileAccess.file_exists(file_path):
+			var file = FileAccess.open(file_path, FileAccess.READ)
+			if file:
+				var content = file.get_as_text().strip_edges()
+				file.close()
+				if not content.is_empty():
+					var parts = content.split("|", true, 1) # Split only on first pipe
+					if parts.size() >= 2:
+						var percent_str = parts[0]
+						var message = parts[1]
+						if percent_str.is_valid_int():
+							emit_signal("extension_progress_updated", ext_id, int(percent_str), message)
 
 # --- Public API ---
 
@@ -58,6 +94,12 @@ func _execute_operation(extension_id: String, operation: String):
 		return
 
 	emit_signal("extension_operation_started", extension_id, operation)
+	
+	# Start monitoring progress
+	if not _monitored_extensions.has(extension_id):
+		_monitored_extensions.append(extension_id)
+	if _progress_timer.is_stopped():
+		_progress_timer.start()
 	
 	# Create and start a new thread for the operation
 	var operation_thread = Thread.new()
@@ -99,6 +141,18 @@ func _execute_operation_script_in_thread(extension_data: Dictionary, operation: 
 func _process_operation_result(extension_data: Dictionary, operation: String, exit_code: int):
 	var extension_id = extension_data.get("id", "")
 	print("INFO ExtensionManager: Operation '", operation, "' for '", extension_id, "' finished with exit code ", exit_code)
+
+	# Stop monitoring
+	if _monitored_extensions.has(extension_id):
+		_monitored_extensions.erase(extension_id)
+	
+	# Clean up progress file
+	var progress_file = _progress_base_path.path_join(extension_id + ".txt")
+	if FileAccess.file_exists(progress_file):
+		DirAccess.remove_absolute(progress_file)
+	
+	if _monitored_extensions.is_empty():
+		_progress_timer.stop()
 
 	# After install/remove/update, we need to re-check the status and updates
 	check_all_extensions_status() # This will eventually trigger update checks

@@ -16,5 +16,11 @@ mono_crash.*.json
 
 .venv/*
 
+# Node ignores
+node_modules/*
+package.json
+package-lock.json
+
+
 
 

@@ -1,4 +1,3 @@
-# extension_list_item.gd
 extends PanelContainer
 
 @onready var name_label: Label = $MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer/ExtensionName
@@ -46,6 +45,7 @@ func _ready():
 	ExtensionsManager.extension_operation_started.connect(_on_operation_started)
 	ExtensionsManager.extension_operation_finished.connect(_on_operation_finished)
 	ExtensionsManager.extension_update_available.connect(_on_extension_update_available)
+	ExtensionsManager.extension_progress_updated.connect(_on_extension_progress_updated)
 
 func _setup_styles():
 	var base_stylebox = action_button.get_theme_stylebox("normal")
@@ -86,25 +86,26 @@ func _on_action_button_pressed():
 	var current_text = action_button.text
 	if current_text == "Install" or current_text == "Update":
 		print("INFO: Requesting install/update for ", _extension_id)
-		# Trigger fake progress
-		_start_fake_progress("Installing..." if current_text == "Install" else "Updating...")
+		_start_progress_display("Initializing..." if current_text == "Install" else "Updating...")
 		if current_text == "Update":
 			ExtensionsManager.update_extension(_extension_id)
 		else:
 			ExtensionsManager.install_extension(_extension_id)
 	elif current_text == "Uninstall":
 		print("INFO: Requesting uninstall for ", _extension_id)
-		_start_fake_progress("Uninstalling...")
+		_start_progress_display("Uninstalling...")
 		ExtensionsManager.uninstall_extension(_extension_id)
 
-func _start_fake_progress(label_text: String):
+func _start_progress_display(label_text: String):
 	progress_info.visible = true
 	progress_label.text = label_text
 	progress_bar.value = 0
 	
-	# Simple tween to simulate progress since we don't have real feedback
-	var tween = create_tween()
-	tween.tween_property(progress_bar, "value", 90.0, 2.0).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+func _on_extension_progress_updated(extension_id: String, percent: int, message: String):
+	if extension_id == _extension_id:
+		progress_info.visible = true
+		progress_bar.value = percent
+		progress_label.text = message
 
 func _on_operation_started(extension_id: String, operation: String):
 	if extension_id == _extension_id:
