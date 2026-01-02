@@ -85,29 +85,60 @@ func get_extension_data(extension_id: String) -> Dictionary:
 	return {}
 
 # Returns a list of extension IDs that are required by `extension_id` but NOT currently installed.
+# Recursively checks dependencies. Returns ordered list (Leaf -> Root).
 func get_missing_dependencies(extension_id: String) -> Array[String]:
 	var missing: Array[String] = []
-	var data = get_extension_data(extension_id)
+	var visited: Array[String] = [] # To prevent infinite loops
+	_collect_missing_dependencies_recursive(extension_id, missing, visited)
+	return missing
+
+func _collect_missing_dependencies_recursive(current_id: String, missing_list: Array[String], visited: Array[String]):
+	if visited.has(current_id):
+		return
+	visited.append(current_id)
+	
+	var data = get_extension_data(current_id)
 	var dependencies = data.get("dependencies", [])
 	
 	if dependencies is Array:
 		for dep_id in dependencies:
-			if not get_extension_status(dep_id):
-				missing.append(dep_id)
-	
-	return missing
+			# Check sub-dependencies first (Depth-First)
+			_collect_missing_dependencies_recursive(dep_id, missing_list, visited)
+			
+			# If this dependency is missing and not already in our list, add it
+			if not get_extension_status(dep_id) and not missing_list.has(dep_id):
+				missing_list.append(dep_id)
 
 # Returns a list of extension IDs that are installed and depend on `extension_id`.
+# Recursively checks dependents. Returns ordered list for removal (Leaf dependents first).
 func get_installed_dependents(extension_id: String) -> Array[String]:
 	var dependents: Array[String] = []
+	var visited: Array[String] = []
+	_collect_installed_dependents_recursive(extension_id, dependents, visited)
+	return dependents
+
+func _collect_installed_dependents_recursive(target_id: String, dependents_list: Array[String], visited: Array[String]):
+	if visited.has(target_id):
+		return
+	visited.append(target_id)
+	
+	# Find direct dependents
+	var direct_dependents = []
 	for ext in _extensions_data:
 		var ext_id = ext.get("id")
-		# Only check if the dependent is actually installed
+		# Only consider installed extensions
 		if get_extension_status(ext_id):
 			var deps = ext.get("dependencies", [])
-			if deps is Array and deps.has(extension_id):
-				dependents.append(ext_id)
-	return dependents
+			if deps is Array and deps.has(target_id):
+				direct_dependents.append(ext_id)
+	
+	# For each direct dependent, collect IT'S dependents first (recursion)
+	for dep_id in direct_dependents:
+		_collect_installed_dependents_recursive(dep_id, dependents_list, visited)
+		
+		# Add to list if not present
+		if not dependents_list.has(dep_id):
+			dependents_list.append(dep_id)
 
 # Starts a batch transaction.
 # ids: Array of extension IDs to process in order.

@@ -22,5 +22,41 @@
 	"tags": ["test", "dummy"],
 	"repository_url": "",
 	"dependencies": ["steam_shortcut_manager_installer"]
+  },
+  {
+	"id": "dummy_root",
+	"name": "Dummy Root (Level 1)",
+	"description": "Requires Middle.",
+	"version": "1.0.0",
+	"author": "Gemini",
+	"script_name": "dummy_root.sh",
+	"icon": "steam_shortcut_manager_icon.png",
+	"tags": ["test", "chain"],
+	"repository_url": "",
+	"dependencies": ["dummy_middle"]
+  },
+  {
+	"id": "dummy_middle",
+	"name": "Dummy Middle (Level 2)",
+	"description": "Requires Leaf.",
+	"version": "1.0.0",
+	"author": "Gemini",
+	"script_name": "dummy_middle.sh",
+	"icon": "steam_shortcut_manager_icon.png",
+	"tags": ["test", "chain"],
+	"repository_url": "",
+	"dependencies": ["dummy_leaf"]
+  },
+  {
+	"id": "dummy_leaf",
+	"name": "Dummy Leaf (Level 3)",
+	"description": "No Dependencies.",
+	"version": "1.0.0",
+	"author": "Gemini",
+	"script_name": "dummy_leaf.sh",
+	"icon": "steam_shortcut_manager_icon.png",
+	"tags": ["test", "chain"],
+	"repository_url": "",
+	"dependencies": []
   }
 ]
