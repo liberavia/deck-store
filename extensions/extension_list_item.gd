@@ -85,16 +85,57 @@ func _on_action_button_pressed():
 	
 	var current_text = action_button.text
 	if current_text == "Install" or current_text == "Update":
+		# Check dependencies for Install
+		var missing_deps = ExtensionsManager.get_missing_dependencies(_extension_id)
+		if not missing_deps.is_empty():
+			_show_dependency_popup("install", missing_deps)
+			return
+
 		print("INFO: Requesting install/update for ", _extension_id)
 		_start_progress_display("Initializing..." if current_text == "Install" else "Updating...")
 		if current_text == "Update":
 			ExtensionsManager.update_extension(_extension_id)
 		else:
 			ExtensionsManager.install_extension(_extension_id)
+			
 	elif current_text == "Uninstall":
+		# Check dependents for Uninstall
+		var dependents = ExtensionsManager.get_installed_dependents(_extension_id)
+		if not dependents.is_empty():
+			_show_dependency_popup("uninstall", dependents)
+			return
+
 		print("INFO: Requesting uninstall for ", _extension_id)
 		_start_progress_display("Uninstalling...")
 		ExtensionsManager.uninstall_extension(_extension_id)
+
+func _show_dependency_popup(mode: String, dependency_ids: Array):
+	var popup_scene = load("res://sections/dependency_popup.tscn")
+	var popup = popup_scene.instantiate()
+	
+	# Add directly to root to ensure it exists and is independent of UI structure
+	get_tree().root.add_child(popup)
+	
+	popup.setup(mode, name_label.text, dependency_ids)
+	
+	popup.confirmed.connect(func():
+		if mode == "install":
+			# Order: Dependencies first, then target
+			var install_list = dependency_ids.duplicate()
+			install_list.append(_extension_id)
+			print("INFO: Batch install confirmed: ", install_list)
+			
+			# We need to trigger progress display on OUR item, but the manager handles the sequence.
+			# The manager will emit operation_started for each item.
+			ExtensionsManager.execute_transaction(install_list, "install")
+			
+		elif mode == "uninstall":
+			# Order: Dependents first, then target
+			var remove_list = dependency_ids.duplicate()
+			remove_list.append(_extension_id)
+			print("INFO: Batch remove confirmed: ", remove_list)
+			ExtensionsManager.execute_transaction(remove_list, "remove")
+	)
 
 func _start_progress_display(label_text: String):
 	progress_info.visible = true

@@ -9,6 +9,18 @@
 	"icon": "steam_shortcut_manager_icon.png",
 	"tags": ["steam", "utility", "artwork", "flatpak", "tools"],
 	"repository_url": "https://github.com/liberavia/steam-shortcut-manager",
-	"release_asset_name": "steam_shortcut_manager.zip"
+	"dependencies": []
+  },
+  {
+	"id": "dependent_dummy_tool",
+	"name": "Dependent Tool (Test)",
+	"description": "A dummy extension to test dependency management. Requires Steam Shortcut Manager.",
+	"version": "1.0.0",
+	"author": "Gemini",
+	"script_name": "dummy_dependent.sh",
+	"icon": "steam_shortcut_manager_icon.png",
+	"tags": ["test", "dummy"],
+	"repository_url": "",
+	"dependencies": ["steam_shortcut_manager_installer"]
   }
 ]
