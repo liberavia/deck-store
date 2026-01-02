@@ -1,0 +1,12 @@
+{
+	"id": "dummy_standalone",
+	"name": "Dummy Standalone",
+	"description": "No dependencies. Just works.",
+	"version": "1.0.0",
+	"author": "Test Dummy",
+	"script_name": "main.sh",
+	"icon": "steam_shortcut_manager_icon.png",
+	"tags": ["test", "standalone"],
+	"repository_url": "",
+	"dependencies": []
+}

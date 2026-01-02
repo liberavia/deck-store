@@ -36,18 +36,45 @@ var stylebox_normal: StyleBoxFlat
 var stylebox_update: StyleBoxFlat
 var stylebox_focus: StyleBoxFlat
 
+# Audio
+var stream_focus = preload("res://assets/change.mp3")
+var stream_select = preload("res://assets/nextprev.wav")
+var audio_player: AudioStreamPlayer
+
 func get_extension_id() -> String:
 	return _extension_id
 
 func _ready():
+	_setup_audio()
 	_setup_styles()
+	
 	action_button.pressed.connect(_on_action_button_pressed)
 	update_button.pressed.connect(_on_update_button_pressed)
+	
+	action_button.focus_entered.connect(_play_focus_sound)
+	update_button.focus_entered.connect(_play_focus_sound)
+	
+	action_button.pressed.connect(_play_select_sound)
+	update_button.pressed.connect(_play_select_sound)
 	
 	ExtensionsManager.extension_operation_started.connect(_on_operation_started)
 	ExtensionsManager.extension_operation_finished.connect(_on_operation_finished)
 	ExtensionsManager.extension_update_available.connect(_on_extension_update_available)
 	ExtensionsManager.extension_progress_updated.connect(_on_extension_progress_updated)
+
+func _setup_audio():
+	audio_player = AudioStreamPlayer.new()
+	add_child(audio_player)
+
+func _play_focus_sound():
+	if audio_player and stream_focus:
+		audio_player.stream = stream_focus
+		audio_player.play()
+
+func _play_select_sound():
+	if audio_player and stream_select:
+		audio_player.stream = stream_select
+		audio_player.play()
 
 func _setup_styles():
 	var base_stylebox = action_button.get_theme_stylebox("normal")

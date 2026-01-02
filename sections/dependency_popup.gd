@@ -10,25 +10,53 @@ signal cancelled
 @onready var confirm_button: Button = $DependencyPopup/MarginContainer/VBoxContainer/HBoxContainer/ConfirmButton
 @onready var cancel_button: Button = $DependencyPopup/MarginContainer/VBoxContainer/HBoxContainer/CancelButton
 
+const EXTENSION_ICON_DIR = "res://extensions/icons/"
+
 var _previous_focus_owner: Control = null
 
+# Audio
+var stream_focus = preload("res://assets/change.mp3")
+var stream_select = preload("res://assets/nextprev.wav")
+var audio_player: AudioStreamPlayer
+
 func _ready():
+	_setup_audio()
+	
 	# Store previous focus
 	_previous_focus_owner = get_viewport().gui_get_focus_owner()
 	
 	confirm_button.pressed.connect(func():
+		_play_select_sound()
 		_restore_focus()
 		emit_signal("confirmed")
 		queue_free()
 	)
 	cancel_button.pressed.connect(func():
+		_play_select_sound() # Using select sound for cancel interaction too (common pattern), or could use back
 		_restore_focus()
 		emit_signal("cancelled")
 		queue_free()
 	)
 	
+	confirm_button.focus_entered.connect(_play_focus_sound)
+	cancel_button.focus_entered.connect(_play_focus_sound)
+	
 	# Grab focus deferred to ensure everything is ready
 	call_deferred("_grab_initial_focus")
+
+func _setup_audio():
+	audio_player = AudioStreamPlayer.new()
+	add_child(audio_player)
+
+func _play_focus_sound():
+	if audio_player and stream_focus:
+		audio_player.stream = stream_focus
+		audio_player.play()
+
+func _play_select_sound():
+	if audio_player and stream_select:
+		audio_player.stream = stream_select
+		audio_player.play()
 
 func _grab_initial_focus():
 	if cancel_button and cancel_button.is_inside_tree():
