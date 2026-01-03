@@ -43,27 +43,36 @@ This document summarizes the key aspects of the DeckStore application based on a
 *   **Main Branch:** `main`
 *   **Recent Activity:** Complete rewrite of ExtensionsManager, removal of legacy binary code, implementation of dependency management UI.
 
-## 5. Troubleshooting & Known Issues
+## 5. Development Environment Context
 
-### 5.1. Update Logic
+*   **Hosts:** The project is developed across two environments:
+    *   **Host A:** KDE Neon (User: `andre`, Home: `/home/andre`).
+    *   **Host B:** Steam Deck / SteamOS (User: `deck`, Home: `/home/deck`).
+*   **Implication:** Hardcoded paths like `/home/deck` must be avoided. Use `$HOME` or Godot's `OS.get_environment("HOME")`. Flatpak `host` permissions are used to bridge the gap.
+
+## 6. Troubleshooting & Known Issues
+
+### 6.1. Update Logic
 *   **Issue:** `flatpak install --reinstall` failed for bundles.
 *   **Fix:** Updates are now handled by explicit `uninstall` followed by `install` in the extension scripts. The `ExtensionsManager` clears the "update available" flag immediately upon success to reflect changes in the UI.
 
-### 5.2. Missing Extension Dependency
+### 6.2. Missing Extension Dependency
 *   **Feature:** If a user clicks "Add to Steam" but the extension is missing, a modal appears.
 *   **Implementation:** `add_to_steam_button.gd` checks via `ExtensionsManager` and instantiates `dependency_popup.tscn` if needed.
 
-## 6. Recent Session Log (Dec 31, 2025)
+## 7. Recent Session Log (Jan 03, 2026)
 
-### 6.1. Accomplishments
-*   **Refactoring:** Moved all extension logic to `extensions/<id>` structure.
-*   **Dependencies:** Implemented recursive dependency resolution (Leaf -> Middle -> Root) and safety checks.
-*   **Cleanup:** Removed `bin/steam_shortcut_manager` and Python sources.
-*   **UI:** Fixed scrolling, added sounds, improved "Update" visibility.
-*   **Testing:** Validated with a set of Dummy extensions (`dummy_core`, `dummy_utils`, `dummy_app`, `dummy_standalone`) which are currently still present in the repo for future testing.
+### 7.1. Accomplishments
+*   **New Extension:** Created `decky_loader` extension.
+    *   Implemented manual "User Mode" installation (no `sudo` required) to bypass SteamOS filesystem locks and password prompts.
+    *   Downloads binary directly from GitHub Releases via API parsing in bash.
+    *   Creates and manages a systemd user service (`decky-loader.service`) on the host via `flatpak-spawn`.
+    *   Robust version checking by parsing the generated service file.
+*   **Focus Management:** Fixed an issue where focus was lost after installing extensions via the `AddToSteamButton`. The button now correctly reclaims focus only if it initiated the install.
+*   **Cleanup:** Removed all dummy extensions (`dummy_core`, `dummy_utils`, `dummy_app`, `dummy_standalone`) from the repository.
+*   **Refactoring:** Moved all extension logic to `extensions/<id>` structure (completed in previous session).
 
-### 6.2. Next Steps
-*   **UI Sounds:** The user noted that UI sounds might need further refinement in a separate branch.
-*   **Dummy Cleanup:** The dummy extensions (`extensions/dummy_*`) are kept for now but should be removed before a final release.
-*   **Push:** Current state is committed and pushed.
+### 7.2. Next Steps
+*   **Merge:** The `extract_shortcut_manager` branch is feature-complete and polished. Ready to merge into `main`.
+*   **Testing:** Verify Decky Loader functionality on actual Steam Deck hardware (currently tested on KDE Neon where Decky service runs but UI might not appear).
 --- End of Context from: GEMINI.md ---

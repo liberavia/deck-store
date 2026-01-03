@@ -6,6 +6,7 @@ extends Button
 
 var icon_url: String = ""
 var _focus_sound_player: AudioStreamPlayer
+var _awaiting_install_completion: bool = false
 
 const DEFAULT_FLATPAK_EXE_PATH = "/usr/bin/flatpak"
 
@@ -21,7 +22,7 @@ func _ready():
 		print("AddToSteamButton WARN: FocusSoundPlayer nicht gefunden unter /root/App/FocusSoundPlayer")
 		
 	if ExtensionsManager:
-		ExtensionsManager.extension_operation_finished.connect(_on_extension_operation_finished)
+		ExtensionsManager.extension_status_updated.connect(_on_extension_status_updated)
 
 
 func _on_focus_entered_sound():
@@ -38,10 +39,15 @@ func set_app_info(p_app_id: String, p_app_name: String, p_icon_url: String):
 	disabled = false
 
 
-func _on_extension_operation_finished(extension_id: String, operation: String):
-	if extension_id == "steam_shortcut_manager_installer" and operation == "install":
+func _on_extension_status_updated(extension_id: String, is_installed: bool):
+	if extension_id == "steam_shortcut_manager_installer" and _awaiting_install_completion:
+		# Always re-enable button when operation cycle is complete
 		text = "Add to Steam"
 		disabled = false
+		_awaiting_install_completion = false
+		
+		if is_installed:
+			grab_focus.call_deferred()
 
 
 func _on_pressed():
@@ -57,6 +63,7 @@ func _on_pressed():
 				print("AddToSteamButton: User confirmed extension install.")
 				text = "Installing Tool..."
 				disabled = true
+				_awaiting_install_completion = true
 				ExtensionsManager.install_extension("steam_shortcut_manager_installer")
 			)
 		else:

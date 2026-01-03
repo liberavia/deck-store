@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cwsw5wxqey43a"
-path="res://.godot/imported/steam_shortcut_manager_icon.png-a4c9b511bfae6f92583364504f19f8e1.ctex"
+uid="uid://dofyu6hyn5l6f"
+path="res://.godot/imported/decky_icon.png-544e8969e9c8210f160988e34eb7d9ec.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://extensions/dummy_utils/steam_shortcut_manager_icon.png"
-dest_files=["res://.godot/imported/steam_shortcut_manager_icon.png-a4c9b511bfae6f92583364504f19f8e1.ctex"]
+source_file="res://extensions/decky_loader/decky_icon.png"
+dest_files=["res://.godot/imported/decky_icon.png-544e8969e9c8210f160988e34eb7d9ec.ctex"]
 
 [params]
 
