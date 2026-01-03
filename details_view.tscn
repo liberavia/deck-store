@@ -103,28 +103,41 @@ custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 expand_mode = 4
 
-[node name="AppTitle" type="RichTextLabel" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
+[node name="TitleGroup" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
+layout_mode = 2
+
+[node name="AppTitle" type="RichTextLabel" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/TitleGroup"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = SubResource("SystemFont_wsyjd")
 theme_override_font_sizes/normal_font_size = 36
+text = "App-Title"
+fit_content = true
+autowrap_mode = 0
 vertical_alignment = 1
 
-[node name="VerifiedContainer" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
-visible = false
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/TitleGroup"]
 layout_mode = 2
-size_flags_horizontal = 8
+theme_override_constants/margin_left = 15
 
-[node name="Label" type="Label" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/VerifiedContainer"]
+[node name="VerifiedContainer" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/TitleGroup/MarginContainer"]
 layout_mode = 2
-text = "Verified App"
+size_flags_horizontal = 0
 
-[node name="AppVerified" type="TextureRect" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/VerifiedContainer"]
+[node name="AppVerified" type="TextureRect" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/TitleGroup/MarginContainer/VerifiedContainer"]
 custom_minimum_size = Vector2(30, 30)
 layout_mode = 2
 texture = ExtResource("2_u0jqg")
 expand_mode = 1
 stretch_mode = 5
+
+[node name="Label" type="Label" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/TitleGroup/MarginContainer/VerifiedContainer"]
+layout_mode = 2
+text = "Verified App"
+
+[node name="Spacer" type="Control" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar"]
 layout_mode = 2

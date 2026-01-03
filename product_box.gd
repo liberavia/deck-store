@@ -1,4 +1,4 @@
-# product_box.gd
+class_name ProductBox
 extends Control
 
 @onready var panel: Panel = $Panel

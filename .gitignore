@@ -13,3 +13,17 @@ export_credentials.cfg
 .mono/
 data_*/
 mono_crash.*.json
+
+.venv/*
+
+# Node ignores
+node_modules/*
+package.json
+package-lock.json
+
+#local screenshots
+screenshots/*
+
+
+
+

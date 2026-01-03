@@ -1,0 +1,116 @@
+[gd_scene load_steps=5 format=3 uid="uid://fe6lep5lsw1e"]
+
+[ext_resource type="Script" uid="uid://bffa0g6t007sf" path="res://extensions/extension_list_item.gd" id="1_6pa83"]
+[ext_resource type="Texture2D" uid="uid://cyceumguanpq3" path="res://assets/check_green.png" id="2_mvps1"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u0jqg"]
+bg_color = Color(0.627451, 0.12549, 0.941176, 1)
+
+[node name="ExtensionListItem" type="PanelContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_6pa83")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="ExtensionContainer" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="Control" type="Control" parent="MarginContainer/ExtensionContainer"]
+custom_minimum_size = Vector2(128, 128)
+layout_mode = 2
+
+[node name="ExtensionIcon" type="TextureRect" parent="MarginContainer/ExtensionContainer/Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="StatusIndicator" type="TextureRect" parent="MarginContainer/ExtensionContainer/Control"]
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -32.0
+offset_bottom = 32.0
+grow_horizontal = 0
+texture = ExtResource("2_mvps1")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/ExtensionContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="ExtensionInfoContainer" type="VBoxContainer" parent="MarginContainer/ExtensionContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="ExtensionName" type="Label" parent="MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Extension Name"
+autowrap_mode = 3
+
+[node name="ExtensionDescription" type="Label" parent="MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer"]
+layout_mode = 2
+text = "Extension Description goes here. It should wrap if it is too long to fit in the container."
+autowrap_mode = 3
+
+[node name="ExtensionStatus" type="Label" parent="MarginContainer/ExtensionContainer/MarginContainer/ExtensionInfoContainer"]
+layout_mode = 2
+
+[node name="ActionContainer" type="VBoxContainer" parent="MarginContainer/ExtensionContainer"]
+layout_mode = 2
+size_flags_horizontal = 8
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="ProgressInfo" type="VBoxContainer" parent="MarginContainer/ExtensionContainer/ActionContainer"]
+visible = false
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+
+[node name="ProgressLabel" type="Label" parent="MarginContainer/ExtensionContainer/ActionContainer/ProgressInfo"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Preparing..."
+horizontal_alignment = 1
+
+[node name="ProgressBar" type="ProgressBar" parent="MarginContainer/ExtensionContainer/ActionContainer/ProgressInfo"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/fill = SubResource("StyleBoxFlat_u0jqg")
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="MarginContainer/ExtensionContainer/ActionContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 2
+
+[node name="UpdateButton" type="Button" parent="MarginContainer/ExtensionContainer/ActionContainer/ButtonsContainer"]
+visible = false
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Update"
+
+[node name="ActionButton" type="Button" parent="MarginContainer/ExtensionContainer/ActionContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Install"

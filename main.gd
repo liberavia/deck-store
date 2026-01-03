@@ -5,83 +5,125 @@ extends Control
 
 @onready var details_view: Control = $DetailsView
 @onready var main_view: VBoxContainer = $CanvasLayer/VBoxContainer
-@onready var popular_product_list: ProductList = $CanvasLayer/VBoxContainer/ContentScrollContainer/VBoxContainer/PopularProductList
-@onready var trending_product_list: ProductList = $CanvasLayer/VBoxContainer/ContentScrollContainer/VBoxContainer/TrendingProductList
 
-@onready var home_button: Button = $CanvasLayer/VBoxContainer/HBoxContainer/ButtonHome
-@onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/HBoxContainer
+@onready var section_view_container: Control = $CanvasLayer/VBoxContainer/SectionViewContainer
+
+@onready var home_button: Button = $CanvasLayer/VBoxContainer/TopButtonBar/ButtonHome
+@onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/TopButtonBar
 @onready var global_scroll_container: ScrollContainer = $CanvasLayer/VBoxContainer/ContentScrollContainer
 @onready var select_sound: AudioStreamPlayer = $SelectSoundPlayer
+@onready var focus_sound: AudioStreamPlayer = $FocusSoundPlayer
 @onready var back_sound: AudioStreamPlayer = $BackSoundPlayer
+@onready var switch_sound: AudioStreamPlayer = $SwitchSoundPlayer
 
 var _installed_flatpak_ids: Dictionary = {}
 var _flatpak_list_output: String = ""
 var _flatpak_thread: Thread = null
 var _last_focused_product_box: Control = null
+var _current_home_view_instance: Control = null
+var _sections: Array[Dictionary] = [
+	{"name": "Home", "scene_path": "res://sections/home_view.tscn", "button_node_name": "ButtonHome", "instance": null},
+	{"name": "Categories", "scene_path": "res://sections/categories_view.tscn", "button_node_name": "ButtonCategories", "instance": null},
+	{"name": "Installed", "scene_path": "res://sections/installed_view.tscn", "button_node_name": "ButtonInstalled", "instance": null},
+	{"name": "Updates", "scene_path": "res://sections/updates_view.tscn", "button_node_name": "ButtonUpdates", "instance": null},
+	{"name": "Extensions", "scene_path": "res://sections/extensions_view.tscn", "button_node_name": "ButtonExtensions", "instance": null},
+	{"name": "Search", "scene_path": "res://sections/search_view.tscn", "button_node_name": "ButtonSearch", "instance": null}
+]
+var _current_section_index: int = 0
+var _is_switching_section: bool = false
+var _suppress_focus_sound: bool = false
 
 # --- Cache-Constants ---
-const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 hour
-const CACHE_DURATION_SEC: int = 3600
-const API_CACHE_DIR = "user://cache/api/"
-const IMAGE_CACHE_DIR = "user://cache/images/"
-const IMAGE_CACHE_DURATION_SEC: int = 7 * 24 * 60 * 60 # 1 week in seconds
+const DECKSTORE_BASE_DIR_NAME = ".deck-store"
+const API_CACHE_SUBDIR = "cache/api"
+const IMAGE_CACHE_SUBDIR = "cache/images"
+
+const CACHE_DURATION_SEC: int = 3600 # 1 hour
+const IMAGE_CACHE_DURATION_SEC: int = 7 * 24 * 60 * 60 # 1 week
+
 var transition_time := 0.5
+var transition_time_section_change := 0.2
+
+# Absolute paths, will be initialized in _ready()
+var _deckstore_abs_base_path: String = ""
+var _api_cache_abs_path: String = ""
+var _image_cache_abs_path: String = ""
 
 signal installed_apps_updated
-
 
 # =============================================================================
 # LIFECYCLE METHODS
 # =============================================================================
 
 func _ready():
-	var dir_access = DirAccess.open("user://")
-	if dir_access:
-		var absolute_cache_dir = ProjectSettings.globalize_path(API_CACHE_DIR)
-		print("INFO: Cache-Directory (absolute Path): ", absolute_cache_dir)
-		var err = DirAccess.make_dir_recursive_absolute(API_CACHE_DIR)
-		if err != OK and err != ERR_ALREADY_EXISTS:
-			printerr("Could not create cache directory: ", API_CACHE_DIR, ", Code: ", err)
-	else:
-		printerr("Could not open user:// directory.")
-		
-	var image_dir_access = DirAccess.open("user://")
-	if image_dir_access:
-		var err = DirAccess.make_dir_recursive_absolute(IMAGE_CACHE_DIR)
-		if err != OK and err != ERR_ALREADY_EXISTS:
-			printerr("ERROR: Could not create image cache directory: ", IMAGE_CACHE_DIR, ", Code: ", err)
-		# Optional: Clean up very old cache files here if needed
-	else:
-		printerr("ERROR: Could not open user:// directory for image cache.")
-			
-	if not popular_product_list.product_box_scene:
-		popular_product_list.product_box_scene = product_box
-	if not trending_product_list.product_box_scene:
-		trending_product_list.product_box_scene = product_box
+	var home_dir = OS.get_environment("HOME")
+	if home_dir.is_empty():
+		printerr("FATAL ERROR: Could not determine user's HOME directory. Caching will fail.")
+		return
 
+	# Construct absolute paths for DeckStore data
+	_deckstore_abs_base_path = home_dir.path_join(DECKSTORE_BASE_DIR_NAME)
+	_api_cache_abs_path = _deckstore_abs_base_path.path_join(API_CACHE_SUBDIR)
+	_image_cache_abs_path = _deckstore_abs_base_path.path_join(IMAGE_CACHE_SUBDIR)
+	
+	print("INFO: DeckStore Base Path (absolute): ", _deckstore_abs_base_path)
+	print("INFO: API Cache Directory (absolute Path): ", _api_cache_abs_path)
+	print("INFO: Image Cache Directory (absolute Path): ", _image_cache_abs_path)
+
+	# Create API cache directory
+	var err_api_cache = DirAccess.make_dir_recursive_absolute(_api_cache_abs_path)
+	if err_api_cache != OK and err_api_cache != ERR_ALREADY_EXISTS:
+		printerr("ERROR: Could not create API cache directory: ", _api_cache_abs_path, ", Code: ", err_api_cache)
+	
+	# Create Image cache directory
+	var err_img_cache = DirAccess.make_dir_recursive_absolute(_image_cache_abs_path)
+	if err_img_cache != OK and err_img_cache != ERR_ALREADY_EXISTS:
+		printerr("ERROR: Could not create image cache directory: ", _image_cache_abs_path, ", Code: ", err_img_cache)
+			
 	home_button.focus_mode = Control.FOCUS_ALL
 	for btn in top_button_bar.get_children():
 		if btn is Button: btn.focus_mode = Control.FOCUS_ALL
 
-	home_button.pressed.connect(load_popular_products)
-	home_button.pressed.connect(load_trending_products)
+	for i in range(_sections.size()):
+		var section_data = _sections[i]
+		var scene = load(section_data.scene_path) as PackedScene
+		if scene:
+			var instance = scene.instantiate()
+			_sections[i].instance = instance 
+			
+			if section_data.name == "Home" and "product_box_scene" in instance:
+				instance.product_box_scene = product_box
+				_connect_home_view_signals(instance)
+			
+			instance.visible = (i == 0) # Mache nur die erste Sektion (Home) sichtbar
+			section_view_container.add_child(instance)
+		else:
+			printerr("ERROR: Could not load scene for section: ", section_data.name)
+
+	for i in range(_sections.size()):
+		var section_data = _sections[i]
+		var button_node = top_button_bar.get_node_or_null(section_data.button_node_name) as Button
+		if is_instance_valid(button_node):
+			button_node.pressed.connect(_on_top_bar_button_pressed.bind(i))
+		else:
+			printerr("ERROR: Button node not found for section: ", section_data.name)
+
+	for btn_node in top_button_bar.get_children():
+		if btn_node is Button:
+			btn_node.focus_entered.connect(_on_top_bar_button_focus_entered)
+			
+	load_popular_products()
+	load_trending_products()
+	
 	Input.joy_connection_changed.connect(_on_joy_connection_changed) # Beibehalten
 
 	details_view.move_back_to_main_view.connect(_on_move_back_to_main_view)
 	details_view.image_load_requested.connect(_on_product_list_image_load_requested)
-	popular_product_list.move_to_details_view.connect(_on_move_to_details_view)
-	trending_product_list.move_to_details_view.connect(_on_move_to_details_view)
-	popular_product_list.image_load_requested.connect(_on_product_list_image_load_requested)
-	popular_product_list.focus_exited_up.connect(_on_product_list_focus_exited_up)
-	popular_product_list.load_new_page.connect(_load_product_list)
-	trending_product_list.image_load_requested.connect(_on_product_list_image_load_requested)
-	trending_product_list.focus_exited_up.connect(_on_product_list_focus_exited_up)
-	trending_product_list.load_new_page.connect(_load_product_list)
 
 	_check_connected_controllers() 
 	print("-----------------------------------------")
-	load_popular_products()
-	load_trending_products()
+	_switch_to_section(0)
+	home_button.grab_focus()
 	_fetch_installed_apps()
 	
 # =============================================================================
@@ -89,6 +131,25 @@ func _ready():
 # =============================================================================
 
 func _unhandled_input(event: InputEvent):
+	var new_section_index = _current_section_index
+	var switched = false
+	if event.is_action_pressed("section_next"): # R1 / RB
+		new_section_index += 1
+		if new_section_index >= _sections.size():
+			new_section_index = 0 # Wrap around to the start
+		switched = true
+		
+	elif event.is_action_pressed("section_previous"): # L1 / LB
+		new_section_index -= 1
+		if new_section_index < 0:
+			new_section_index = _sections.size() - 1 # Wrap around to the end
+		switched = true
+	
+	if switched:
+		_on_top_bar_button_pressed(new_section_index)
+		get_viewport().set_input_as_handled()
+		return
+			
 	var focused_control = get_viewport().gui_get_focus_owner()
 	if not is_instance_valid(focused_control): return
 
@@ -99,7 +160,8 @@ func _unhandled_input(event: InputEvent):
 		elif event.is_action_pressed("ui_right"): action_string = "ui_right" # Für Navigation innerhalb der Buttons
 
 		if action_string == "ui_down":
-			popular_product_list.focus_first_product()
+			if is_instance_valid(_current_home_view_instance) and _current_home_view_instance.has_method("focus_first_product_in_popular_list"):
+				_current_home_view_instance.focus_first_product_in_popular_list()
 			get_viewport().set_input_as_handled()
 		elif action_string == "ui_left" or action_string == "ui_right":
 			pass
@@ -107,9 +169,36 @@ func _unhandled_input(event: InputEvent):
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
-func get_image_cache_dir():
-	return IMAGE_CACHE_DIR
+func _on_top_bar_button_focus_entered():
+	if _suppress_focus_sound:
+		return
 
+	if is_instance_valid(focus_sound):
+		focus_sound.play()
+
+func load_popular_products():
+	# Get the instance of the home view from our sections array
+	var home_view_node = _sections[0].instance # Index 0 is "Home"
+	if is_instance_valid(home_view_node) and home_view_node.has_node("ContentScrollContainer/VBoxContainer/PopularProductList"):
+		var popular_list = home_view_node.get_node("ContentScrollContainer/VBoxContainer/PopularProductList")
+		_load_product_list("https://flathub.org/api/v2/collection/popular?page=1&per_page=10&locale=en", popular_list)
+	else:
+		printerr("ERROR: Could not find PopularProductList in HomeView instance.")
+
+func load_trending_products():
+	var home_view_node = _sections[0].instance
+	if is_instance_valid(home_view_node) and home_view_node.has_node("ContentScrollContainer/VBoxContainer/TrendingProductList"):
+		var trending_list = home_view_node.get_node("ContentScrollContainer/VBoxContainer/TrendingProductList")
+		_load_product_list("https://flathub.org/api/v2/collection/trending?page=1&per_page=10&locale=en", trending_list)
+	else:
+		printerr("ERROR: Could not find TrendingProductList in HomeView instance.")
+
+func get_image_cache_dir():
+	return _image_cache_abs_path
+
+func get_api_cache_dir() -> String:
+	return _api_cache_abs_path
+	
 func is_app_installed(app_id: String) -> bool:
 	return _installed_flatpak_ids.has(app_id)
 
@@ -118,8 +207,15 @@ func get_installed_ids() -> Dictionary:
 
 func _get_api_cache_filepath(url: String) -> String:
 	var hash = url.md5_text() 
-	return API_CACHE_DIR.path_join(hash + ".json")
+	return get_api_cache_dir().path_join(hash + ".json")
 
+func _get_image_cache_filepath(image_url: String, file_extension: String) -> String:
+	if _image_cache_abs_path.is_empty():
+		printerr("ERROR: _get_image_cache_filepath - Image Cache Path not initialized!")
+		return ""
+	var url_hash = image_url.md5_text()
+	return _image_cache_abs_path.path_join(url_hash + file_extension)
+	
 func _on_product_list_image_load_requested(url: String, texture_rect: TextureRect):
 	if not is_instance_valid(texture_rect):
 		printerr("ERROR: Image request for invalid texture_rect, URL: ", url)
@@ -129,8 +225,8 @@ func _on_product_list_image_load_requested(url: String, texture_rect: TextureRec
 		return
 
 	var url_hash = url.md5_text()
-	var cache_filepath_png = IMAGE_CACHE_DIR.path_join(url_hash + ".png")
-	var cache_filepath_webp = IMAGE_CACHE_DIR.path_join(url_hash + ".webp")
+	var cache_filepath_png = _get_image_cache_filepath(url, ".png")
+	var cache_filepath_webp = _get_image_cache_filepath(url, ".webp")
 
 	var cache_filepath_to_load = ""
 	var file_extension = ""
@@ -197,32 +293,73 @@ func _on_product_list_focus_exited_up():
 		print("Main: Received focus_exited_up, focusing Home button.") # Debug
 		home_button.grab_focus()
 
-		if is_instance_valid(global_scroll_container):
-			global_scroll_container.scroll_vertical = 0
-			print("Main: Reset global scroll position to top.") # Debug
+		if is_instance_valid(_current_home_view_instance) and \
+			_current_home_view_instance.name == "HomeView" and \
+			_current_home_view_instance.has_method("scroll_to_top"):
+			
+			_current_home_view_instance.scroll_to_top()
 		else:
-			printerr("Main: GlobalScrollContainer nicht gefunden zum Zurücksetzen!")
+			# Fallback, falls der global_scroll_container noch relevant ist oder als Notlösung
+			if is_instance_valid(global_scroll_container): # global_scroll_container ist der alte in main.tscn
+				global_scroll_container.scroll_vertical = 0
+				print("Main: Reset global scroll position to top (fallback).") 
+			
+# In main.gd
 
 func _on_move_to_details_view(app_id: String, installed: bool):
 	var focused_control = get_viewport().gui_get_focus_owner()
-	if is_instance_valid(focused_control) and \
-	   (popular_product_list.is_ancestor_of(focused_control) or \
-		trending_product_list.is_ancestor_of(focused_control)):
-			_last_focused_product_box = focused_control
-	else:
-		_last_focused_product_box = null
-			
+	_last_focused_product_box = null # Reset before attempting to set
+
+	if is_instance_valid(focused_control):
+		var current_section_node = _sections[_current_section_index].instance
+		if is_instance_valid(current_section_node) and current_section_node.is_ancestor_of(focused_control):
+			var candidate = focused_control
+			# Traverse up the scene tree from the focused_control
+			# until we either find a node of type ProductBox
+			# or we reach the current_section_node itself (meaning focused_control was not inside a ProductBox)
+			# or we have no parent left within the section.
+			while is_instance_valid(candidate):
+				if candidate is ProductBox: # This requires 'class_name ProductBox' in your product_box.gd
+					_last_focused_product_box = candidate
+					print("INFO Main: Stored last focused ProductBox: ", candidate.name if "name" in candidate else "Unnamed ProductBox")
+					break # Found it!
+				
+				# Stop if the parent is the section container itself or if there's no parent
+				var parent = candidate.get_parent()
+				if not is_instance_valid(parent) or parent == current_section_node:
+					# If we reached here, focused_control was not inside a ProductBox,
+					# or ProductBox itself was focused (and the 'is ProductBox' check above caught it).
+					# If the originally focused control is what we want to re-focus and it's not a ProductBox,
+					# we could store 'focused_control' directly, but it's usually better to focus its ProductBox container.
+					if _last_focused_product_box == null: # Only if we haven't found a ProductBox yet
+						print("WARN Main: Focused control was not a ProductBox or child of one. Storing direct focused_control for fallback: ", focused_control)
+						_last_focused_product_box = focused_control # Fallback to the actual focused item
+					break 
+				candidate = parent
+	
+	if not is_instance_valid(_last_focused_product_box):
+		print("INFO Main: Could not determine a specific control to re-focus within the current section.")
+
+	# The rest of your function to switch to details_view
 	details_view.set_initial_state(app_id, installed)
 	details_view.load_details()
-	select_sound.play()
+	if is_instance_valid(select_sound): select_sound.play() # Check if sound player is valid
+	
+	# --- Transition Logic (simplified for now, focus on the problem) ---
+	# Your tweening logic for main_view and details_view
 	var tween = create_tween()
 	var main_view_height = main_view.size.y
-	var target_y = main_view_height
-	tween.tween_property(main_view, "position:y", target_y, transition_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	# var target_y = main_view_height # This moves main_view down, was it intended to move up?
+	var target_y_main_out = -main_view_height # Example: move main_view up and out
+	
+	tween.tween_property(main_view, "position:y", target_y_main_out, transition_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	await tween.finished
+	main_view.visible = false # Hide after animation
+
+	details_view.position.y = 0 # Ensure details_view is at its correct position
 	details_view.visible = true
 	details_view.set_initial_focus()
-	
+		
 func _on_move_back_to_main_view():
 	back_sound.play()
 	var tween = create_tween()
@@ -231,16 +368,21 @@ func _on_move_back_to_main_view():
 	var target_y = 0
 	tween.tween_property(main_view, "position:y", target_y, transition_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	details_view.visible = false
+	main_view.visible = true
 	await tween.finished
 	details_view.clear_data()
 	
-	if is_instance_valid(_last_focused_product_box):
+	if is_instance_valid(_last_focused_product_box) and _last_focused_product_box.is_inside_tree():
 		_last_focused_product_box.grab_focus()
-		_last_focused_product_box = null
+		print("INFO Main: Restored focus to: ", _last_focused_product_box.name if _last_focused_product_box and "name" in _last_focused_product_box else "unnamed or null")
 	else:
-		if is_instance_valid(popular_product_list):
-			popular_product_list.focus_first_product()
-	
+		print("INFO Main: _last_focused_product_box is invalid or not in tree. Focusing default.")
+		var current_section_instance = _sections[_current_section_index].instance
+		if is_instance_valid(current_section_instance) and current_section_instance.has_method("focus_default_element"):
+			current_section_instance.focus_default_element()
+		elif is_instance_valid(home_button): # Absolute fallback
+			home_button.grab_focus()
+	_last_focused_product_box = null 
 # =============================================================================
 # PRODUCT LOADING & CALLBACKS 
 # =============================================================================
@@ -278,7 +420,9 @@ func _on_image_request_completed(result, response_code, headers, body: PackedByt
 
 			if not file_extension.is_empty():
 				var url_hash = image_url.md5_text()
-				var cache_filepath = IMAGE_CACHE_DIR.path_join(url_hash + file_extension)
+				var cache_filepath = _get_image_cache_filepath(image_url, file_extension)
+				if not cache_filepath.is_empty():
+					var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
 				var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
 				var open_error = FileAccess.get_open_error()
 				if open_error == OK:
@@ -295,25 +439,6 @@ func _on_image_request_completed(result, response_code, headers, body: PackedByt
 	if is_instance_valid(http_request_node):
 		http_request_node.queue_free()
 				
-func process_home_popular_products_result(result, response_code, headers, body, http_request_list: HTTPRequest):
-	if response_code == 200:
-		var response_string = body.get_string_from_utf8(); var json = JSON.parse_string(response_string)
-		if json is Dictionary and json.has('hits') and json['hits'] is Array:
-			if is_instance_valid(popular_product_list):
-				popular_product_list.set_products(json['hits'])
-			else:
-				printerr("PopularProductList is invalid!")
-	if is_instance_valid(http_request_list): http_request_list.queue_free()
-
-func process_home_trending_products_result(result, response_code, headers, body, http_request_list: HTTPRequest):
-	if response_code == 200:
-		var response_string = body.get_string_from_utf8(); var json = JSON.parse_string(response_string)
-		if json is Dictionary and json.has('hits') and json['hits'] is Array:
-			if is_instance_valid(popular_product_list):
-				trending_product_list.set_products(json['hits'])
-			else:
-				printerr("TrendingProductList is invalid!")
-	if is_instance_valid(http_request_list): http_request_list.queue_free()
 
 # =============================================================================
 # DATA LOADING (Mit File Cache Logik)
@@ -362,8 +487,8 @@ func _load_product_list(url: String, target_list: ProductList):
 	var http_request = HTTPRequest.new()
 	add_child(http_request)
 	http_request.request_completed.connect(
-		_on_product_list_request_completed.bind(http_request, url, target_list) # URL und Ziel binden
-	)
+		_on_product_list_request_completed.bind(http_request, url, target_list)
+	)	
 	var error = http_request.request(url)
 	if error != OK:
 		printerr("Error starting request for '%s' (%s): %s" % [target_list.title, url, error])
@@ -415,12 +540,6 @@ func _process_product_list_data(json_data, target_list: ProductList, url: String
 		print("Productlist '%s' updated." % target_list.title)
 	else: printerr("Unexpected data structure for list '%s'." % target_list.title)
 
-func load_popular_products():
-	_load_product_list("https://flathub.org/api/v2/collection/popular?page=1&per_page=10&locale=en", popular_product_list)
-
-func load_trending_products():
-	_load_product_list("https://flathub.org/api/v2/collection/trending?page=1&per_page=10&locale=en", trending_product_list)
-
 # =============================================================================
 # JOY CONNECTION CALLBACKS
 # =============================================================================
@@ -442,7 +561,7 @@ func _on_joy_connection_changed(device_id: int, connected: bool):
 # =============================================================================
 
 func _fetch_installed_apps():
-	if _flatpak_thread != null and _flatpak_thread.is_started() and not _flatpak_thread.is_finished():
+	if _flatpak_thread != null and _flatpak_thread.is_alive():
 		return
 
 	print("INFO: Start Thread for fetching installed flatpaks...")
@@ -450,7 +569,7 @@ func _fetch_installed_apps():
 	var callable = Callable(self, "_execute_flatpak_in_thread")
 	var err = _flatpak_thread.start(callable)
 	if err != OK:
-		printerr("FEHLER: Could not start flatpak thread! Code: ", err)
+		printerr("ERROR: Could not start flatpak thread! Code: ", err)
 		_flatpak_thread = null
 
 
@@ -479,8 +598,8 @@ func get_cached_image_path(image_url: String) -> String:
 		return ""
 
 	var url_hash = image_url.md5_text()
-	var path_png = IMAGE_CACHE_DIR.path_join(url_hash + ".png")
-	var path_webp = IMAGE_CACHE_DIR.path_join(url_hash + ".webp")
+	var path_png = _get_image_cache_filepath(image_url, ".png")
+	var path_webp = _get_image_cache_filepath(image_url, ".webp")
 
 	if FileAccess.file_exists(path_png):
 		return path_png
@@ -514,8 +633,130 @@ func _process_flatpak_result(output: String, exit_code: int):
 	_flatpak_thread = null
 
 func _update_all_lists_install_status():
-	print("INFO: Update installed state in lists...")
-	if is_instance_valid(popular_product_list):
-		popular_product_list.update_installed_status(_installed_flatpak_ids)
-	if is_instance_valid(trending_product_list):
-		trending_product_list.update_installed_status(_installed_flatpak_ids)
+	print("INFO Main: Updating install status in current section...")
+	if _current_section_index >= 0 and _current_section_index < _sections.size():
+		var current_section_node = _sections[_current_section_index].instance
+		if is_instance_valid(current_section_node) and current_section_node.has_method("update_internal_list_install_status"):
+			# The current section's script (e.g., home_view.gd, categories_view.gd)
+			# must implement update_internal_list_install_status(installed_ids_dict)
+			current_section_node.update_internal_list_install_status(_installed_flatpak_ids)
+			print("INFO Main: Called update_internal_list_install_status on: ", current_section_node.name)
+		elif is_instance_valid(current_section_node):
+			print("DEBUG Main: Current section '", current_section_node.name, "' does not have 'update_internal_list_install_status' method.")
+		else:
+			print("DEBUG Main: Current section instance is invalid.")
+	else:
+		print("DEBUG Main: No valid current section index to update install status for.")
+
+# Switches to the section at the given index with a carousel animation
+func _switch_to_section(target_index: int):
+	if _is_switching_section: return
+	if target_index < 0 or target_index >= _sections.size(): return
+	if target_index == _current_section_index and is_instance_valid(_sections[target_index].instance): return
+
+	_is_switching_section = true
+
+	var old_section_index = _current_section_index
+	var old_section_instance = _sections[old_section_index].instance
+	
+	var new_section_instance = _sections[target_index].instance
+	
+	# --- START: Corrected Animation Direction Logic ---
+	var direction = 1 # Default: "next" animation (new view from the right)
+	
+	# Determine direction based on index change
+	if target_index < old_section_index:
+		# This is a normal "previous" press (e.g., from index 3 to 2)
+		direction = -1
+	
+	# Now, specifically handle the wrap-around cases to get the correct "feel"
+	if old_section_index == _sections.size() - 1 and target_index == 0:
+		# Case: Moving forward from the last section (e.g., Search) to the first (Home)
+		# This is a "next" action.
+		direction = 1
+	elif old_section_index == 0 and target_index == _sections.size() - 1:
+		# Case: Moving backward from the first section (Home) to the last (Search)
+		# This is a "previous" action.
+		direction = -1
+	
+	var container_width = section_view_container.size.x
+
+	# Prepare and show the new section off-screen
+	if is_instance_valid(new_section_instance):
+		new_section_instance.position.x = container_width * direction
+		new_section_instance.visible = true
+		if new_section_instance.has_method("on_view_entered"):
+			new_section_instance.on_view_entered()
+	else:
+		printerr("ERROR: New section instance is invalid for index: ", target_index)
+		_is_switching_section = false
+		return
+		
+	# Create and configure the tween for the animation
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.set_trans(Tween.TRANS_SINE)
+	tween.set_ease(Tween.EASE_OUT)
+
+	# Animate the new section into view
+	tween.tween_property(new_section_instance, "position:x", 0, transition_time_section_change)
+
+	# Animate the old section out of view
+	if is_instance_valid(old_section_instance):
+		if old_section_instance.has_method("on_view_exiting"):
+			old_section_instance.on_view_exiting()
+		# Move it in the opposite direction
+		tween.tween_property(old_section_instance, "position:x", -container_width * direction, transition_time_section_change)
+		# Hide the old section after the animation completes
+		tween.chain().tween_callback(func(): old_section_instance.visible = false)
+	
+	# Update the current index *after* the direction has been calculated
+	_current_section_index = target_index
+	
+	# Update the top bar focus and re-enable switching after animation
+	await tween.finished
+	_update_top_bar_button_focus()
+	_is_switching_section = false
+	
+# Called when a button in the top bar is pressed
+func _on_top_bar_button_pressed(target_index: int):
+	if is_instance_valid(switch_sound) and _is_switching_section == false:
+		switch_sound.play()
+	_switch_to_section(target_index)
+
+# Helper to connect signals for HomeView
+func _connect_home_view_signals(home_view_node: Control):
+	if not is_instance_valid(home_view_node): return
+
+	if home_view_node.has_signal("move_to_details_view_requested"):
+		home_view_node.move_to_details_view_requested.connect(_on_move_to_details_view)
+	if home_view_node.has_signal("image_load_requested"):
+		home_view_node.image_load_requested.connect(_on_product_list_image_load_requested)
+	if home_view_node.has_signal("focus_exited_up_from_lists"):
+		home_view_node.focus_exited_up_from_lists.connect(_on_product_list_focus_exited_up)
+	if home_view_node.has_signal("load_new_page_requested"):
+		home_view_node.load_new_page_requested.connect(_load_product_list)
+
+# Helper to update focus and style on top bar buttons
+func _update_top_bar_button_focus():
+	for i in range(_sections.size()):
+		var button_name = _sections[i].button_node_name
+		var button_node = top_button_bar.get_node_or_null(button_name) as Button
+
+		if not is_instance_valid(button_node):
+			continue
+
+		if i == _current_section_index:
+			# Suppress the sound *before* grabbing focus
+			_suppress_focus_sound = true
+			button_node.grab_focus()
+			button_node.set_pressed_no_signal(true)
+
+			await get_tree().process_frame
+			_suppress_focus_sound = false
+		else:
+			button_node.set_pressed_no_signal(false)
+			
+func refresh_installed_apps_list():
+	print("INFO Main: Refreshing installed apps list due to recent install/uninstall.")
+	_fetch_installed_apps()
