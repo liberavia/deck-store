@@ -93,7 +93,8 @@ func _ready():
 			
 			if section_data.name == "Home" and "product_box_scene" in instance:
 				instance.product_box_scene = product_box
-				_connect_home_view_signals(instance)
+			
+			_connect_section_signals(instance)
 			
 			instance.visible = (i == 0) # Mache nur die erste Sektion (Home) sichtbar
 			section_view_container.add_child(instance)
@@ -724,18 +725,25 @@ func _on_top_bar_button_pressed(target_index: int):
 		switch_sound.play()
 	_switch_to_section(target_index)
 
-# Helper to connect signals for HomeView
-func _connect_home_view_signals(home_view_node: Control):
-	if not is_instance_valid(home_view_node): return
+# Helper to connect signals for any Section View (HomeView, CategoriesView, etc.)
+func _connect_section_signals(view_node: Control):
+	if not is_instance_valid(view_node): return
 
-	if home_view_node.has_signal("move_to_details_view_requested"):
-		home_view_node.move_to_details_view_requested.connect(_on_move_to_details_view)
-	if home_view_node.has_signal("image_load_requested"):
-		home_view_node.image_load_requested.connect(_on_product_list_image_load_requested)
-	if home_view_node.has_signal("focus_exited_up_from_lists"):
-		home_view_node.focus_exited_up_from_lists.connect(_on_product_list_focus_exited_up)
-	if home_view_node.has_signal("load_new_page_requested"):
-		home_view_node.load_new_page_requested.connect(_load_product_list)
+	if view_node.has_signal("move_to_details_view_requested"):
+		if not view_node.move_to_details_view_requested.is_connected(_on_move_to_details_view):
+			view_node.move_to_details_view_requested.connect(_on_move_to_details_view)
+			
+	if view_node.has_signal("image_load_requested"):
+		if not view_node.image_load_requested.is_connected(_on_product_list_image_load_requested):
+			view_node.image_load_requested.connect(_on_product_list_image_load_requested)
+			
+	if view_node.has_signal("focus_exited_up_from_lists"):
+		if not view_node.focus_exited_up_from_lists.is_connected(_on_product_list_focus_exited_up):
+			view_node.focus_exited_up_from_lists.connect(_on_product_list_focus_exited_up)
+			
+	if view_node.has_signal("load_new_page_requested"):
+		if not view_node.load_new_page_requested.is_connected(_load_product_list):
+			view_node.load_new_page_requested.connect(_load_product_list)
 
 # Helper to update focus and style on top bar buttons
 func _update_top_bar_button_focus():
