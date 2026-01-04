@@ -6,7 +6,12 @@ extends Control
 enum DisplayMode { MULTI_LINE_WRAP, SINGLE_LINE_SCROLL }
 @export var display_mode: DisplayMode = DisplayMode.MULTI_LINE_WRAP
 @export var product_box_scene: PackedScene
-@export var title: String
+@export var title: String = "":
+	set(value):
+		title = value
+		if is_instance_valid(title_label):
+			title_label.text = title
+			title_label.visible = not title.is_empty()
 @export var min_rows: int = 2
 
 # --- Signals ---
@@ -14,7 +19,7 @@ signal focus_exited_up
 signal image_load_requested(url: String, texture_rect: TextureRect)
 signal move_to_details_view(app_id: String, installed: bool)
 signal load_new_page(url: String, target_list: ProductList)
-
+signal products_loaded
 
 # --- Nodes ---
 @onready var multi_line_scroll: ScrollContainer = $VBoxContainer/MultiLineScroll
@@ -27,6 +32,7 @@ signal load_new_page(url: String, target_list: ProductList)
 @onready var next_button: Button = $VBoxContainer/PaginationBar/NextButton
 @onready var page_label: Label = $VBoxContainer/PaginationBar/PageLabel
 @onready var pagination_bar: HBoxContainer = $VBoxContainer/PaginationBar
+@onready var loading_overlay: Control = $LoadingOverlay
 
 # --- Internal Variables ---
 var _active_content_container: Container 
@@ -129,6 +135,12 @@ func set_pagination_data(hitsPerPage: int, page: int, totalPages: int):
 		prev_button.pressed.connect(_on_prev_button_pressed)
 
 func set_products(product_data: Array):
+	hide_loading()
+	
+	# Reset scroll position
+	if is_instance_valid(multi_line_scroll): multi_line_scroll.scroll_vertical = 0
+	if is_instance_valid(single_line_scroll): single_line_scroll.scroll_horizontal = 0
+	
 	if not is_instance_valid(_active_content_container):
 		printerr("ProductList: Active container is invalid!")
 		return
@@ -165,7 +177,19 @@ func set_products(product_data: Array):
 	print("--- ProductList set_products END ---")
 	print("Final child count in active container: ", final_child_count)
 	var main_node = get_node_or_null("/root/App")
-	update_installed_status(main_node.get_installed_ids())
+	if main_node and main_node.has_method("get_installed_ids"):
+		update_installed_status(main_node.get_installed_ids())
+	
+	call_deferred("emit_signal", "products_loaded")
+
+func show_loading():
+	if is_instance_valid(loading_overlay):
+		loading_overlay.show_overlay()
+		
+func hide_loading():
+	if is_instance_valid(loading_overlay):
+		loading_overlay.hide_overlay()
+
 func get_base_url(full_url: String) -> String:
 	var parts = full_url.split("?", false, 1)
 	return parts[0]
@@ -176,12 +200,14 @@ func _show_pagination():
 	return true
 
 func _on_prev_button_pressed():
+	show_loading()
 	var base_url = get_base_url(current_url)
 	var prev_page = current_page - 1
 	var target_url = "%s?page=%s&per_page=%s&locale=en" % [base_url, prev_page, items_per_page]
 	emit_signal("load_new_page", target_url, self)
 	
 func _on_next_button_pressed():
+	show_loading()
 	var base_url = get_base_url(current_url)
 	var next_page = current_page + 1
 	var target_url = "%s?page=%s&per_page=%s&locale=en" % [base_url, next_page, items_per_page]
@@ -238,6 +264,10 @@ func _update_minimum_height():
 
 
 func focus_first_product():
+	# Reset scroll explicitly before focusing to prevent jumping to bottom
+	if multi_line_scroll.visible: multi_line_scroll.scroll_vertical = 0
+	elif single_line_scroll.visible: single_line_scroll.scroll_horizontal = 0
+
 	var first_focusable = _get_first_focusable_product()
 	if is_instance_valid(first_focusable):
 		first_focusable.grab_focus()
@@ -283,13 +313,15 @@ func _handle_navigation(action_string: String) -> bool:
 		if child_count > 0 and current_index >= 0:
 			if _active_content_container is HFlowContainer:
 				var focused_pos_y = focused_control.global_position.y
-				var first_child_pos_y = _active_content_container.get_child(0).global_position.y
-				if abs(focused_pos_y - first_child_pos_y) < 10.0: is_in_first_row = true
+				# Important: find the first child that is NOT queued for deletion
+				var first_valid_child = _get_first_focusable_product()
+				if first_valid_child:
+					var first_child_pos_y = first_valid_child.global_position.y
+					if abs(focused_pos_y - first_child_pos_y) < 10.0: is_in_first_row = true
 			elif _active_content_container is HBoxContainer:
 				is_in_first_row = true
 
 		if is_in_first_row:
-			print("ProductList: Emitting focus_exited_up") # Debug
 			emit_signal("focus_exited_up")
 			navigation_occurred = true
 		else:
@@ -339,13 +371,18 @@ func _get_current_column_count() -> int:
 		var columns = floor((container_width + h_separation) / divisor)
 		return max(1, int(columns))
 	elif _active_content_container is HBoxContainer:
-		return _active_content_container.get_child_count()
+		# Count only valid children
+		var valid_count = 0
+		for child in _active_content_container.get_children():
+			if not child.is_queued_for_deletion():
+				valid_count += 1
+		return valid_count
 	else: return 1
 
 func _get_child_if_focusable(index: int) -> Control:
 	if index >= 0 and index < _active_content_container.get_child_count():
 		var node = _active_content_container.get_child(index) as Control
-		if is_instance_valid(node) and node.focus_mode != Control.FOCUS_NONE:
+		if is_instance_valid(node) and not node.is_queued_for_deletion() and node.focus_mode != Control.FOCUS_NONE:
 			return node
 	return null
 
@@ -361,6 +398,6 @@ func _focus_product_at_index(target_node: Control):
 func _get_first_focusable_product() -> Control:
 	if not is_instance_valid(_active_content_container): return null
 	for child in _active_content_container.get_children():
-		if child is Control and child.focus_mode != Control.FOCUS_NONE:
+		if child is Control and not child.is_queued_for_deletion() and child.focus_mode != Control.FOCUS_NONE:
 			return child
 	return null

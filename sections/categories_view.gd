@@ -21,6 +21,8 @@ var _style_focus: StyleBoxFlat
 var _style_pressed: StyleBoxFlat
 var _category_button_group: ButtonGroup
 var _focus_sound_player: AudioStreamPlayer
+var _select_sound_player: AudioStreamPlayer
+var _first_load: bool = true
 
 func _ready():
 	_setup_styles()
@@ -67,6 +69,11 @@ func _setup_audio():
 	_focus_sound_player.stream = load("res://assets/change.mp3")
 	_focus_sound_player.bus = "Master" # Or specific UI bus if exists
 	add_child(_focus_sound_player)
+	
+	_select_sound_player = AudioStreamPlayer.new()
+	_select_sound_player.stream = load("res://assets/nextprev.wav")
+	_select_sound_player.bus = "Master"
+	add_child(_select_sound_player)
 
 func _setup_paths():
 	var main_node = get_node_or_null("/root/App")
@@ -81,6 +88,13 @@ func _setup_product_list():
 		product_list.image_load_requested.connect(func(url, rect): emit_signal("image_load_requested", url, rect))
 		product_list.focus_exited_up.connect(func(): emit_signal("focus_exited_up_from_lists"))
 		product_list.load_new_page.connect(func(url, list): emit_signal("load_new_page_requested", url, list))
+		product_list.products_loaded.connect(_on_products_loaded)
+
+func _on_products_loaded():
+	if is_instance_valid(product_list) and is_visible_in_tree():
+		# Wait for layout to stabilize (fixes scroll/focus issues)
+		await get_tree().create_timer(0.05).timeout
+		product_list.focus_first_product()
 
 # --- Data Fetching ---
 
@@ -185,6 +199,13 @@ func _populate_category_list(categories: Array):
 		btn.focus_entered.connect(_on_button_focus_entered)
 		
 		category_button_container.add_child(btn)
+		
+	# Initial selection if first load
+	if _first_load and category_button_container.get_child_count() > 0:
+		var first_btn = category_button_container.get_child(0)
+		first_btn.set_pressed_no_signal(true)
+		_on_category_button_pressed(categories[0]) # Manually trigger load
+		_first_load = false
 
 func _on_button_focus_entered():
 	if _focus_sound_player:
@@ -198,9 +219,14 @@ func _on_category_button_gui_input(event: InputEvent):
 
 func _on_category_button_pressed(category_id: String):
 	print("Selected Category ID: ", category_id)
+	if _select_sound_player:
+		_select_sound_player.play()
 	
 	if product_list:
-		product_list.title = category_id.capitalize()
+		if product_list.has_method("show_loading"):
+			product_list.show_loading()
+			
+		product_list.title = "Apps in category " + category_id.capitalize()
 		var url = "https://flathub.org/api/v2/collection/category/%s?page=1&per_page=24&locale=en" % category_id.uri_encode()
 		emit_signal("load_new_page_requested", url, product_list)
 

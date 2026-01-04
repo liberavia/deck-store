@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://bubfvije4jq88" path="res://product_box.tscn" id="2_bsby6"]
 [ext_resource type="Script" uid="uid://cbdjfi6c6bvbu" path="res://prev_button.gd" id="3_oosp4"]
 [ext_resource type="Script" uid="uid://bv0d0leqmjrwt" path="res://next_button.gd" id="4_xwbbg"]
+[ext_resource type="PackedScene" uid="uid://c5y1x2z3a4b5" path="res://loading_overlay.tscn" id="6_overlay"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5x0sp"]
 bg_color = Color(0, 0, 0, 0.35)
@@ -115,3 +116,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 35
+
+[node name="LoadingOverlay" parent="." instance=ExtResource("6_overlay")]
+visible = false
+layout_mode = 1
