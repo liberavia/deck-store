@@ -80,9 +80,27 @@ func _ready():
 	if err_img_cache != OK and err_img_cache != ERR_ALREADY_EXISTS:
 		printerr("ERROR: Could not create image cache directory: ", _image_cache_abs_path, ", Code: ", err_img_cache)
 			
+	# --- Setup Top Bar Buttons (Styles & Toggle) ---
+	var section_btn_group = ButtonGroup.new()
+	
+	# Pressed/Selected Style (Purple Background, Purple Border)
+	var style_pressed = StyleBoxFlat.new()
+	style_pressed.bg_color = Color(0.627, 0.125, 0.941, 0.6) # Semi-transparent Purple
+	style_pressed.set_border_width_all(3)
+	style_pressed.border_color = Color(0.627, 0.125, 0.941, 1) # Solid Purple border
+	
+	# Focus Style (Reuse existing focus style logic or create similar if needed, 
+	# but buttons already have overrides from scene. We just add 'pressed')
+	
 	home_button.focus_mode = Control.FOCUS_ALL
 	for btn in top_button_bar.get_children():
-		if btn is Button: btn.focus_mode = Control.FOCUS_ALL
+		if btn is Button: 
+			btn.focus_mode = Control.FOCUS_ALL
+			btn.toggle_mode = true
+			btn.button_group = section_btn_group
+			btn.add_theme_stylebox_override("pressed", style_pressed)
+			# Optional: Make hover look like focus if not already consistent
+			# btn.add_theme_stylebox_override("hover", ...) 
 
 	for i in range(_sections.size()):
 		var section_data = _sections[i]

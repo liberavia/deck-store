@@ -15,7 +15,16 @@ signal load_new_page_requested(url: String, target_list: ProductList)
 var _api_cache_dir: String = ""
 const CACHE_DURATION_SEC: int = 86400 # 24 hours
 
+# --- Styling & Audio ---
+var _style_normal: StyleBoxFlat
+var _style_focus: StyleBoxFlat
+var _style_pressed: StyleBoxFlat
+var _category_button_group: ButtonGroup
+var _focus_sound_player: AudioStreamPlayer
+
 func _ready():
+	_setup_styles()
+	_setup_audio()
 	_setup_paths()
 	_setup_product_list()
 	
@@ -25,6 +34,39 @@ func _ready():
 	if back_button:
 		back_button.pressed.connect(_on_back_button_pressed)
 		back_button.visible = false # Hidden initially
+
+func _setup_styles():
+	# Normal Style (Transparent Black, Thin White Border)
+	_style_normal = StyleBoxFlat.new()
+	_style_normal.bg_color = Color(0, 0, 0, 0.35)
+	_style_normal.set_border_width_all(1)
+	_style_normal.border_color = Color(1, 1, 1, 1)
+	_style_normal.content_margin_left = 15
+	_style_normal.content_margin_right = 15
+	
+	# Focus Style (Transparent Black, Thick Purple Border)
+	_style_focus = StyleBoxFlat.new()
+	_style_focus.bg_color = Color(0, 0, 0, 0.35)
+	_style_focus.set_border_width_all(3)
+	_style_focus.border_color = Color(0.627, 0.125, 0.941, 1)
+	_style_focus.content_margin_left = 15
+	_style_focus.content_margin_right = 15
+	
+	# Pressed/Selected Style (Purple Background, Purple Border)
+	_style_pressed = StyleBoxFlat.new()
+	_style_pressed.bg_color = Color(0.627, 0.125, 0.941, 0.6) # Semi-transparent Purple
+	_style_pressed.set_border_width_all(3)
+	_style_pressed.border_color = Color(0.627, 0.125, 0.941, 1) # Solid Purple border
+	_style_pressed.content_margin_left = 15
+	_style_pressed.content_margin_right = 15
+	
+	_category_button_group = ButtonGroup.new()
+
+func _setup_audio():
+	_focus_sound_player = AudioStreamPlayer.new()
+	_focus_sound_player.stream = load("res://assets/change.mp3")
+	_focus_sound_player.bus = "Master" # Or specific UI bus if exists
+	add_child(_focus_sound_player)
 
 func _setup_paths():
 	var main_node = get_node_or_null("/root/App")
@@ -116,17 +158,37 @@ func _populate_category_list(categories: Array):
 		
 	categories.sort()
 	
+	# Add some spacing between buttons
+	category_button_container.add_theme_constant_override("separation", 10)
+	
 	for cat_id in categories:
 		var btn = Button.new()
 		# Display name: capitalize first letter (or specific mapping)
 		var display_name = cat_id.capitalize() 
 		btn.text = display_name
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		# Manual focus handling for right navigation
-		# btn.focus_neighbor_right = product_list.get_path() 
+		
+		# Styling
+		btn.add_theme_stylebox_override("normal", _style_normal)
+		btn.add_theme_stylebox_override("focus", _style_focus)
+		btn.add_theme_stylebox_override("pressed", _style_pressed)
+		btn.add_theme_stylebox_override("hover", _style_focus) # Mouse hover behaves like focus
+		
+		btn.custom_minimum_size.y = 45 # Make them easily touchable/clickable
+		
+		# Toggle behavior for "Selected" state
+		btn.toggle_mode = true
+		btn.button_group = _category_button_group
+		
 		btn.pressed.connect(_on_category_button_pressed.bind(cat_id))
 		btn.gui_input.connect(_on_category_button_gui_input)
+		btn.focus_entered.connect(_on_button_focus_entered)
+		
 		category_button_container.add_child(btn)
+
+func _on_button_focus_entered():
+	if _focus_sound_player:
+		_focus_sound_player.play()
 
 func _on_category_button_gui_input(event: InputEvent):
 	if event.is_action_pressed("ui_right"):
@@ -153,8 +215,11 @@ func update_internal_list_install_status(installed_ids: Dictionary):
 		product_list.update_installed_status(installed_ids)
 
 func focus_default_element():
-	# Try to focus the first category button
-	if category_button_container.get_child_count() > 0:
+	# Try to focus the selected button first, otherwise the first one
+	var pressed_btn = _category_button_group.get_pressed_button()
+	if pressed_btn:
+		pressed_btn.grab_focus()
+	elif category_button_container.get_child_count() > 0:
 		category_button_container.get_child(0).grab_focus()
 	elif is_instance_valid(back_button) and back_button.visible:
 		back_button.grab_focus()
