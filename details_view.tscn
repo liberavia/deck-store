@@ -17,6 +17,9 @@ subpixel_positioning = 0
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u0jqg"]
 bg_color = Color(0.627451, 0.12549, 0.941176, 1)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8dtdw"]
+bg_color = Color(0.141176, 0.32549, 0.133333, 1)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mufgs"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
 border_width_left = 3
@@ -24,9 +27,6 @@ border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
 border_color = Color(0.627451, 0.12549, 0.941176, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8dtdw"]
-bg_color = Color(0.141176, 0.32549, 0.133333, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_uows0"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
@@ -48,6 +48,9 @@ border_color = Color(0.627451, 0.12549, 0.941176, 1)
 bg_color = Color(0.6, 0.6, 0.6, 0)
 draw_center = false
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fogxl"]
+bg_color = Color(0.13966, 0.326548, 0.133366, 1)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3hj5f"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
 border_width_left = 3
@@ -55,9 +58,6 @@ border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
 border_color = Color(0.627451, 0.12549, 0.941176, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fogxl"]
-bg_color = Color(0.13966, 0.326548, 0.133366, 1)
 
 [node name="DetailsView" type="Control"]
 layout_mode = 3
@@ -169,8 +169,8 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_u0jqg")
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 25
-theme_override_styles/focus = SubResource("StyleBoxFlat_mufgs")
 theme_override_styles/normal = SubResource("StyleBoxFlat_8dtdw")
+theme_override_styles/focus = SubResource("StyleBoxFlat_mufgs")
 text = "Add to Steam"
 script = ExtResource("3_8dtdw")
 
@@ -319,8 +319,8 @@ text = "(123456)"
 custom_minimum_size = Vector2(0, 45)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
-theme_override_styles/focus = SubResource("StyleBoxFlat_3hj5f")
 theme_override_styles/normal = SubResource("StyleBoxFlat_fogxl")
+theme_override_styles/focus = SubResource("StyleBoxFlat_3hj5f")
 text = "Show Reviews"
 script = ExtResource("6_mufgs")
 

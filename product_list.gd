@@ -13,6 +13,7 @@ enum DisplayMode { MULTI_LINE_WRAP, SINGLE_LINE_SCROLL }
 			title_label.text = title
 			title_label.visible = not title.is_empty()
 @export var min_rows: int = 2
+@export var use_auto_height: bool = true
 
 # --- Signals ---
 signal focus_exited_up
@@ -32,6 +33,10 @@ signal products_loaded
 @onready var next_button: Button = $VBoxContainer/PaginationBar/NextButton
 @onready var page_label: Label = $VBoxContainer/PaginationBar/PageLabel
 @onready var pagination_bar: HBoxContainer = $VBoxContainer/PaginationBar
+@onready var pagination_bar_bottom: HBoxContainer = $VBoxContainer/PaginationBarBottom
+@onready var page_label_bottom: Label = $VBoxContainer/PaginationBarBottom/PageLabel
+@onready var prev_button_bottom: Button = $VBoxContainer/PaginationBarBottom/PrevButton
+@onready var next_button_bottom: Button = $VBoxContainer/PaginationBarBottom/NextButton
 @onready var loading_overlay: Control = $LoadingOverlay
 
 # --- Internal Variables ---
@@ -82,7 +87,7 @@ func _ready():
 		multi_line_scroll.visible = true
 		single_line_scroll.visible = false
 		_active_content_container = multi_line_content
-		pagination_bar.visible = _show_pagination()
+		_update_pagination_visibility()
 		print("ProductList: Multi-line mode activated.")
 	else: # SINGLE_LINE_SCROLL
 		multi_line_scroll.visible = false
@@ -99,10 +104,15 @@ func _ready():
 		printerr("ProductList: product_box_scene ist nicht zugewiesen!")
 		
 	call_deferred("_update_minimum_height")
-	if prev_button:
-		prev_button.pressed.connect(_on_prev_button_pressed)
-	if next_button:
-		next_button.pressed.connect(_on_next_button_pressed)	
+	
+	# Connect Top Pagination
+	if prev_button: prev_button.pressed.connect(_on_prev_button_pressed)
+	if next_button: next_button.pressed.connect(_on_next_button_pressed)
+	
+	# Connect Bottom Pagination
+	if prev_button_bottom: prev_button_bottom.pressed.connect(_on_prev_button_pressed)
+	if next_button_bottom: next_button_bottom.pressed.connect(_on_next_button_pressed)
+		
 	print("--- ProductList _ready END for '", title, "' ---")
 
 func set_url(url: String):
@@ -112,27 +122,35 @@ func set_pagination_data(hitsPerPage: int, page: int, totalPages: int):
 	items_per_page = hitsPerPage
 	current_page = page
 	total_pages = totalPages
-	page_label.text = "Page %s of %s" % [current_page, total_pages]
 	
-	if current_page >= total_pages:
-		next_button.disabled = true
-		next_button.focus_mode = Control.FOCUS_NONE
-		if next_button.has_focus():
-			prev_button.grab_focus()
-	else:
-		next_button.disabled = false
-		next_button.focus_mode = Control.FOCUS_ALL
-		next_button.pressed.connect(_on_next_button_pressed)
-		
-	if current_page <= 1:
-		prev_button.disabled = true
-		prev_button.focus_mode = Control.FOCUS_NONE
-		if prev_button.has_focus():
-			next_button.grab_focus()
-	else:
-		prev_button.disabled = false
-		prev_button.focus_mode = Control.FOCUS_ALL
-		prev_button.pressed.connect(_on_prev_button_pressed)
+	var label_text = "Page %s of %s" % [current_page, total_pages]
+	page_label.text = label_text
+	if page_label_bottom: page_label_bottom.text = label_text
+	
+	# Disable/Enable Buttons logic
+	var can_go_next = current_page < total_pages
+	var can_go_prev = current_page > 1
+	
+	_update_nav_button(next_button, can_go_next)
+	_update_nav_button(next_button_bottom, can_go_next)
+	_update_nav_button(prev_button, can_go_prev)
+	_update_nav_button(prev_button_bottom, can_go_prev)
+
+	# Focus handling if button was disabled while focused (simple fallback)
+	if not can_go_next and (next_button.has_focus() or next_button_bottom.has_focus()):
+		if can_go_prev: 
+			if next_button.has_focus(): prev_button.grab_focus()
+			else: prev_button_bottom.grab_focus()
+	
+	if not can_go_prev and (prev_button.has_focus() or prev_button_bottom.has_focus()):
+		if can_go_next: 
+			if prev_button.has_focus(): next_button.grab_focus()
+			else: next_button_bottom.grab_focus()
+
+func _update_nav_button(btn: Button, enabled: bool):
+	if not is_instance_valid(btn): return
+	btn.disabled = not enabled
+	btn.focus_mode = Control.FOCUS_ALL if enabled else Control.FOCUS_NONE
 
 func set_products(product_data: Array):
 	hide_loading()
@@ -199,6 +217,11 @@ func _show_pagination():
 	# @TODO: possibly better to decide after all elements have been loaded. For now just true
 	return true
 
+func _update_pagination_visibility():
+	var show = _show_pagination()
+	if pagination_bar: pagination_bar.visible = show
+	if pagination_bar_bottom: pagination_bar_bottom.visible = show
+
 func _on_prev_button_pressed():
 	show_loading()
 	var base_url = get_base_url(current_url)
@@ -227,6 +250,8 @@ func update_installed_status(new_ids: Dictionary):
 				child.set_installed_status(is_installed)
 
 func _update_minimum_height():
+	if not use_auto_height: return
+	
 	if not is_instance_valid(self) or not is_instance_valid(inner_vbox) or \
 	   not is_instance_valid(title_label) or not is_instance_valid(_active_content_container):
 		printerr("Nodes für Mindesthöhenberechnung ungültig in '%s'." % title)
@@ -258,6 +283,10 @@ func _update_minimum_height():
 
 	# Add padding
 	calculated_min_height += 10.0
+	
+	# Add height for bottom pagination if visible
+	if pagination_bar_bottom and pagination_bar_bottom.visible:
+		calculated_min_height += pagination_bar_bottom.size.y + vbox_separation
 
 	print("Update Min Height for '%s': %.1f (Title: %.1f, Content: %.1f)" % [title, calculated_min_height, title_height, content_min_height])
 	self.custom_minimum_size.y = calculated_min_height
@@ -278,6 +307,18 @@ func focus_first_product():
 func _unhandled_input(event: InputEvent):
 	if not has_focus() and not get_viewport().gui_get_focus_owner():
 		return
+		
+	# Pagination Shortcuts
+	if event.is_action_pressed("ui_page_up"):
+		if current_page > 1:
+			_on_prev_button_pressed()
+			get_viewport().set_input_as_handled()
+			return
+	elif event.is_action_pressed("ui_page_down"):
+		if current_page < total_pages:
+			_on_next_button_pressed()
+			get_viewport().set_input_as_handled()
+			return
 
 	var action_string = ""
 	if event.is_action_pressed("ui_up"): action_string = "ui_up"

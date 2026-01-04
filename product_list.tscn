@@ -117,6 +117,42 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 35
 
+[node name="PaginationBarBottom" type="HBoxContainer" parent="VBoxContainer"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 6
+
+[node name="PrevButton" type="Button" parent="VBoxContainer/PaginationBarBottom"]
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+focus_neighbor_right = NodePath("../NextButton")
+theme_override_styles/focus = SubResource("StyleBoxFlat_5x0sp")
+theme_override_styles/normal = SubResource("StyleBoxFlat_oosp4")
+text = "Previous"
+script = ExtResource("3_oosp4")
+
+[node name="SeperatorLeft" type="HSeparator" parent="VBoxContainer/PaginationBarBottom"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+
+[node name="PageLabel" type="Label" parent="VBoxContainer/PaginationBarBottom"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_bsby6")
+text = "Page 1 of 25"
+
+[node name="SeperatorRight" type="HSeparator" parent="VBoxContainer/PaginationBarBottom"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+
+[node name="NextButton" type="Button" parent="VBoxContainer/PaginationBarBottom"]
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+focus_neighbor_left = NodePath("../PrevButton")
+theme_override_styles/focus = SubResource("StyleBoxFlat_5x0sp")
+theme_override_styles/normal = SubResource("StyleBoxFlat_oosp4")
+text = "Next"
+script = ExtResource("4_xwbbg")
+
 [node name="LoadingOverlay" parent="." instance=ExtResource("6_overlay")]
 visible = false
 layout_mode = 1

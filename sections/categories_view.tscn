@@ -59,3 +59,4 @@ size_flags_stretch_ratio = 0.75
 layout_mode = 2
 title = "Select a Category"
 display_mode = 0
+use_auto_height = false
