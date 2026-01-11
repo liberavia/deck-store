@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://bubfvije4jq88" path="res://product_box.tscn" id="2_bsby6"]
 [ext_resource type="Script" uid="uid://cbdjfi6c6bvbu" path="res://prev_button.gd" id="3_oosp4"]
 [ext_resource type="Script" uid="uid://bv0d0leqmjrwt" path="res://next_button.gd" id="4_xwbbg"]
+[ext_resource type="PackedScene" uid="uid://c5y1x2z3a4b5" path="res://loading_overlay.tscn" id="6_overlay"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5x0sp"]
 bg_color = Color(0, 0, 0, 0.35)
@@ -115,3 +116,43 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 35
+
+[node name="PaginationBarBottom" type="HBoxContainer" parent="VBoxContainer"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 6
+
+[node name="PrevButton" type="Button" parent="VBoxContainer/PaginationBarBottom"]
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+focus_neighbor_right = NodePath("../NextButton")
+theme_override_styles/focus = SubResource("StyleBoxFlat_5x0sp")
+theme_override_styles/normal = SubResource("StyleBoxFlat_oosp4")
+text = "Previous"
+script = ExtResource("3_oosp4")
+
+[node name="SeperatorLeft" type="HSeparator" parent="VBoxContainer/PaginationBarBottom"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+
+[node name="PageLabel" type="Label" parent="VBoxContainer/PaginationBarBottom"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_bsby6")
+text = "Page 1 of 25"
+
+[node name="SeperatorRight" type="HSeparator" parent="VBoxContainer/PaginationBarBottom"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+
+[node name="NextButton" type="Button" parent="VBoxContainer/PaginationBarBottom"]
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+focus_neighbor_left = NodePath("../PrevButton")
+theme_override_styles/focus = SubResource("StyleBoxFlat_5x0sp")
+theme_override_styles/normal = SubResource("StyleBoxFlat_oosp4")
+text = "Next"
+script = ExtResource("4_xwbbg")
+
+[node name="LoadingOverlay" parent="." instance=ExtResource("6_overlay")]
+visible = false
+layout_mode = 1

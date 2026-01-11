@@ -6,15 +6,21 @@ extends Control
 enum DisplayMode { MULTI_LINE_WRAP, SINGLE_LINE_SCROLL }
 @export var display_mode: DisplayMode = DisplayMode.MULTI_LINE_WRAP
 @export var product_box_scene: PackedScene
-@export var title: String
+@export var title: String = "":
+	set(value):
+		title = value
+		if is_instance_valid(title_label):
+			title_label.text = title
+			title_label.visible = not title.is_empty()
 @export var min_rows: int = 2
+@export var use_auto_height: bool = true
 
 # --- Signals ---
 signal focus_exited_up
 signal image_load_requested(url: String, texture_rect: TextureRect)
 signal move_to_details_view(app_id: String, installed: bool)
 signal load_new_page(url: String, target_list: ProductList)
-
+signal products_loaded
 
 # --- Nodes ---
 @onready var multi_line_scroll: ScrollContainer = $VBoxContainer/MultiLineScroll
@@ -27,6 +33,11 @@ signal load_new_page(url: String, target_list: ProductList)
 @onready var next_button: Button = $VBoxContainer/PaginationBar/NextButton
 @onready var page_label: Label = $VBoxContainer/PaginationBar/PageLabel
 @onready var pagination_bar: HBoxContainer = $VBoxContainer/PaginationBar
+@onready var pagination_bar_bottom: HBoxContainer = $VBoxContainer/PaginationBarBottom
+@onready var page_label_bottom: Label = $VBoxContainer/PaginationBarBottom/PageLabel
+@onready var prev_button_bottom: Button = $VBoxContainer/PaginationBarBottom/PrevButton
+@onready var next_button_bottom: Button = $VBoxContainer/PaginationBarBottom/NextButton
+@onready var loading_overlay: Control = $LoadingOverlay
 
 # --- Internal Variables ---
 var _active_content_container: Container 
@@ -76,7 +87,7 @@ func _ready():
 		multi_line_scroll.visible = true
 		single_line_scroll.visible = false
 		_active_content_container = multi_line_content
-		pagination_bar.visible = _show_pagination()
+		_update_pagination_visibility()
 		print("ProductList: Multi-line mode activated.")
 	else: # SINGLE_LINE_SCROLL
 		multi_line_scroll.visible = false
@@ -93,10 +104,15 @@ func _ready():
 		printerr("ProductList: product_box_scene ist nicht zugewiesen!")
 		
 	call_deferred("_update_minimum_height")
-	if prev_button:
-		prev_button.pressed.connect(_on_prev_button_pressed)
-	if next_button:
-		next_button.pressed.connect(_on_next_button_pressed)	
+	
+	# Connect Top Pagination
+	if prev_button: prev_button.pressed.connect(_on_prev_button_pressed)
+	if next_button: next_button.pressed.connect(_on_next_button_pressed)
+	
+	# Connect Bottom Pagination
+	if prev_button_bottom: prev_button_bottom.pressed.connect(_on_prev_button_pressed)
+	if next_button_bottom: next_button_bottom.pressed.connect(_on_next_button_pressed)
+		
 	print("--- ProductList _ready END for '", title, "' ---")
 
 func set_url(url: String):
@@ -106,29 +122,43 @@ func set_pagination_data(hitsPerPage: int, page: int, totalPages: int):
 	items_per_page = hitsPerPage
 	current_page = page
 	total_pages = totalPages
-	page_label.text = "Page %s of %s" % [current_page, total_pages]
 	
-	if current_page >= total_pages:
-		next_button.disabled = true
-		next_button.focus_mode = Control.FOCUS_NONE
-		if next_button.has_focus():
-			prev_button.grab_focus()
-	else:
-		next_button.disabled = false
-		next_button.focus_mode = Control.FOCUS_ALL
-		next_button.pressed.connect(_on_next_button_pressed)
-		
-	if current_page <= 1:
-		prev_button.disabled = true
-		prev_button.focus_mode = Control.FOCUS_NONE
-		if prev_button.has_focus():
-			next_button.grab_focus()
-	else:
-		prev_button.disabled = false
-		prev_button.focus_mode = Control.FOCUS_ALL
-		prev_button.pressed.connect(_on_prev_button_pressed)
+	var label_text = "Page %s of %s" % [current_page, total_pages]
+	page_label.text = label_text
+	if page_label_bottom: page_label_bottom.text = label_text
+	
+	# Disable/Enable Buttons logic
+	var can_go_next = current_page < total_pages
+	var can_go_prev = current_page > 1
+	
+	_update_nav_button(next_button, can_go_next)
+	_update_nav_button(next_button_bottom, can_go_next)
+	_update_nav_button(prev_button, can_go_prev)
+	_update_nav_button(prev_button_bottom, can_go_prev)
+
+	# Focus handling if button was disabled while focused (simple fallback)
+	if not can_go_next and (next_button.has_focus() or next_button_bottom.has_focus()):
+		if can_go_prev: 
+			if next_button.has_focus(): prev_button.grab_focus()
+			else: prev_button_bottom.grab_focus()
+	
+	if not can_go_prev and (prev_button.has_focus() or prev_button_bottom.has_focus()):
+		if can_go_next: 
+			if prev_button.has_focus(): next_button.grab_focus()
+			else: next_button_bottom.grab_focus()
+
+func _update_nav_button(btn: Button, enabled: bool):
+	if not is_instance_valid(btn): return
+	btn.disabled = not enabled
+	btn.focus_mode = Control.FOCUS_ALL if enabled else Control.FOCUS_NONE
 
 func set_products(product_data: Array):
+	hide_loading()
+	
+	# Reset scroll position
+	if is_instance_valid(multi_line_scroll): multi_line_scroll.scroll_vertical = 0
+	if is_instance_valid(single_line_scroll): single_line_scroll.scroll_horizontal = 0
+	
 	if not is_instance_valid(_active_content_container):
 		printerr("ProductList: Active container is invalid!")
 		return
@@ -165,7 +195,19 @@ func set_products(product_data: Array):
 	print("--- ProductList set_products END ---")
 	print("Final child count in active container: ", final_child_count)
 	var main_node = get_node_or_null("/root/App")
-	update_installed_status(main_node.get_installed_ids())
+	if main_node and main_node.has_method("get_installed_ids"):
+		update_installed_status(main_node.get_installed_ids())
+	
+	call_deferred("emit_signal", "products_loaded")
+
+func show_loading():
+	if is_instance_valid(loading_overlay):
+		loading_overlay.show_overlay()
+		
+func hide_loading():
+	if is_instance_valid(loading_overlay):
+		loading_overlay.hide_overlay()
+
 func get_base_url(full_url: String) -> String:
 	var parts = full_url.split("?", false, 1)
 	return parts[0]
@@ -175,13 +217,20 @@ func _show_pagination():
 	# @TODO: possibly better to decide after all elements have been loaded. For now just true
 	return true
 
+func _update_pagination_visibility():
+	var show = _show_pagination()
+	if pagination_bar: pagination_bar.visible = show
+	if pagination_bar_bottom: pagination_bar_bottom.visible = show
+
 func _on_prev_button_pressed():
+	show_loading()
 	var base_url = get_base_url(current_url)
 	var prev_page = current_page - 1
 	var target_url = "%s?page=%s&per_page=%s&locale=en" % [base_url, prev_page, items_per_page]
 	emit_signal("load_new_page", target_url, self)
 	
 func _on_next_button_pressed():
+	show_loading()
 	var base_url = get_base_url(current_url)
 	var next_page = current_page + 1
 	var target_url = "%s?page=%s&per_page=%s&locale=en" % [base_url, next_page, items_per_page]
@@ -201,6 +250,8 @@ func update_installed_status(new_ids: Dictionary):
 				child.set_installed_status(is_installed)
 
 func _update_minimum_height():
+	if not use_auto_height: return
+	
 	if not is_instance_valid(self) or not is_instance_valid(inner_vbox) or \
 	   not is_instance_valid(title_label) or not is_instance_valid(_active_content_container):
 		printerr("Nodes für Mindesthöhenberechnung ungültig in '%s'." % title)
@@ -232,12 +283,20 @@ func _update_minimum_height():
 
 	# Add padding
 	calculated_min_height += 10.0
+	
+	# Add height for bottom pagination if visible
+	if pagination_bar_bottom and pagination_bar_bottom.visible:
+		calculated_min_height += pagination_bar_bottom.size.y + vbox_separation
 
 	print("Update Min Height for '%s': %.1f (Title: %.1f, Content: %.1f)" % [title, calculated_min_height, title_height, content_min_height])
 	self.custom_minimum_size.y = calculated_min_height
 
 
 func focus_first_product():
+	# Reset scroll explicitly before focusing to prevent jumping to bottom
+	if multi_line_scroll.visible: multi_line_scroll.scroll_vertical = 0
+	elif single_line_scroll.visible: single_line_scroll.scroll_horizontal = 0
+
 	var first_focusable = _get_first_focusable_product()
 	if is_instance_valid(first_focusable):
 		first_focusable.grab_focus()
@@ -248,6 +307,18 @@ func focus_first_product():
 func _unhandled_input(event: InputEvent):
 	if not has_focus() and not get_viewport().gui_get_focus_owner():
 		return
+		
+	# Pagination Shortcuts
+	if event.is_action_pressed("ui_page_up"):
+		if current_page > 1:
+			_on_prev_button_pressed()
+			get_viewport().set_input_as_handled()
+			return
+	elif event.is_action_pressed("ui_page_down"):
+		if current_page < total_pages:
+			_on_next_button_pressed()
+			get_viewport().set_input_as_handled()
+			return
 
 	var action_string = ""
 	if event.is_action_pressed("ui_up"): action_string = "ui_up"
@@ -283,13 +354,15 @@ func _handle_navigation(action_string: String) -> bool:
 		if child_count > 0 and current_index >= 0:
 			if _active_content_container is HFlowContainer:
 				var focused_pos_y = focused_control.global_position.y
-				var first_child_pos_y = _active_content_container.get_child(0).global_position.y
-				if abs(focused_pos_y - first_child_pos_y) < 10.0: is_in_first_row = true
+				# Important: find the first child that is NOT queued for deletion
+				var first_valid_child = _get_first_focusable_product()
+				if first_valid_child:
+					var first_child_pos_y = first_valid_child.global_position.y
+					if abs(focused_pos_y - first_child_pos_y) < 10.0: is_in_first_row = true
 			elif _active_content_container is HBoxContainer:
 				is_in_first_row = true
 
 		if is_in_first_row:
-			print("ProductList: Emitting focus_exited_up") # Debug
 			emit_signal("focus_exited_up")
 			navigation_occurred = true
 		else:
@@ -339,13 +412,18 @@ func _get_current_column_count() -> int:
 		var columns = floor((container_width + h_separation) / divisor)
 		return max(1, int(columns))
 	elif _active_content_container is HBoxContainer:
-		return _active_content_container.get_child_count()
+		# Count only valid children
+		var valid_count = 0
+		for child in _active_content_container.get_children():
+			if not child.is_queued_for_deletion():
+				valid_count += 1
+		return valid_count
 	else: return 1
 
 func _get_child_if_focusable(index: int) -> Control:
 	if index >= 0 and index < _active_content_container.get_child_count():
 		var node = _active_content_container.get_child(index) as Control
-		if is_instance_valid(node) and node.focus_mode != Control.FOCUS_NONE:
+		if is_instance_valid(node) and not node.is_queued_for_deletion() and node.focus_mode != Control.FOCUS_NONE:
 			return node
 	return null
 
@@ -361,6 +439,6 @@ func _focus_product_at_index(target_node: Control):
 func _get_first_focusable_product() -> Control:
 	if not is_instance_valid(_active_content_container): return null
 	for child in _active_content_container.get_children():
-		if child is Control and child.focus_mode != Control.FOCUS_NONE:
+		if child is Control and not child.is_queued_for_deletion() and child.focus_mode != Control.FOCUS_NONE:
 			return child
 	return null
