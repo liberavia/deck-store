@@ -64,13 +64,50 @@ func _on_search_input_focus_entered():
 	if _focus_sound_player:
 		_focus_sound_player.play()
 
-func _show_virtual_keyboard():
-	print("SearchView: Requesting Virtual Keyboard...")
-	DisplayServer.virtual_keyboard_show(search_input.text)
+func _update_typing_visuals():
+	if not is_instance_valid(search_input): return
+	
+	# We can use theme overrides to change appearance
+	if _typing_active:
+		# Active Typing: Green Border (or distinct color)
+		var style = search_input.get_theme_stylebox("normal").duplicate()
+		if style is StyleBoxFlat:
+			style.border_color = Color(0, 1, 0, 1) # Green
+			style.set_border_width_all(2)
+			search_input.add_theme_stylebox_override("normal", style)
+			search_input.add_theme_stylebox_override("focus", style) # Keep it green even if focused
+	else:
+		# Inactive: Revert to default (remove overrides or set back)
+		# Simplest is to remove the specific overrides we added
+		search_input.remove_theme_stylebox_override("normal")
+		search_input.remove_theme_stylebox_override("focus")
+
+func _set_typing_active(active: bool):
+	if _typing_active != active:
+		_typing_active = active
+		_update_typing_visuals()
+		if _typing_active:
+			_show_virtual_keyboard()
 
 func _input(event: InputEvent):
 	if not is_visible_in_tree():
 		return
+
+	# --- Manual Trigger Detection (Steam + Back) ---
+	# Button 4 is usually Back/Select. Button 5/Guide might not be caught here if OS swallows it, 
+	# but we check if it is pressed.
+	# Note: On Steam Deck, Guide+Back is a system shortcut. If it reaches us, we use it.
+	if event is InputEventJoypadButton and event.pressed:
+		# Check for Back button (usually index 4 or 6) + Guide held
+		# Godot 4: JOY_BUTTON_BACK=4, JOY_BUTTON_GUIDE=16. 
+		# But logs showed Button 5 as Guide? That's confusing. Let's trust standard constants first.
+		if event.button_index == JOY_BUTTON_BACK:
+			# Check if Guide is held (Input singleton checks physical state)
+			if Input.is_joy_button_pressed(event.device, JOY_BUTTON_GUIDE):
+				print("SearchView: Manual Keyboard Trigger Detected (Guide+Back)")
+				_set_typing_active(true)
+				get_viewport().set_input_as_handled()
+				return
 
 	# --- Fix for Double Input & Background Navigation ---
 	
@@ -79,8 +116,7 @@ func _input(event: InputEvent):
 	if not _typing_active and search_input.has_focus():
 		if event.is_action_pressed("ui_accept"):
 			print("SearchView: Starting Typing Mode (A pressed)")
-			_typing_active = true
-			_show_virtual_keyboard()
+			_set_typing_active(true)
 			get_viewport().set_input_as_handled()
 			return
 		elif event.is_action_pressed("ui_cancel"):
@@ -99,7 +135,7 @@ func _input(event: InputEvent):
 		# 1. Allow exiting typing mode
 		if event.is_action_pressed("ui_cancel"):
 			print("SearchView: Exiting typing mode via ui_cancel")
-			_typing_active = false
+			_set_typing_active(false)
 			search_input.release_focus()
 			if _select_sound_player: _select_sound_player.play()
 			get_viewport().set_input_as_handled()
@@ -146,8 +182,7 @@ func _input(event: InputEvent):
 # func _unhandled_input(event: InputEvent): ... deleted
 
 func _on_search_submitted(text: String):
-	_typing_active = false
-	_typing_active = false
+	_set_typing_active(false)
 	if text.strip_edges().is_empty():
 		return
 	
@@ -186,4 +221,4 @@ func on_view_entered():
 	focus_default_element()
 
 func on_view_exiting():
-	_typing_active = false
+	_set_typing_active(false)
