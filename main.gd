@@ -594,7 +594,11 @@ func _fetch_installed_apps():
 
 func _execute_flatpak_in_thread():
 	var spawn_cmd = "/usr/bin/flatpak-spawn"
-	var spawn_args = ["--host", "flatpak", "list", "--app", "--columns=application"]
+	# Use sh -c to set LC_ALL=C for consistent output format (dots for decimals)
+	# and fetch application ID, name, and size.
+	var host_command = "LC_ALL=C flatpak list --app --columns=application,name,size"
+	var spawn_args = ["--host", "sh", "-c", host_command]
+	
 	var output_array = []
 
 	print("INFO: Thread: Execute '%s %s' ..." % [spawn_cmd, " ".join(spawn_args)])
@@ -636,10 +640,29 @@ func _process_flatpak_result(output: String, exit_code: int):
 		var lines = output.strip_edges().split("\n")
 		var count = 0
 		for line in lines:
-			var app_id = line.strip_edges()
-			if not app_id.is_empty():
-				_installed_flatpak_ids[app_id] = true
+			line = line.strip_edges()
+			if line.is_empty(): continue
+			
+			# Columns: application, name, size
+			# separated by tabs usually, but let's be robust
+			var parts = line.split("\t")
+			if parts.size() >= 3:
+				var app_id = parts[0].strip_edges()
+				var app_name = parts[1].strip_edges()
+				var app_size = parts[2].strip_edges()
+				
+				_installed_flatpak_ids[app_id] = {
+					"name": app_name,
+					"size": app_size
+				}
 				count += 1
+			else:
+				# Fallback if split by tab fails (maybe spaces?)
+				# But spaces are dangerous because Name can have spaces.
+				# Given LC_ALL=C and standard flatpak list, tabs are expected.
+				# We log a warning if parsing fails.
+				printerr("WARN: Could not parse flatpak line: ", line)
+				
 		print("INFO: %d installed flatpaks found and processed." % count)
 		_update_all_lists_install_status()
 		emit_signal("installed_apps_updated")
