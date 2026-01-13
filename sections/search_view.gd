@@ -89,6 +89,10 @@ func _set_typing_active(active: bool):
 		if _typing_active:
 			_show_virtual_keyboard()
 
+func _show_virtual_keyboard():
+	print("SearchView: Requesting Virtual Keyboard...")
+	DisplayServer.virtual_keyboard_show(search_input.text)
+
 func _input(event: InputEvent):
 	if not is_visible_in_tree():
 		return
