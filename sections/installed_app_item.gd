@@ -2,9 +2,9 @@ extends Button
 
 signal item_pressed(app_id: String)
 
-@onready var icon_rect: TextureRect = $HBoxContainer/IconRect
-@onready var name_label: Label = $HBoxContainer/NameLabel
-@onready var size_label: Label = $HBoxContainer/SizeLabel
+@onready var icon_rect: TextureRect = $MarginContainer/HBoxContainer/IconRect
+@onready var name_label: Label = $MarginContainer/HBoxContainer/NameLabel
+@onready var size_label: Label = $MarginContainer/HBoxContainer/SizeLabel
 
 var app_id: String = ""
 var audio_player: AudioStreamPlayer

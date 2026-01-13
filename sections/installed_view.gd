@@ -3,7 +3,7 @@ extends Control
 signal move_to_details_view_requested(app_id: String, installed: bool)
 signal focus_exited_up_from_lists()
 
-@onready var app_list_container: VBoxContainer = $MarginContainer/VBoxContainer/ScrollContainer/AppListContainer
+@onready var app_list_container: VBoxContainer = $MarginContainer/VBoxContainer/ScrollContainer/ListMarginContainer/AppListContainer
 @onready var total_size_label: Label = $MarginContainer/VBoxContainer/HeaderContainer/TotalSizeLabel
 @onready var scroll_container: ScrollContainer = $MarginContainer/VBoxContainer/ScrollContainer
 

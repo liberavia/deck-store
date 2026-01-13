@@ -8,10 +8,6 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-content_margin_left = 15
-content_margin_right = 60
-content_margin_top = 10
-content_margin_bottom = 10
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_focus"]
 bg_color = Color(0.1, 0.1, 0.1, 0.6)
@@ -24,10 +20,6 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-content_margin_left = 15
-content_margin_right = 60
-content_margin_top = 10
-content_margin_bottom = 10
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hover"]
 bg_color = Color(0.2, 0.2, 0.2, 0.6)
@@ -35,10 +27,6 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-content_margin_left = 15
-content_margin_right = 60
-content_margin_top = 10
-content_margin_bottom = 10
 
 [node name="InstalledAppItem" type="Button"]
 custom_minimum_size = Vector2(0, 80)
@@ -51,22 +39,28 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_hover")
 theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
 script = ExtResource("1_abcde")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_right = 20
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="IconRect" type="TextureRect" parent="HBoxContainer"]
+[node name="IconRect" type="TextureRect" parent="MarginContainer/HBoxContainer"]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
+size_flags_vertical = 4
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="HBoxContainer"]
+[node name="NameLabel" type="Label" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 20
@@ -74,7 +68,7 @@ text = "Application Name"
 vertical_alignment = 1
 text_overrun_behavior = 3
 
-[node name="SizeLabel" type="Label" parent="HBoxContainer"]
+[node name="SizeLabel" type="Label" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
 theme_override_font_sizes/font_size = 16
