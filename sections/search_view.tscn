@@ -1,4 +1,7 @@
-[gd_scene format=3 uid="uid://b8yhu8ttgv2wr"]
+[gd_scene load_steps=3 format=3 uid="uid://b8yhu8ttgv2wr"]
+
+[ext_resource type="Script" path="res://sections/search_view.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://b8fwocgf5txps" path="res://product_list.tscn" id="2_plist"]
 
 [node name="SearchView" type="Control"]
 layout_mode = 3
@@ -7,11 +10,41 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
+script = ExtResource("1_script")
 
-[node name="Label" type="Label" parent="."]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 23.0
-text = "Search Section"
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 15
+
+[node name="TopBar" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SearchInput" type="LineEdit" parent="VBoxContainer/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Search for apps..."
+caret_blink = true
+caret_blink_interval = 0.5
+
+[node name="SearchButton" type="Button" parent="VBoxContainer/TopBar"]
+layout_mode = 2
+text = "Search"
+
+[node name="KeyboardHint" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 14
+text = "Press Steam + Back (View) to open keyboard"
+horizontal_alignment = 1
+
+[node name="ProductList" parent="VBoxContainer" instance=ExtResource("2_plist")]
+layout_mode = 2
+title = "Search Results"
+display_mode = 0
+use_auto_height = false
