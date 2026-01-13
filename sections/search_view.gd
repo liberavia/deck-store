@@ -140,7 +140,9 @@ func _input(event: InputEvent):
 		if event.is_action_pressed("ui_cancel"):
 			print("SearchView: Exiting typing mode via ui_cancel")
 			_set_typing_active(false)
-			search_input.release_focus()
+			# Do NOT release focus here. We want to stay focused on the input box
+			# so the user can navigate downwards to the list.
+			# search_input.release_focus() 
 			if _select_sound_player: _select_sound_player.play()
 			get_viewport().set_input_as_handled()
 			return
@@ -164,8 +166,15 @@ func _input(event: InputEvent):
 			
 		# 4. Text Recovery (if focus lost)
 		if event is InputEventKey and event.pressed:
+			# Handle Enter key explicitly if focus is lost (overlay prevents signal emission)
+			if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+				print("SearchView: Enter detected during typing (Manual Submit)")
+				_on_search_submitted(search_input.text)
+				get_viewport().set_input_as_handled()
+				return
+
 			# If we receive a key press and it's a printable character
-			if event.unicode != 0 and event.keycode != KEY_ENTER and event.keycode != KEY_KP_ENTER:
+			if event.unicode != 0:
 				if not search_input.has_focus():
 					print("SearchView: Recovering focus for SearchInput and appending: ", event.as_text())
 					search_input.grab_focus()
@@ -195,7 +204,7 @@ func _on_search_submitted(text: String):
 	if _select_sound_player:
 		_select_sound_player.play()
 		
-	search_input.release_focus() # Hide keyboard
+	# search_input.release_focus() # Keep focus on input
 	DisplayServer.virtual_keyboard_hide()
 	
 	_perform_search(text)
