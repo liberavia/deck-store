@@ -14,6 +14,7 @@ signal load_new_page_requested(url: String, target_list: ProductList)
 # --- Internal State ---
 var _focus_sound_player: AudioStreamPlayer
 var _select_sound_player: AudioStreamPlayer
+var _typing_active: bool = false
 
 func _ready():
 	_setup_audio()
@@ -57,6 +58,7 @@ func _setup_connections():
 # --- Logic ---
 
 func _on_search_input_focus_entered():
+	_typing_active = true
 	# Trigger virtual keyboard on Steam Deck / Touch devices
 	call_deferred("_show_virtual_keyboard")
 	if _focus_sound_player:
@@ -71,13 +73,12 @@ func _unhandled_input(event: InputEvent):
 		return
 
 	# --- Fix for Double Input (Controller Pass-through) ---
-	# When the virtual keyboard is open on Steam Deck, controller inputs often pass through to the game.
-	# If we are "focused" on the search input, we assume the user is typing/navigating the OS keyboard.
-	# We therefore swallow all Joypad inputs to prevent background navigation in the app.
-	if search_input.has_focus():
+	# We rely on _typing_active state because actual focus is often lost to the OS keyboard overlay.
+	if _typing_active:
 		if event is InputEventJoypadButton or event is InputEventJoypadMotion:
 			# Allow "B" (ui_cancel) to exit focus mode
 			if event.is_action_pressed("ui_cancel"):
+				_typing_active = false
 				search_input.release_focus()
 				if _select_sound_player: _select_sound_player.play()
 			
@@ -112,6 +113,7 @@ func _unhandled_input(event: InputEvent):
 				get_viewport().set_input_as_handled()
 
 func _on_search_submitted(text: String):
+	_typing_active = false
 	if text.strip_edges().is_empty():
 		return
 	
@@ -150,4 +152,4 @@ func on_view_entered():
 	focus_default_element()
 
 func on_view_exiting():
-	pass
+	_typing_active = false
