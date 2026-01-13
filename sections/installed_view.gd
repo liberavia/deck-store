@@ -5,15 +5,48 @@ signal focus_exited_up_from_lists()
 
 @onready var app_list_container: VBoxContainer = $MarginContainer/VBoxContainer/ScrollContainer/ListMarginContainer/AppListContainer
 @onready var total_size_label: Label = $MarginContainer/VBoxContainer/HeaderContainer/TotalSizeLabel
+@onready var sort_option_button: OptionButton = $MarginContainer/VBoxContainer/HeaderContainer/SortOptionButton
 @onready var scroll_container: ScrollContainer = $MarginContainer/VBoxContainer/ScrollContainer
 
 var installed_app_item_scene = preload("res://sections/installed_app_item.tscn")
+var current_installed_apps_data: Dictionary = {}
+
+# Sounds
+var audio_player: AudioStreamPlayer
+var stream_focus = preload("res://assets/change.mp3")
+var stream_select = preload("res://assets/nextprev.wav")
 
 func _ready():
+	# Setup Audio
+	audio_player = AudioStreamPlayer.new()
+	add_child(audio_player)
+
+	# Connect Sort Button signals
+	sort_option_button.item_selected.connect(_on_sort_option_selected)
+	sort_option_button.focus_entered.connect(_on_sort_focus_entered)
+	sort_option_button.pressed.connect(_on_sort_pressed) # When dropdown opens
+	
 	# Initial populate if data is already available
 	var main_node = get_node_or_null("/root/App")
 	if main_node and main_node.has_method("get_installed_ids"):
 		update_internal_list_install_status(main_node.get_installed_ids())
+
+func _on_sort_option_selected(_index):
+	if audio_player and stream_select:
+		audio_player.stream = stream_select
+		audio_player.play()
+	_populate_list(current_installed_apps_data)
+
+func _on_sort_focus_entered():
+	if audio_player and stream_focus:
+		audio_player.stream = stream_focus
+		audio_player.play()
+
+func _on_sort_pressed():
+	# Optional: Play select sound when opening the dropdown
+	if audio_player and stream_select:
+		audio_player.stream = stream_select
+		audio_player.play()
 
 func on_view_entered():
 	# Refresh list when entering the view
@@ -27,6 +60,7 @@ func on_view_entered():
 		focus_first_element()
 
 func update_internal_list_install_status(installed_apps: Dictionary):
+	current_installed_apps_data = installed_apps
 	_populate_list(installed_apps)
 
 func _populate_list(installed_apps: Dictionary):
@@ -35,11 +69,26 @@ func _populate_list(installed_apps: Dictionary):
 		child.queue_free()
 	
 	var app_ids = installed_apps.keys()
-	# Sort alphabetically by Name
+	var sort_mode = sort_option_button.selected
+	# 0 = Name Asc, 1 = Name Desc, 2 = Size Desc, 3 = Size Asc
+	
 	app_ids.sort_custom(func(a, b):
-		var name_a = installed_apps[a].get("name", a).to_lower()
-		var name_b = installed_apps[b].get("name", b).to_lower()
-		return name_a < name_b
+		if sort_mode == 2: # Size Descending (▼)
+			var size_a = _parse_size(installed_apps[a].get("size", "0 B")).value_bytes
+			var size_b = _parse_size(installed_apps[b].get("size", "0 B")).value_bytes
+			return size_a > size_b
+		elif sort_mode == 3: # Size Ascending (▲)
+			var size_a = _parse_size(installed_apps[a].get("size", "0 B")).value_bytes
+			var size_b = _parse_size(installed_apps[b].get("size", "0 B")).value_bytes
+			return size_a < size_b
+		elif sort_mode == 1: # Name Descending (Z-A, ▼)
+			var name_a = installed_apps[a].get("name", a).to_lower()
+			var name_b = installed_apps[b].get("name", b).to_lower()
+			return name_a > name_b
+		else: # Name Ascending (A-Z, ▲, Default 0)
+			var name_a = installed_apps[a].get("name", a).to_lower()
+			var name_b = installed_apps[b].get("name", b).to_lower()
+			return name_a < name_b
 	)
 	
 	var total_bytes: float = 0.0
