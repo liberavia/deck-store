@@ -68,49 +68,68 @@ func _show_virtual_keyboard():
 	print("SearchView: Requesting Virtual Keyboard...")
 	DisplayServer.virtual_keyboard_show(search_input.text)
 
-func _unhandled_input(event: InputEvent):
+func _input(event: InputEvent):
 	if not is_visible_in_tree():
 		return
 
-	# --- Fix for Double Input (Controller Pass-through) ---
-	# We rely on _typing_active state because actual focus is often lost to the OS keyboard overlay.
+	# --- Fix for Double Input & Background Navigation ---
+	# We intercept input at the root level (_input) because GUI focus handles events 
+	# before _unhandled_input, causing our previous block to be bypassed.
 	if _typing_active:
-		if event is InputEventJoypadButton or event is InputEventJoypadMotion:
-			# Allow "B" (ui_cancel) to exit focus mode
-			if event.is_action_pressed("ui_cancel"):
-				_typing_active = false
-				search_input.release_focus()
-				if _select_sound_player: _select_sound_player.play()
-			
+		# Debug: Print what we are seeing
+		if event.is_pressed():
+			print("SearchView Input Debug: ", event.as_text())
+
+		# 1. Allow exiting typing mode
+		if event.is_action_pressed("ui_cancel"):
+			print("SearchView: Exiting typing mode via ui_cancel")
+			_typing_active = false
+			search_input.release_focus()
+			if _select_sound_player: _select_sound_player.play()
 			get_viewport().set_input_as_handled()
 			return
 
-	if event is InputEventKey and event.pressed:
-		print("SearchView Debug: Key pressed: ", event.as_text_key_label())
-		
-		# If we receive a key press and it's a printable character (length 1),
-		# and the search input doesn't have focus, we try to help it.
-		if event.unicode != 0 and event.keycode != KEY_ENTER and event.keycode != KEY_KP_ENTER:
-			if not search_input.has_focus():
-				print("SearchView: Recovering focus for SearchInput and appending: ", event.as_text())
-				search_input.grab_focus()
-				# Depending on timing, this specific key might be lost to the LineEdit
-				# if it didn't have focus *during* the press.
-				# We can manually append it.
-				var char = char(event.unicode)
-				search_input.text += char
-				search_input.caret_column = search_input.text.length()
-				get_viewport().set_input_as_handled()
-		
-		# Allow Backspace even if focus lost
-		elif event.keycode == KEY_BACKSPACE:
-			if not search_input.has_focus():
-				search_input.grab_focus()
-				var t = search_input.text
-				if t.length() > 0:
-					search_input.text = t.substr(0, t.length() - 1)
+		# 2. Block ALL navigation actions to prevent background focus changes
+		# This stops the focused element in the background from receiving d-pad/arrow events.
+		if event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right") or \
+		   event.is_action_pressed("ui_up") or event.is_action_pressed("ui_down") or \
+		   event.is_action_pressed("ui_page_up") or event.is_action_pressed("ui_page_down") or \
+		   event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_select") or \
+		   event.is_action_pressed("ui_focus_next") or event.is_action_pressed("ui_focus_prev"):
+			
+			print("SearchView: Blocking navigation input during typing: ", event.as_text())
+			get_viewport().set_input_as_handled()
+			return
+
+		# 3. Block raw Joypad inputs (buttons/axes)
+		if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+			get_viewport().set_input_as_handled()
+			return
+			
+		# 4. Text Recovery (if focus lost)
+		if event is InputEventKey and event.pressed:
+			# If we receive a key press and it's a printable character
+			if event.unicode != 0 and event.keycode != KEY_ENTER and event.keycode != KEY_KP_ENTER:
+				if not search_input.has_focus():
+					print("SearchView: Recovering focus for SearchInput and appending: ", event.as_text())
+					search_input.grab_focus()
+					var char = char(event.unicode)
+					search_input.text += char
 					search_input.caret_column = search_input.text.length()
-				get_viewport().set_input_as_handled()
+					get_viewport().set_input_as_handled()
+			
+			# Allow Backspace
+			elif event.keycode == KEY_BACKSPACE:
+				if not search_input.has_focus():
+					search_input.grab_focus()
+					var t = search_input.text
+					if t.length() > 0:
+						search_input.text = t.substr(0, t.length() - 1)
+						search_input.caret_column = search_input.text.length()
+					get_viewport().set_input_as_handled()
+
+# Removed _unhandled_input as logic moved to _input
+# func _unhandled_input(event: InputEvent): ... deleted
 
 func _on_search_submitted(text: String):
 	_typing_active = false
