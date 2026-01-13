@@ -58,9 +58,9 @@ func _setup_connections():
 # --- Logic ---
 
 func _on_search_input_focus_entered():
-	_typing_active = true
-	# Trigger virtual keyboard on Steam Deck / Touch devices
-	call_deferred("_show_virtual_keyboard")
+	# Do NOT automatically enter typing mode (blocking navigation) on focus.
+	# Wait for explicit user activation (e.g. pressing 'A').
+	# Just show keyboard as a hint if supported, but don't lock UI.
 	if _focus_sound_player:
 		_focus_sound_player.play()
 
@@ -73,8 +73,24 @@ func _input(event: InputEvent):
 		return
 
 	# --- Fix for Double Input & Background Navigation ---
-	# We intercept input at the root level (_input) because GUI focus handles events 
-	# before _unhandled_input, causing our previous block to be bypassed.
+	
+	# Case 1: NOT Typing yet, but focused.
+	# User can navigate away (Down) or Start Typing (A).
+	if not _typing_active and search_input.has_focus():
+		if event.is_action_pressed("ui_accept"):
+			print("SearchView: Starting Typing Mode (A pressed)")
+			_typing_active = true
+			_show_virtual_keyboard()
+			get_viewport().set_input_as_handled()
+			return
+		elif event.is_action_pressed("ui_cancel"):
+			print("SearchView: Leaving Search Input (B pressed)")
+			search_input.release_focus()
+			get_viewport().set_input_as_handled()
+			return
+			
+	# Case 2: Typing Mode Active (Keyboard assumed open).
+	# We block navigation to prevent "double input".
 	if _typing_active:
 		# Debug: Print what we are seeing
 		if event.is_pressed():
@@ -90,18 +106,16 @@ func _input(event: InputEvent):
 			return
 
 		# 2. Block ALL navigation actions to prevent background focus changes
-		# This stops the focused element in the background from receiving d-pad/arrow events.
 		if event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right") or \
 		   event.is_action_pressed("ui_up") or event.is_action_pressed("ui_down") or \
 		   event.is_action_pressed("ui_page_up") or event.is_action_pressed("ui_page_down") or \
-		   event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_select") or \
 		   event.is_action_pressed("ui_focus_next") or event.is_action_pressed("ui_focus_prev"):
 			
 			print("SearchView: Blocking navigation input during typing: ", event.as_text())
 			get_viewport().set_input_as_handled()
 			return
 
-		# 3. Block raw Joypad inputs (buttons/axes)
+		# 3. Block raw Joypad inputs
 		if event is InputEventJoypadButton or event is InputEventJoypadMotion:
 			get_viewport().set_input_as_handled()
 			return
@@ -132,6 +146,7 @@ func _input(event: InputEvent):
 # func _unhandled_input(event: InputEvent): ... deleted
 
 func _on_search_submitted(text: String):
+	_typing_active = false
 	_typing_active = false
 	if text.strip_edges().is_empty():
 		return
