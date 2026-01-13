@@ -146,6 +146,8 @@ func _input(event: InputEvent):
 			return
 
 		# 2. Block ALL navigation actions to prevent background focus changes
+		# Note: We removed ui_accept/ui_select from here to allow Keyboard ENTER to submit search.
+		# Controller 'A' (ui_accept) is blocked by the JoypadButton check below.
 		if event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right") or \
 		   event.is_action_pressed("ui_up") or event.is_action_pressed("ui_down") or \
 		   event.is_action_pressed("ui_page_up") or event.is_action_pressed("ui_page_down") or \
