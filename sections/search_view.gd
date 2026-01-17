@@ -15,14 +15,20 @@ signal load_new_page_requested(url: String, target_list: ProductList)
 var _focus_sound_player: AudioStreamPlayer
 var _select_sound_player: AudioStreamPlayer
 var _typing_active: bool = false
+var _debounce_timer: Timer
+var _last_search_query: String = ""
+var _post_submit_cooldown_timer: Timer
+var _cooldown_active: bool = false
 
 func _ready():
 	_setup_audio()
 	_setup_connections()
+	_setup_debounce_timer()
+	_setup_cooldown_timer()
 	
 	# Initial state
 	if is_instance_valid(product_list):
-		product_list.title = ""
+		product_list.title = "" # Start empty or with instructions
 
 func _setup_audio():
 	_focus_sound_player = AudioStreamPlayer.new()
@@ -34,6 +40,34 @@ func _setup_audio():
 	_select_sound_player.stream = load("res://assets/nextprev.wav")
 	_select_sound_player.bus = "Master"
 	add_child(_select_sound_player)
+
+func _setup_debounce_timer():
+	_debounce_timer = Timer.new()
+	_debounce_timer.one_shot = true
+	_debounce_timer.wait_time = 0.8 # 800ms delay
+	_debounce_timer.timeout.connect(_on_debounce_timeout)
+	add_child(_debounce_timer)
+
+func _setup_cooldown_timer():
+	_post_submit_cooldown_timer = Timer.new()
+	_post_submit_cooldown_timer.one_shot = true
+	_post_submit_cooldown_timer.wait_time = 0.3 # 300ms block
+	_post_submit_cooldown_timer.timeout.connect(func(): _cooldown_active = false)
+	add_child(_post_submit_cooldown_timer)
+
+func _reset_debounce_timer():
+	if is_instance_valid(_debounce_timer):
+		_debounce_timer.start()
+
+func _on_debounce_timeout():
+	if not is_instance_valid(search_input): return
+	var text = search_input.text.strip_edges()
+	
+	# Only search if length >= 3 and it's a new query
+	if text.length() >= 3 and text != _last_search_query:
+		print("SearchView: Live search triggering for: ", text)
+		_perform_search(text)
+		_last_search_query = text
 
 func _setup_connections():
 	# Search Input
@@ -86,6 +120,9 @@ func _set_typing_active(active: bool):
 			if is_instance_valid(search_input):
 				search_input.grab_focus()
 			_show_virtual_keyboard()
+		else:
+			# Stop timer if we leave typing mode
+			if is_instance_valid(_debounce_timer): _debounce_timer.stop()
 
 func _show_virtual_keyboard():
 	print("SearchView: Requesting Virtual Keyboard...")
@@ -93,6 +130,11 @@ func _show_virtual_keyboard():
 
 func _input(event: InputEvent):
 	if not is_visible_in_tree():
+		return
+
+	# --- Cooldown Block ---
+	if _cooldown_active:
+		get_viewport().set_input_as_handled()
 		return
 
 	# --- Manual Trigger Detection (Steam + Back) ---
@@ -115,8 +157,8 @@ func _input(event: InputEvent):
 			get_viewport().set_input_as_handled()
 			return
 		elif event.is_action_pressed("ui_cancel"):
-			print("SearchView: Leaving Search Input (B pressed)")
-			search_input.release_focus()
+			print("SearchView: B pressed on Search Input (consumed, keeping focus)")
+			# User prefers to keep focus on search input instead of moving up
 			get_viewport().set_input_as_handled()
 			return
 			
@@ -131,6 +173,12 @@ func _input(event: InputEvent):
 			# so the user can navigate downwards to the list.
 			# search_input.release_focus() 
 			if _select_sound_player: _select_sound_player.play()
+			get_viewport().set_input_as_handled()
+			return
+
+		# 1b. Block Section Switching (Conflict with Virtual Keyboard shortcuts, e.g. RT)
+		if event.is_action_pressed("section_next") or event.is_action_pressed("section_previous"):
+			print("SearchView: Blocking section switch during typing: ", event.as_text())
 			get_viewport().set_input_as_handled()
 			return
 
@@ -166,6 +214,7 @@ func _input(event: InputEvent):
 				
 				search_input.text += char(event.unicode)
 				search_input.caret_column = search_input.text.length()
+				_reset_debounce_timer()
 				get_viewport().set_input_as_handled()
 			
 			# Handle Backspace
@@ -177,6 +226,7 @@ func _input(event: InputEvent):
 				if t.length() > 0:
 					search_input.text = t.substr(0, t.length() - 1)
 					search_input.caret_column = search_input.text.length()
+					_reset_debounce_timer()
 				get_viewport().set_input_as_handled()
 
 func _on_search_submitted(text: String):
@@ -186,9 +236,16 @@ func _on_search_submitted(text: String):
 	
 	if _select_sound_player:
 		_select_sound_player.play()
+	
+	# Start cooldown to block lingering joypad inputs (e.g. RT axis)
+	_cooldown_active = true
+	if is_instance_valid(_post_submit_cooldown_timer):
+		_post_submit_cooldown_timer.start()
 		
+	# search_input.release_focus() # Keep focus on input
 	DisplayServer.virtual_keyboard_hide()
 	
+	_last_search_query = text.strip_edges() # Update last query to prevent re-search if timer was running
 	_perform_search(text)
 
 func _perform_search(query: String):
