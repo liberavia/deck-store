@@ -9,7 +9,7 @@ signal load_new_page_requested(url: String, target_list: ProductList)
 # --- UI Nodes ---
 @onready var search_input: LineEdit = $VBoxContainer/TopBar/SearchInput
 @onready var search_button: Button = $VBoxContainer/TopBar/SearchButton
-@onready var product_list: ProductList = $VBoxContainer/ProductList
+@onready var product_list: ProductList = $VBoxContainer/ListMargin/ProductList
 
 # --- Internal State ---
 var _focus_sound_player: AudioStreamPlayer
@@ -25,10 +25,50 @@ func _ready():
 	_setup_connections()
 	_setup_debounce_timer()
 	_setup_cooldown_timer()
+	_setup_styling()
 	
 	# Initial state
 	if is_instance_valid(product_list):
-		product_list.title = "" # Start empty or with instructions
+		product_list.title = "" 
+		product_list.visible = false
+
+func _setup_styling():
+	# Define Colors (Matching Main/Section Buttons)
+	var purple_main = Color(0.627, 0.125, 0.941, 1.0)
+	var purple_bg = Color(0.627, 0.125, 0.941, 0.6)
+	var white_border = Color(1.0, 1.0, 1.0, 0.8)
+	var dark_bg = Color(0.1, 0.1, 0.1, 0.8)
+	
+	# Normal Style (White Border, Square Corners)
+	var style_normal = StyleBoxFlat.new()
+	style_normal.bg_color = dark_bg
+	style_normal.set_border_width_all(2)
+	style_normal.border_color = white_border
+	# No corner radius for square look
+	
+	# Add Padding (Content Margin)
+	style_normal.content_margin_left = 10
+	style_normal.content_margin_right = 10
+	style_normal.content_margin_top = 5
+	style_normal.content_margin_bottom = 5
+	
+	# Focus/Pressed Style (Purple Border & Background)
+	var style_focus = style_normal.duplicate()
+	style_focus.bg_color = purple_bg
+	style_focus.border_color = purple_main
+	
+	if is_instance_valid(search_button):
+		search_button.add_theme_stylebox_override("normal", style_normal)
+		search_button.add_theme_stylebox_override("hover", style_focus)
+		search_button.add_theme_stylebox_override("pressed", style_focus)
+		search_button.add_theme_stylebox_override("focus", style_focus)
+		search_button.add_theme_font_size_override("font_size", 20)
+
+	if is_instance_valid(search_input):
+		search_input.add_theme_stylebox_override("normal", style_normal)
+		search_input.add_theme_stylebox_override("focus", style_focus)
+		search_input.add_theme_color_override("font_color", Color.WHITE)
+		search_input.add_theme_font_size_override("font_size", 22)
 
 func _setup_audio():
 	_focus_sound_player = AudioStreamPlayer.new()
@@ -252,11 +292,12 @@ func _perform_search(query: String):
 	if not is_instance_valid(product_list): return
 	
 	print("SearchView: Searching for: ", query)
+	product_list.visible = true
 	product_list.show_loading()
 	product_list.title = "Results for '" + query + "'"
 	
 	# Construct Flathub Search URL
-	var url = "https://flathub.org/api/v2/search?q=%s&page=1&per_page=20" % query.uri_encode()
+	var url = "https://flathub.org/api/v2/search?q=%s&page=1&per_page=24" % query.uri_encode()
 	
 	emit_signal("load_new_page_requested", url, product_list)
 

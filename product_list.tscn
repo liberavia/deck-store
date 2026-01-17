@@ -52,6 +52,15 @@ size_flags_vertical = 0
 horizontal_alignment = 1
 uppercase = true
 
+[node name="NoResultsLabel" type="Label" parent="VBoxContainer"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_font_sizes/font_size = 20
+text = "No results found."
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="PaginationBar" type="HBoxContainer" parent="VBoxContainer"]
 visible = false
 layout_mode = 2
