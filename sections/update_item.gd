@@ -6,7 +6,7 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @onready var checkbox: CheckBox = $MarginContainer/HBoxContainer/CheckBox
 @onready var icon_rect: TextureRect = $MarginContainer/HBoxContainer/IconRect
 @onready var name_label: Label = $MarginContainer/HBoxContainer/InfoContainer/NameLabel
-@onready var version_label: Label = $MarginContainer/HBoxContainer/InfoContainer/VersionLabel
+@onready var version_label: RichTextLabel = $MarginContainer/HBoxContainer/InfoContainer/VersionLabel
 @onready var size_label: Label = $MarginContainer/HBoxContainer/SizeLabel
 
 var app_id: String = ""
@@ -27,7 +27,7 @@ func _ready():
 func setup(p_app_id: String, p_name: String, p_old_version: String, p_new_version: String, p_size: String, p_icon_url: String):
 	app_id = p_app_id
 	name_label.text = p_name
-	version_label.text = "%s -> %s" % [p_old_version, p_new_version]
+	version_label.text = "Update from version [b]%s[/b] to [b]%s[/b]" % [p_old_version, p_new_version]
 	size_label.text = p_size
 	
 	if not p_icon_url.is_empty():

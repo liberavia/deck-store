@@ -192,7 +192,10 @@ func _process_update_check_result(output: String):
 			var app_id = parts[0].strip_edges()
 			var app_name = parts[1].strip_edges()
 			var new_version = parts[2].strip_edges()
-			var size_str = parts[3].strip_edges()
+			var raw_size = parts[3].strip_edges()
+			
+			# Clean size string: replace non-breaking space (or question marks) with space
+			var size_str = raw_size.replace("?", " ").replace("\u00A0", " ").strip_edges()
 			
 			var old_version = "?"
 			

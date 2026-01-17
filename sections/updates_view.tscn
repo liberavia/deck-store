@@ -21,6 +21,14 @@ border_width_bottom = 1
 border_color = Color(1, 1, 1, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_focus"]
+bg_color = Color(0, 0, 0, 0.35)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.627451, 0.12549, 0.941176, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_focus_expanded"]
 bg_color = Color(0, 0, 0, 0)
 border_width_left = 3
 border_width_top = 3
@@ -99,7 +107,7 @@ theme_override_styles/normal = SubResource("StyleBoxEmpty_checkbox")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_checkbox")
 theme_override_styles/disabled = SubResource("StyleBoxEmpty_checkbox")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_checkbox")
-theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
+theme_override_styles/focus = SubResource("StyleBoxFlat_focus_expanded")
 
 [node name="SpacerMiddle1" type="Control" parent="MarginContainer/VBoxContainer/HeaderContainer"]
 custom_minimum_size = Vector2(20, 0)

@@ -66,11 +66,15 @@ theme_override_font_sizes/font_size = 22
 text = "Application Name"
 clip_text = true
 
-[node name="VersionLabel" type="Label" parent="MarginContainer/HBoxContainer/InfoContainer"]
+[node name="VersionLabel" type="RichTextLabel" parent="MarginContainer/HBoxContainer/InfoContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
-theme_override_font_sizes/font_size = 18
-text = "v1.0.0 -> v1.0.1"
+size_flags_vertical = 3
+theme_override_colors/default_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/normal_font_size = 18
+bbcode_enabled = true
+text = "Update from version [b]1.0.0[/b] to [b]1.0.1[/b]"
+fit_content = true
+scroll_active = false
 
 [node name="SizeLabel" type="Label" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
