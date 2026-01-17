@@ -1,6 +1,7 @@
 extends Button
 
 signal item_pressed(app_id: String)
+signal image_load_requested(url: String, texture_rect: TextureRect)
 
 @onready var icon_rect: TextureRect = $MarginContainer/HBoxContainer/IconRect
 @onready var name_label: Label = $MarginContainer/HBoxContainer/NameLabel
@@ -71,41 +72,6 @@ func _on_metadata_received(result, response_code, headers, body, http_request):
 	http_request.queue_free()
 
 func _fetch_icon_image(url: String):
-	# Use Main's caching logic if available, or just fetch
-	var main_node = get_node_or_null("/root/App")
-	if main_node and main_node.has_method("get_cached_image_path"):
-		var cached_path = main_node.get_cached_image_path(url)
-		if not cached_path.is_empty():
-			var texture = _load_texture_from_path(cached_path)
-			if texture:
-				icon_rect.texture = texture
-				return
+	# Delegate image loading to the main system (via parent view)
+	emit_signal("image_load_requested", url, icon_rect)
 
-	# If not in cache, request it
-	if main_node and main_node.has_signal("image_load_requested"):
-		main_node.emit_signal("image_load_requested", url, icon_rect)
-	else:
-		var http = HTTPRequest.new()
-		add_child(http)
-		http.request_completed.connect(_on_icon_downloaded.bind(http))
-		http.request(url)
-
-func _on_icon_downloaded(result, response_code, headers, body, http_request):
-	if response_code == 200:
-		var image = Image.new()
-		var err = image.load_png_from_buffer(body) # Assume PNG for Flathub icons usually
-		if err != OK:
-			err = image.load_webp_from_buffer(body) # Try WebP
-		
-		if err == OK:
-			var texture = ImageTexture.create_from_image(image)
-			icon_rect.texture = texture
-	http_request.queue_free()
-
-func _load_texture_from_path(path: String) -> Texture2D:
-	if FileAccess.file_exists(path):
-		var image = Image.new()
-		var err = image.load(path)
-		if err == OK:
-			return ImageTexture.create_from_image(image)
-	return null

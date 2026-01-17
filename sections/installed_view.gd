@@ -2,14 +2,28 @@ extends Control
 
 signal move_to_details_view_requested(app_id: String, installed: bool)
 signal focus_exited_up_from_lists()
+signal image_load_requested(url: String, texture_rect: TextureRect)
+
+const REFRESH_COOLDOWN_SECONDS = 120
+const INSTALLED_AUTOMATIC_REFRESH = true
 
 @onready var app_list_container: VBoxContainer = $MarginContainer/VBoxContainer/ScrollContainer/ListMarginContainer/AppListContainer
 @onready var total_size_label: Label = $MarginContainer/VBoxContainer/HeaderContainer/TotalSizeLabel
 @onready var sort_option_button: OptionButton = $MarginContainer/VBoxContainer/HeaderContainer/SortOptionButton
 @onready var scroll_container: ScrollContainer = $MarginContainer/VBoxContainer/ScrollContainer
 
+# Refresh UI Elements (dynamically connected in _ready or via scene if we updated scene)
+# Assuming they will be added to the scene:
+@onready var refresh_button: Button = $MarginContainer/VBoxContainer/HeaderContainer/RefreshContainer/RefreshButton
+@onready var last_updated_label: Label = $MarginContainer/VBoxContainer/HeaderContainer/RefreshContainer/LastUpdatedLabel
+@onready var cooldown_progress: TextureProgressBar = $MarginContainer/VBoxContainer/HeaderContainer/RefreshContainer/RefreshButton/CooldownProgress
+@onready var loading_overlay_scene = preload("res://loading_overlay.tscn")
+
+var loading_overlay_instance: Control = null
 var installed_app_item_scene = preload("res://sections/installed_app_item.tscn")
 var current_installed_apps_data: Dictionary = {}
+var last_refresh_time: int = 0
+var last_updated_time_str: String = "--:--"
 
 # Sounds
 var audio_player: AudioStreamPlayer
@@ -21,15 +35,81 @@ func _ready():
 	audio_player = AudioStreamPlayer.new()
 	add_child(audio_player)
 
+	# Setup Loading Overlay
+	if loading_overlay_scene:
+		loading_overlay_instance = loading_overlay_scene.instantiate()
+		add_child(loading_overlay_instance)
+		loading_overlay_instance.visible = false
+
 	# Connect Sort Button signals
 	sort_option_button.item_selected.connect(_on_sort_option_selected)
 	sort_option_button.focus_entered.connect(_on_sort_focus_entered)
 	sort_option_button.pressed.connect(_on_sort_pressed) # When dropdown opens
 	
+	# Connect Refresh Button
+	if is_instance_valid(refresh_button):
+		refresh_button.pressed.connect(_on_refresh_pressed)
+		
 	# Initial populate if data is already available
 	var main_node = get_node_or_null("/root/App")
 	if main_node and main_node.has_method("get_installed_ids"):
-		update_internal_list_install_status(main_node.get_installed_ids())
+		var apps = main_node.get_installed_ids()
+		if not apps.is_empty():
+			update_internal_list_install_status(apps)
+
+func _process(_delta):
+	if not self.visible: return
+	
+	var current_time = Time.get_unix_time_from_system()
+	var time_diff = current_time - last_refresh_time
+	var remaining = REFRESH_COOLDOWN_SECONDS - time_diff
+	
+	if remaining > 0:
+		# Cooldown active
+		if is_instance_valid(refresh_button): 
+			refresh_button.text = "Refresh List (%ds)" % int(remaining)
+		if is_instance_valid(cooldown_progress):
+			cooldown_progress.visible = true
+			var progress = (remaining / float(REFRESH_COOLDOWN_SECONDS)) * 100
+			cooldown_progress.value = progress
+	else:
+		# Cooldown expired
+		if is_instance_valid(refresh_button): 
+			refresh_button.text = "Refresh List"
+		if is_instance_valid(cooldown_progress):
+			cooldown_progress.visible = false
+			
+		# Auto-Refresh if enabled
+		if INSTALLED_AUTOMATIC_REFRESH:
+			print("InstalledView: Timer expired, triggering auto-refresh.")
+			_trigger_refresh()
+
+func _on_refresh_pressed():
+	if audio_player and stream_select:
+		audio_player.stream = stream_select
+		audio_player.play()
+	_trigger_refresh()
+
+func _trigger_refresh():
+	last_refresh_time = Time.get_unix_time_from_system()
+	_update_last_updated_label()
+	
+	if is_instance_valid(loading_overlay_instance):
+		loading_overlay_instance.show_overlay()
+		
+	var main_node = get_node_or_null("/root/App")
+	if main_node and main_node.has_method("refresh_installed_apps_list"):
+		main_node.refresh_installed_apps_list()
+	
+	# Fallback/Safety: Hide overlay after a few seconds if no update comes back quickly, 
+	# though normally update_internal_list_install_status will clear it.
+	get_tree().create_timer(5.0).timeout.connect(func(): if is_instance_valid(loading_overlay_instance): loading_overlay_instance.hide_overlay())
+
+func _update_last_updated_label():
+	if is_instance_valid(last_updated_label):
+		var time_dict = Time.get_time_dict_from_system()
+		last_updated_time_str = "%02d:%02d" % [time_dict.hour, time_dict.minute]
+		last_updated_label.text = "Updated: " + last_updated_time_str
 
 func _on_sort_option_selected(_index):
 	if audio_player and stream_select:
@@ -49,10 +129,20 @@ func _on_sort_pressed():
 		audio_player.play()
 
 func on_view_entered():
-	# Refresh list when entering the view
-	var main_node = get_node_or_null("/root/App")
-	if main_node and main_node.has_method("get_installed_ids"):
-		update_internal_list_install_status(main_node.get_installed_ids())
+	var current_time = Time.get_unix_time_from_system()
+	var time_diff = current_time - last_refresh_time
+	
+	var should_refresh = false
+	if current_installed_apps_data.is_empty():
+		should_refresh = true
+	elif INSTALLED_AUTOMATIC_REFRESH and time_diff >= REFRESH_COOLDOWN_SECONDS:
+		should_refresh = true
+		
+	if should_refresh:
+		print("InstalledView: Auto-refreshing installed apps (Cooldown expired or empty).")
+		_trigger_refresh()
+	else:
+		print("InstalledView: Skipping auto-refresh (Cooldown active or disabled).")
 
 	# Focus first element if nothing focused
 	var focus_owner = get_viewport().gui_get_focus_owner()
@@ -60,6 +150,14 @@ func on_view_entered():
 		focus_first_element()
 
 func update_internal_list_install_status(installed_apps: Dictionary):
+	# Hide overlay when data arrives
+	if is_instance_valid(loading_overlay_instance):
+		loading_overlay_instance.hide_overlay()
+		
+	# If this update came from an external source (not our refresh trigger), update timestamp anyway
+	if installed_apps.hash() != current_installed_apps_data.hash():
+		_update_last_updated_label()
+		
 	current_installed_apps_data = installed_apps
 	_populate_list(installed_apps)
 
@@ -109,6 +207,8 @@ func _populate_list(installed_apps: Dictionary):
 		app_list_container.add_child(item)
 		item.setup(app_id, app_name, display_size_str)
 		item.item_pressed.connect(_on_item_pressed)
+		if item.has_signal("image_load_requested"):
+			item.image_load_requested.connect(func(url, rect): emit_signal("image_load_requested", url, rect))
 		
 	# Update Total Size Label
 	total_size_label.text = "Total Size: %s" % _format_size(total_bytes)

@@ -1,11 +1,11 @@
 {
-    "id": "decky_loader",
-    "name": "Decky Loader",
-    "description": "A plugin loader for the Steam Deck.",
-    "author": "SteamDeckHomebrew",
-    "version": "1.0.0",
-    "icon": "decky_icon.png",
-    "script_name": "main.sh",
-    "repository_url": "https://github.com/SteamDeckHomebrew/decky-loader",
-    "dependencies": []
+	"id": "decky_loader",
+	"name": "Decky Loader",
+	"description": "A plugin loader for the Steam Deck.",
+	"author": "SteamDeckHomebrew",
+	"version": "1.0.0",
+	"icon": "decky_icon.png",
+	"script_name": "main.sh",
+	"repository_url": "https://github.com/SteamDeckHomebrew/decky-loader",
+	"dependencies": []
 }

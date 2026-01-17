@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://dw4q0cx1f8tqe"]
+[gd_scene load_steps=5 format=3 uid="uid://dw4q0cx1f8tqe"]
 
 [ext_resource type="Script" path="res://sections/installed_view.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://c25q26r52436e" path="res://icon.svg" id="2_icon"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_focus"]
 bg_color = Color(0.1, 0.1, 0.1, 0.6)
@@ -57,6 +58,38 @@ text = "Installed Applications"
 [node name="SpacerLeft" type="Control" parent="MarginContainer/VBoxContainer/HeaderContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="RefreshContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/HeaderContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="LastUpdatedLabel" type="Label" parent="MarginContainer/VBoxContainer/HeaderContainer/RefreshContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+text = "Updated: --:--"
+
+[node name="RefreshButton" type="Button" parent="MarginContainer/VBoxContainer/HeaderContainer/RefreshContainer"]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
+text = "Refresh List"
+
+[node name="CooldownProgress" type="TextureProgressBar" parent="MarginContainer/VBoxContainer/HeaderContainer/RefreshContainer/RefreshButton"]
+visible = false
+modulate = Color(1, 1, 1, 0.235294)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+fill_mode = 5
+nine_patch_stretch = true
+texture_progress = ExtResource("2_icon")
+
+[node name="SpacerMiddle" type="Control" parent="MarginContainer/VBoxContainer/HeaderContainer"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
 
 [node name="SortLabel" type="Label" parent="MarginContainer/VBoxContainer/HeaderContainer"]
 layout_mode = 2
