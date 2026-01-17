@@ -37,6 +37,7 @@ signal products_loaded
 @onready var page_label_bottom: Label = $VBoxContainer/PaginationBarBottom/PageLabel
 @onready var prev_button_bottom: Button = $VBoxContainer/PaginationBarBottom/PrevButton
 @onready var next_button_bottom: Button = $VBoxContainer/PaginationBarBottom/NextButton
+@onready var no_results_label: Label = $VBoxContainer/NoResultsLabel
 @onready var loading_overlay: Control = $LoadingOverlay
 
 # --- Internal Variables ---
@@ -159,6 +160,23 @@ func set_products(product_data: Array):
 	if is_instance_valid(multi_line_scroll): multi_line_scroll.scroll_vertical = 0
 	if is_instance_valid(single_line_scroll): single_line_scroll.scroll_horizontal = 0
 	
+	var has_products = product_data.size() > 0
+	
+	if is_instance_valid(no_results_label):
+		no_results_label.visible = not has_products
+		
+	# Determine target scroll based on mode
+	var target_scroll = multi_line_scroll if display_mode == DisplayMode.MULTI_LINE_WRAP else single_line_scroll
+	if is_instance_valid(target_scroll): target_scroll.visible = has_products
+	
+	if not has_products:
+		# Hide pagination if no results
+		if pagination_bar: pagination_bar.visible = false
+		if pagination_bar_bottom: pagination_bar_bottom.visible = false
+		print("--- ProductList set_products (Empty) END ---")
+		call_deferred("emit_signal", "products_loaded")
+		return
+
 	if not is_instance_valid(_active_content_container):
 		printerr("ProductList: Active container is invalid!")
 		return
@@ -194,6 +212,11 @@ func set_products(product_data: Array):
 		final_child_count = _active_content_container.get_child_count()
 	print("--- ProductList set_products END ---")
 	print("Final child count in active container: ", final_child_count)
+	
+	# Restore pagination visibility if products exist and we are in multi-line mode
+	if display_mode == DisplayMode.MULTI_LINE_WRAP:
+		_update_pagination_visibility()
+	
 	var main_node = get_node_or_null("/root/App")
 	if main_node and main_node.has_method("get_installed_ids"):
 		update_installed_status(main_node.get_installed_ids())
@@ -211,7 +234,27 @@ func hide_loading():
 func get_base_url(full_url: String) -> String:
 	var parts = full_url.split("?", false, 1)
 	return parts[0]
-	
+
+func _get_url_params(full_url: String) -> Dictionary:
+	var params = {}
+	var parts = full_url.split("?")
+	if parts.size() > 1:
+		var param_pairs = parts[1].split("&")
+		for p in param_pairs:
+			var kv = p.split("=")
+			if kv.size() == 2:
+				params[kv[0]] = kv[1]
+	return params
+
+func _build_url(base: String, params: Dictionary) -> String:
+	var query_string = ""
+	var first = true
+	for key in params:
+		if not first: query_string += "&"
+		query_string += key + "=" + str(params[key])
+		first = false
+	return base + "?" + query_string
+
 func _show_pagination():
 	# decide wether pagination is shown or not
 	# @TODO: possibly better to decide after all elements have been loaded. For now just true
@@ -225,15 +268,26 @@ func _update_pagination_visibility():
 func _on_prev_button_pressed():
 	show_loading()
 	var base_url = get_base_url(current_url)
-	var prev_page = current_page - 1
-	var target_url = "%s?page=%s&per_page=%s&locale=en" % [base_url, prev_page, items_per_page]
+	var params = _get_url_params(current_url)
+	
+	params["page"] = str(current_page - 1)
+	params["per_page"] = str(items_per_page)
+	# Ensure locale is present if it was hardcoded before, though ideally it should be in current_url
+	if not params.has("locale"): params["locale"] = "en" 
+	
+	var target_url = _build_url(base_url, params)
 	emit_signal("load_new_page", target_url, self)
 	
 func _on_next_button_pressed():
 	show_loading()
 	var base_url = get_base_url(current_url)
-	var next_page = current_page + 1
-	var target_url = "%s?page=%s&per_page=%s&locale=en" % [base_url, next_page, items_per_page]
+	var params = _get_url_params(current_url)
+	
+	params["page"] = str(current_page + 1)
+	params["per_page"] = str(items_per_page)
+	if not params.has("locale"): params["locale"] = "en"
+	
+	var target_url = _build_url(base_url, params)
 	emit_signal("load_new_page", target_url, self)
 	
 func _on_emit_move_to_details_view(app_id: String, installed: bool):
@@ -305,7 +359,13 @@ func focus_first_product():
 
 
 func _unhandled_input(event: InputEvent):
-	if not has_focus() and not get_viewport().gui_get_focus_owner():
+	if not is_visible_in_tree():
+		return
+
+	var focused_control = get_viewport().gui_get_focus_owner()
+	var has_focus_ownership = has_focus() or (is_instance_valid(focused_control) and is_ancestor_of(focused_control))
+	
+	if not has_focus_ownership:
 		return
 		
 	# Pagination Shortcuts

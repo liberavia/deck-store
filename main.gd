@@ -469,6 +469,11 @@ func _load_product_list(url: String, target_list: ProductList):
 		return
 
 	# --- File Cache Check ---
+	# Special handling for Search (POST request disguised as GET URL for internal consistency)
+	if url.begins_with("https://flathub.org/api/v2/search"):
+		_perform_search_post(url, target_list)
+		return
+
 	var cache_filepath = _get_api_cache_filepath(url)
 	if FileAccess.file_exists(cache_filepath):
 		print("-> Cache-Datei gefunden: ", cache_filepath.get_file())
@@ -512,6 +517,77 @@ func _load_product_list(url: String, target_list: ProductList):
 	if error != OK:
 		printerr("Error starting request for '%s' (%s): %s" % [target_list.title, url, error])
 		if is_instance_valid(http_request): http_request.queue_free()
+
+func _perform_search_post(url: String, target_list: ProductList):
+	print("DEBUG: Performing POST search for URL: ", url)
+	
+	# 1. Parse Parameters from URL string
+	# URL format: https://flathub.org/api/v2/search?q=...&page=...&per_page=...
+	var query_string = ""
+	var page = 1
+	var per_page = 24
+	
+	var parts = url.split("?")
+	if parts.size() > 1:
+		var params = parts[1].split("&")
+		for p in params:
+			var kv = p.split("=")
+			if kv.size() == 2:
+				var key = kv[0]
+				var val = kv[1].uri_decode()
+				match key:
+					"q", "query": query_string = val
+					"page": page = int(val)
+					"per_page": per_page = int(val)
+	
+	if query_string.is_empty():
+		printerr("ERROR: No query found in search URL: ", url)
+		return
+
+	# 2. Prepare POST Request
+	var api_url = "https://flathub.org/api/v2/search"
+	var headers = ["Content-Type: application/json"]
+	var body_data = {
+		"query": query_string,
+		"page": page,
+		"per_page": per_page
+	}
+	var body_json = JSON.stringify(body_data)
+	
+	var http_request = HTTPRequest.new()
+	add_child(http_request)
+	http_request.request_completed.connect(
+		_on_search_request_completed.bind(http_request, url, target_list)
+	)
+	
+	print("DEBUG: Sending POST to ", api_url, " with body: ", body_json)
+	var error = http_request.request(api_url, headers, HTTPClient.METHOD_POST, body_json)
+	if error != OK:
+		printerr("Error starting SEARCH request: ", error)
+		http_request.queue_free()
+
+func _on_search_request_completed(result, response_code, headers, body, http_request_list: HTTPRequest, url: String, target_list: ProductList):
+	if not is_instance_valid(target_list):
+		if is_instance_valid(http_request_list): http_request_list.queue_free()
+		return
+		
+	if response_code == 200:
+		var response_string = body.get_string_from_utf8()
+		var api_json = JSON.parse_string(response_string)
+		
+		if api_json != null:
+			# We don't cache search results effectively yet, or we could cache by the custom URL hash
+			# For now, just process data
+			_process_product_list_data(api_json, target_list, url)
+		else:
+			printerr("JSON parse error for Search Response.")
+	else:
+		printerr("HTTP Error %d while searching." % response_code)
+		if body.size() > 0:
+			print("Response Body: ", body.get_string_from_utf8())
+
+	if is_instance_valid(http_request_list):
+		http_request_list.queue_free()
 
 func _on_product_list_request_completed(result, response_code, headers, body, http_request_list: HTTPRequest, url: String, target_list: ProductList):
 	if not is_instance_valid(target_list):

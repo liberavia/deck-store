@@ -8,14 +8,6 @@
 [ext_resource type="PackedScene" uid="uid://cauevp0c1nuys" path="res://details_view.tscn" id="9_kek77"]
 [ext_resource type="AudioStream" uid="uid://ef3g1di4j6uw" path="res://assets/nextprev.wav" id="10_4c57u"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kek77"]
-bg_color = Color(0, 0, 0, 0.35)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.627451, 0.12549, 0.941176, 1)
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_efxa6"]
 bg_color = Color(0, 0, 0, 0.35)
 border_width_left = 1
@@ -23,6 +15,14 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(1, 1, 1, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kek77"]
+bg_color = Color(0, 0, 0, 0.35)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.627451, 0.12549, 0.941176, 1)
 
 [node name="App" type="Control"]
 light_mask = 8
@@ -61,44 +61,44 @@ alignment = 1
 [node name="ButtonHome" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
-theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
+theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 text = "Home"
 
 [node name="ButtonCategories" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
-theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
+theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 text = "Categories
 "
 
 [node name="ButtonInstalled" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
-theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
+theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 text = "Installed"
 
 [node name="ButtonUpdates" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
-theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
+theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 text = "Updates"
 
 [node name="ButtonExtensions" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
-theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
+theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 text = "Extensions"
 
 [node name="ButtonSearch" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
-theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
+theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 text = "Search"
 
 [node name="SectionViewContainer" type="Control" parent="CanvasLayer/VBoxContainer"]
