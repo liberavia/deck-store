@@ -22,7 +22,7 @@ func _ready():
 	
 	# Initial state
 	if is_instance_valid(product_list):
-		product_list.title = "" # Start empty or with instructions
+		product_list.title = ""
 
 func _setup_audio():
 	_focus_sound_player = AudioStreamPlayer.new()
@@ -43,7 +43,6 @@ func _setup_connections():
 		
 		search_input.text_submitted.connect(_on_search_submitted)
 		search_input.focus_entered.connect(_on_search_input_focus_entered)
-		# We removed focus_exited to prevent hiding keyboard when focus momentarily shifts to overlay
 	
 	if is_instance_valid(search_button):
 		search_button.pressed.connect(func(): _on_search_submitted(search_input.text))
@@ -58,9 +57,6 @@ func _setup_connections():
 # --- Logic ---
 
 func _on_search_input_focus_entered():
-	# Do NOT automatically enter typing mode (blocking navigation) on focus.
-	# Wait for explicit user activation (e.g. pressing 'A').
-	# Just show keyboard as a hint if supported, but don't lock UI.
 	if _focus_sound_player:
 		_focus_sound_player.play()
 
@@ -78,7 +74,6 @@ func _update_typing_visuals():
 			search_input.add_theme_stylebox_override("focus", style) # Keep it green even if focused
 	else:
 		# Inactive: Revert to default (remove overrides or set back)
-		# Simplest is to remove the specific overrides we added
 		search_input.remove_theme_stylebox_override("normal")
 		search_input.remove_theme_stylebox_override("focus")
 
@@ -87,6 +82,9 @@ func _set_typing_active(active: bool):
 		_typing_active = active
 		_update_typing_visuals()
 		if _typing_active:
+			# Ensure we have focus so we don't end up in limbo after typing
+			if is_instance_valid(search_input):
+				search_input.grab_focus()
 			_show_virtual_keyboard()
 
 func _show_virtual_keyboard():
@@ -98,13 +96,9 @@ func _input(event: InputEvent):
 		return
 
 	# --- Manual Trigger Detection (Steam + Back) ---
-	# Button 4 is usually Back/Select. Button 5/Guide might not be caught here if OS swallows it, 
-	# but we check if it is pressed.
-	# Note: On Steam Deck, Guide+Back is a system shortcut. If it reaches us, we use it.
 	if event is InputEventJoypadButton and event.pressed:
 		# Check for Back button (usually index 4 or 6) + Guide held
 		# Godot 4: JOY_BUTTON_BACK=4, JOY_BUTTON_GUIDE=16. 
-		# But logs showed Button 5 as Guide? That's confusing. Let's trust standard constants first.
 		if event.button_index == JOY_BUTTON_BACK:
 			# Check if Guide is held (Input singleton checks physical state)
 			if Input.is_joy_button_pressed(event.device, JOY_BUTTON_GUIDE):
@@ -113,9 +107,6 @@ func _input(event: InputEvent):
 				get_viewport().set_input_as_handled()
 				return
 
-	# --- Fix for Double Input & Background Navigation ---
-	
-	# Case 1: NOT Typing yet, but focused.
 	# User can navigate away (Down) or Start Typing (A).
 	if not _typing_active and search_input.has_focus():
 		if event.is_action_pressed("ui_accept"):
@@ -130,11 +121,7 @@ func _input(event: InputEvent):
 			return
 			
 	# Case 2: Typing Mode Active (Keyboard assumed open).
-	# We block navigation to prevent "double input".
 	if _typing_active:
-		# Debug: Print what we are seeing
-		if event.is_pressed():
-			print("SearchView Input Debug: ", event.as_text())
 
 		# 1. Allow exiting typing mode
 		if event.is_action_pressed("ui_cancel"):
@@ -148,8 +135,6 @@ func _input(event: InputEvent):
 			return
 
 		# 2. Block ALL navigation actions to prevent background focus changes
-		# Note: We removed ui_accept/ui_select from here to allow Keyboard ENTER to submit search.
-		# Controller 'A' (ui_accept) is blocked by the JoypadButton check below.
 		if event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right") or \
 		   event.is_action_pressed("ui_up") or event.is_action_pressed("ui_down") or \
 		   event.is_action_pressed("ui_page_up") or event.is_action_pressed("ui_page_down") or \
@@ -164,37 +149,35 @@ func _input(event: InputEvent):
 			get_viewport().set_input_as_handled()
 			return
 			
-		# 4. Text Recovery (if focus lost)
+		# 4. Text Handling (Manual override to ensure consistency)
 		if event is InputEventKey and event.pressed:
-			# Handle Enter key explicitly if focus is lost (overlay prevents signal emission)
+			# Handle Enter key explicitly
 			if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
 				print("SearchView: Enter detected during typing (Manual Submit)")
 				_on_search_submitted(search_input.text)
 				get_viewport().set_input_as_handled()
 				return
 
-			# If we receive a key press and it's a printable character
+			# Handle Character Input
 			if event.unicode != 0:
-				if not search_input.has_focus():
-					print("SearchView: Recovering focus for SearchInput and appending: ", event.as_text())
-					search_input.grab_focus()
-					var char = char(event.unicode)
-					search_input.text += char
-					search_input.caret_column = search_input.text.length()
-					get_viewport().set_input_as_handled()
+				print("SearchView: Manually appending char: ", char(event.unicode))
+				# Force focus if lost (sanity check)
+				if not search_input.has_focus(): search_input.grab_focus()
+				
+				search_input.text += char(event.unicode)
+				search_input.caret_column = search_input.text.length()
+				get_viewport().set_input_as_handled()
 			
-			# Allow Backspace
+			# Handle Backspace
 			elif event.keycode == KEY_BACKSPACE:
-				if not search_input.has_focus():
-					search_input.grab_focus()
-					var t = search_input.text
-					if t.length() > 0:
-						search_input.text = t.substr(0, t.length() - 1)
-						search_input.caret_column = search_input.text.length()
-					get_viewport().set_input_as_handled()
-
-# Removed _unhandled_input as logic moved to _input
-# func _unhandled_input(event: InputEvent): ... deleted
+				print("SearchView: Manually handling Backspace")
+				if not search_input.has_focus(): search_input.grab_focus()
+				
+				var t = search_input.text
+				if t.length() > 0:
+					search_input.text = t.substr(0, t.length() - 1)
+					search_input.caret_column = search_input.text.length()
+				get_viewport().set_input_as_handled()
 
 func _on_search_submitted(text: String):
 	_set_typing_active(false)
@@ -204,7 +187,6 @@ func _on_search_submitted(text: String):
 	if _select_sound_player:
 		_select_sound_player.play()
 		
-	# search_input.release_focus() # Keep focus on input
 	DisplayServer.virtual_keyboard_hide()
 	
 	_perform_search(text)
@@ -217,8 +199,7 @@ func _perform_search(query: String):
 	product_list.title = "Results for '" + query + "'"
 	
 	# Construct Flathub Search URL
-	# We use a "fake" GET URL with query parameters that main.gd will intercept and convert to a POST request
-	var url = "https://flathub.org/api/v2/search?q=%s&page=1&per_page=24" % query.uri_encode()
+	var url = "https://flathub.org/api/v2/search?q=%s&page=1&per_page=20" % query.uri_encode()
 	
 	emit_signal("load_new_page_requested", url, product_list)
 
