@@ -8,6 +8,8 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @onready var name_label: Label = $MarginContainer/HBoxContainer/InfoContainer/NameLabel
 @onready var version_label: RichTextLabel = $MarginContainer/HBoxContainer/InfoContainer/VersionLabel
 @onready var size_label: Label = $MarginContainer/HBoxContainer/SizeLabel
+@onready var progress_bar: ProgressBar = $MarginContainer/HBoxContainer/InfoContainer/ProgressBar
+@onready var status_label: Label = $MarginContainer/HBoxContainer/InfoContainer/StatusLabel
 
 var app_id: String = ""
 var is_selected: bool = false
@@ -34,6 +36,19 @@ func setup(p_app_id: String, p_name: String, p_old_version: String, p_new_versio
 		emit_signal("image_load_requested", p_icon_url, icon_rect)
 	else:
 		_load_icon()
+
+func set_progress(value: float, message: String = ""):
+	if not progress_bar.visible: progress_bar.visible = true
+	progress_bar.value = value
+	
+	if not message.is_empty():
+		if not status_label.visible: status_label.visible = true
+		status_label.text = message
+	
+func reset_progress():
+	progress_bar.visible = false
+	status_label.visible = false
+	progress_bar.value = 0
 
 func set_selected(selected: bool):
 	is_selected = selected

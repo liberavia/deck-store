@@ -17,10 +17,16 @@ var selected_app_ids: Array = []
 var _update_check_thread: Thread = null
 var loading_overlay_instance: Control = null
 var _initial_check_done: bool = false
+var is_updating: bool = false
 
 var audio_player: AudioStreamPlayer
 var stream_select = preload("res://assets/nextprev.wav")
 var stream_focus = preload("res://assets/change.mp3")
+
+# Styles for Update Button
+var stylebox_install: StyleBoxFlat
+var stylebox_cancel: StyleBoxFlat
+var stylebox_normal: StyleBoxFlat
 
 func _ready():
 	print("UpdatesView: _ready called.")
@@ -31,6 +37,8 @@ func _ready():
 		loading_overlay_instance = loading_overlay_scene.instantiate()
 		add_child(loading_overlay_instance)
 		loading_overlay_instance.visible = false
+	
+	_setup_styles()
 	
 	if is_instance_valid(select_all_check_button):
 		select_all_check_button.pressed.connect(_on_select_all_pressed)
@@ -44,13 +52,12 @@ func _ready():
 		update_selected_button.pressed.connect(_on_update_selected_pressed)
 		update_selected_button.focus_entered.connect(_on_focus_entered)
 		
-	# Connect Sort Button signals
 	if is_instance_valid(sort_option_button):
 		sort_option_button.item_selected.connect(_on_sort_option_selected)
-		sort_option_button.focus_entered.connect(_on_sort_focus_entered)
+		sort_option_button.focus_entered.connect(_on_focus_entered)
 		sort_option_button.pressed.connect(_on_sort_pressed)
 		
-	# Manual Focus Neighbors for Header (Force Horizontal Flow)
+	# Manual Focus Neighbors
 	if is_instance_valid(select_all_check_button) and is_instance_valid(refresh_button):
 		select_all_check_button.focus_neighbor_right = refresh_button.get_path()
 		refresh_button.focus_neighbor_left = select_all_check_button.get_path()
@@ -62,14 +69,32 @@ func _ready():
 	if is_instance_valid(sort_option_button) and is_instance_valid(update_selected_button):
 		sort_option_button.focus_neighbor_right = update_selected_button.get_path()
 		update_selected_button.focus_neighbor_left = sort_option_button.get_path()
-		
-	# Initial Load
-	_start_update_check()
 
-func _on_focus_entered():
-	if audio_player and stream_focus:
-		audio_player.stream = stream_focus
-		audio_player.play()
+	# Connect DownloadManager signals
+	if ProjectSettings.has_setting("autoload/DownloadManager"):
+		if DownloadManager.has_signal("task_updated"):
+			DownloadManager.task_updated.connect(_on_task_updated)
+		if DownloadManager.has_signal("task_finished"):
+			DownloadManager.task_finished.connect(_on_task_finished)
+
+func _setup_styles():
+	if update_selected_button:
+		var base_style = update_selected_button.get_theme_stylebox("normal")
+		if base_style is StyleBoxFlat:
+			stylebox_normal = base_style.duplicate()
+		else:
+			stylebox_normal = StyleBoxFlat.new()
+			stylebox_normal.bg_color = Color(0, 0, 0, 0.35)
+			stylebox_normal.border_color = Color(1,1,1,1)
+			stylebox_normal.set_border_width_all(1)
+		
+		stylebox_install = stylebox_normal.duplicate()
+		stylebox_install.bg_color = Color.from_string("#245322", Color.GREEN) # Green
+		
+		stylebox_cancel = stylebox_normal.duplicate()
+		stylebox_cancel.bg_color = Color.from_string("#5c0001", Color.RED) # Red
+		
+		_update_button_style()
 
 func on_view_entered():
 	print("UpdatesView: on_view_entered called.")
@@ -78,7 +103,6 @@ func on_view_entered():
 		_initial_check_done = true
 		_start_update_check()
 		
-	# Refocus logic if needed
 	var focus_owner = get_viewport().gui_get_focus_owner()
 	if not is_instance_valid(focus_owner) or not is_ancestor_of(focus_owner):
 		if update_list_container.get_child_count() > 0:
@@ -86,10 +110,18 @@ func on_view_entered():
 		elif is_instance_valid(refresh_button):
 			refresh_button.grab_focus()
 
+func _on_focus_entered():
+	if audio_player and stream_focus:
+		audio_player.stream = stream_focus
+		audio_player.play()
+
+func _on_sort_pressed():
+	if audio_player and stream_select:
+		audio_player.stream = stream_select
+		audio_player.play()
+
 func _start_update_check():
-	print("UpdatesView: Starting update check...")
 	if _update_check_thread != null and _update_check_thread.is_alive():
-		print("UpdatesView: Update check thread already running.")
 		return
 
 	if is_instance_valid(loading_overlay_instance):
@@ -99,79 +131,53 @@ func _start_update_check():
 	_update_check_thread.start(_execute_update_check_in_thread)
 
 func _execute_update_check_in_thread():
-	print("UpdatesView (Thread): Executing flatpak commands via flatpak-spawn...")
-	
 	var spawn_cmd = "/usr/bin/flatpak-spawn"
 	if not FileAccess.file_exists(spawn_cmd):
-		print("UpdatesView (Error): flatpak-spawn not found!")
 		call_deferred("_process_update_check_result", "")
 		return
 
-	# 1. Update AppStream metadata
+	# 1. AppStream
 	var host_cmd_metadata = "flatpak update --appstream"
 	var args_metadata = ["--host", "sh", "-c", host_cmd_metadata]
-	OS.execute(spawn_cmd, args_metadata, [], false) 
+	OS.execute(spawn_cmd, args_metadata, [], false)
 
-	# 2. Get list of remotes (Explicitly check user and system to support older flatpak versions)
-	var remotes_info = [] # Array of Arrays [name, type]
-	
-	# Check User Remotes
+	# 2. Remotes
+	var remotes_info = [] 
+	# Check User
 	var cmd_user = "LC_ALL=C flatpak remotes --user --columns=name"
-	var args_user = ["--host", "sh", "-c", cmd_user]
+	OS.execute(spawn_cmd, ["--host", "sh", "-c", cmd_user], [], false) # Simplified for brevity, assume blocking is fine if we ignore output or use output array
 	var output_user = []
-	OS.execute(spawn_cmd, args_user, output_user)
-	
+	OS.execute(spawn_cmd, ["--host", "sh", "-c", cmd_user], output_user)
 	if output_user.size() > 0:
 		for line in output_user[0].strip_edges().split("\n"):
 			line = line.strip_edges()
-			if not line.is_empty():
-				remotes_info.append([line, "user"])
+			if not line.is_empty(): remotes_info.append([line, "user"])
 
-	# Check System Remotes
+	# Check System
 	var cmd_sys = "LC_ALL=C flatpak remotes --system --columns=name"
-	var args_sys = ["--host", "sh", "-c", cmd_sys]
 	var output_sys = []
-	OS.execute(spawn_cmd, args_sys, output_sys)
-	
+	OS.execute(spawn_cmd, ["--host", "sh", "-c", cmd_sys], output_sys)
 	if output_sys.size() > 0:
 		for line in output_sys[0].strip_edges().split("\n"):
 			line = line.strip_edges()
-			if not line.is_empty():
-				# Avoid duplicates if logic elsewhere is weird, but technically same name in different install is distinct.
-				# We allow duplicates in the list because they have different types.
-				remotes_info.append([line, "system"])
-	
-	print("UpdatesView (Thread): Found remotes with info: ", remotes_info)
+			if not line.is_empty(): remotes_info.append([line, "system"])
 	
 	var accumulated_output = ""
 	
-	# 3. Query each remote precisely
+	# 3. Query
 	for info in remotes_info:
 		var remote_name = info[0]
-		var install_type = info[1] # "system" or "user"
-		var type_flag = "--" + install_type
-		
-		var host_cmd_list = "LC_ALL=C flatpak remote-ls %s %s --updates --app --columns=application,name,version,download-size" % [type_flag, remote_name]
-		var args_list = ["--host", "sh", "-c", host_cmd_list]
+		var install_type = info[1]
+		var host_cmd_list = "LC_ALL=C flatpak remote-ls --%s %s --updates --app --columns=application,name,version,download-size" % [install_type, remote_name]
 		var output_updates = []
+		var exit_code = OS.execute(spawn_cmd, ["--host", "sh", "-c", host_cmd_list], output_updates, true) 
 		
-		print("UpdatesView (Thread): Checking remote: ", remote_name, " (", install_type, ")")
-		var exit_code = OS.execute(spawn_cmd, args_list, output_updates, true) 
-		
-		if output_updates.size() > 0:
-			var output_str = output_updates[0]
-			if exit_code == 0:
-				accumulated_output += output_str + "\n"
-			else:
-				print("UpdatesView (Thread): Failed to check remote ", remote_name, " [", install_type, "] (Exit Code: ", exit_code, "). Output:\n", output_str)
-		else:
-			print("UpdatesView (Thread): Failed to check remote ", remote_name, " [", install_type, "] (No output, Exit Code: ", exit_code, ")")
+		if exit_code == 0 and output_updates.size() > 0:
+			accumulated_output += output_updates[0] + "\n"
 	
-	print("UpdatesView (Thread): Update check finished. Total result length: ", accumulated_output.length())
 	call_deferred("_process_update_check_result", accumulated_output)
 
 func _process_update_check_result(output: String):
-	print("UpdatesView: Processing update check results...")
 	if _update_check_thread:
 		_update_check_thread.wait_to_finish()
 		_update_check_thread = null
@@ -193,33 +199,32 @@ func _process_update_check_result(output: String):
 			var app_name = parts[1].strip_edges()
 			var new_version = parts[2].strip_edges()
 			var raw_size = parts[3].strip_edges()
-			
-			# Clean size string: replace non-breaking space (or question marks) with space
 			var size_str = raw_size.replace("?", " ").replace("\u00A0", " ").strip_edges()
 			
-			var old_version = "?"
+			var exists = false
+			for u in available_updates:
+				if u.app_id == app_id: exists = true; break
 			
-			available_updates.append({
-				"app_id": app_id,
-				"name": app_name,
-				"old_version": old_version,
-				"new_version": new_version,
-				"size": size_str,
-				"icon": "" 
-			})
-			
-			selected_app_ids.append(app_id)
+			if not exists:
+				available_updates.append({
+					"app_id": app_id,
+					"name": app_name,
+					"old_version": "?",
+					"new_version": new_version,
+					"size": size_str,
+					"icon": "" 
+				})
+				selected_app_ids.append(app_id)
 
 	_populate_list()
 
 func _populate_list():
-	# Ensure sort button is focusable (fix for controller issue)
+	# Ensure sort button is focusable
 	if is_instance_valid(sort_option_button) and sort_option_button.focus_mode == Control.FOCUS_NONE:
 		sort_option_button.focus_mode = Control.FOCUS_ALL
 
 	if available_updates.is_empty():
-		for child in update_list_container.get_children():
-			child.queue_free()
+		for child in update_list_container.get_children(): child.queue_free()
 		no_updates_label.visible = true
 		update_selected_button.disabled = true
 		select_all_check_button.disabled = true
@@ -229,195 +234,267 @@ func _populate_list():
 		no_updates_label.visible = false
 		select_all_check_button.disabled = false
 		
-	# Sorting Logic
 	var sort_mode = 0
-	if is_instance_valid(sort_option_button):
-		sort_mode = sort_option_button.selected
+	if is_instance_valid(sort_option_button): sort_mode = sort_option_button.selected
 	
 	available_updates.sort_custom(func(a, b):
-		if sort_mode == 2: # Size Descending (▼)
-			var size_a = _parse_size(a.get("size", "0 B")).value_bytes
-			var size_b = _parse_size(b.get("size", "0 B")).value_bytes
-			return size_a > size_b
-		elif sort_mode == 3: # Size Ascending (▲)
-			var size_a = _parse_size(a.get("size", "0 B")).value_bytes
-			var size_b = _parse_size(b.get("size", "0 B")).value_bytes
-			return size_a < size_b
-		elif sort_mode == 1: # Name Descending (Z-A, ▼)
-			var name_a = a.get("name", "").to_lower()
-			var name_b = b.get("name", "").to_lower()
-			return name_a > name_b
-		else: # Name Ascending (A-Z, ▲, Default 0)
-			var name_a = a.get("name", "").to_lower()
-			var name_b = b.get("name", "").to_lower()
-			return name_a < name_b
+		if sort_mode == 2: return _parse_size(a.get("size", "0 B")).value_bytes > _parse_size(b.get("size", "0 B")).value_bytes
+		elif sort_mode == 3: return _parse_size(a.get("size", "0 B")).value_bytes < _parse_size(b.get("size", "0 B")).value_bytes
+		elif sort_mode == 1: return a.get("name", "").to_lower() > b.get("name", "").to_lower()
+		else: return a.get("name", "").to_lower() < b.get("name", "").to_lower()
 	)
 	
-	# Check if we can reuse existing nodes
+	# Reuse logic
 	var current_nodes = {}
 	var children_to_remove = []
-	
 	for child in update_list_container.get_children():
-		if "app_id" in child:
-			current_nodes[child.app_id] = child
-		else:
-			children_to_remove.append(child)
-			
-	for child in children_to_remove:
-		child.queue_free()
+		if "app_id" in child: current_nodes[child.app_id] = child
+		else: children_to_remove.append(child)
+	for child in children_to_remove: child.queue_free()
 		
-	# Check if set of IDs matches (for sorting vs refreshing)
 	var new_ids = []
 	for u in available_updates: new_ids.append(u.app_id)
 	
 	var can_reuse = true
-	if current_nodes.size() != available_updates.size():
-		can_reuse = false
+	if current_nodes.size() != available_updates.size(): can_reuse = false
 	else:
-		for id in new_ids:
-			if not current_nodes.has(id):
-				can_reuse = false
-				break
+		for id in new_ids: if not current_nodes.has(id): can_reuse = false; break
 	
 	if can_reuse:
-		print("UpdatesView: Reusing existing nodes for sort.")
-		# Just reorder
 		for i in range(available_updates.size()):
 			var u = available_updates[i]
 			var node = current_nodes[u.app_id]
 			update_list_container.move_child(node, i)
 	else:
-		print("UpdatesView: Rebuilding list.")
-		for child in update_list_container.get_children():
-			child.queue_free()
-			
+		for child in update_list_container.get_children(): child.queue_free()
 		for update in available_updates:
 			var item = update_item_scene.instantiate()
 			update_list_container.add_child(item)
-			
-			var icon_url = ""
-			item.setup(
-				update.get("app_id"), 
-				update.get("name"), 
-				update.get("old_version"), 
-				update.get("new_version"), 
-				update.get("size"), 
-				icon_url
-			)
+			item.setup(update.app_id, update.name, update.old_version, update.new_version, update.size, update.icon)
 			item.selection_toggled.connect(_on_item_selection_toggled)
 			item.image_load_requested.connect(func(url, rect): emit_signal("image_load_requested", url, rect))
-			
-			if selected_app_ids.has(update.get("app_id")):
-				item.set_selected(true)
+			if selected_app_ids.has(update.app_id): item.set_selected(true)
 
 	_update_ui_state()
 
-func _on_sort_option_selected(_index):
-	if audio_player and stream_select:
-		audio_player.stream = stream_select
-		audio_player.play()
-	_populate_list()
-
-func _on_sort_focus_entered():
-	if audio_player and stream_focus:
-		audio_player.stream = stream_focus
-		audio_player.play()
-
-func _on_sort_pressed():
-	if audio_player and stream_select:
-		audio_player.stream = stream_select
-		audio_player.play()
-
 func _parse_size(size_str: String) -> Dictionary:
-	var regex = RegEx.new()
-	regex.compile("([0-9.,]+).*?([A-Za-z]+)") 
-	
+	var regex = RegEx.new(); regex.compile("([0-9.,]+).*?([A-Za-z]+)") 
 	var match_result = regex.search(size_str)
-	if not match_result:
-		return { "value_bytes": 0.0, "display_str": size_str }
-		
-	var val_str = match_result.get_string(1).replace(",", ".")
-	var unit_str = match_result.get_string(2)
-	
-	var value = val_str.to_float()
-	var unit = unit_str.to_upper()
+	if not match_result: return { "value_bytes": 0.0, "display_str": size_str }
+	var val = match_result.get_string(1).replace(",", ".").to_float()
+	var unit = match_result.get_string(2).to_upper()
 	var bytes = 0.0
-	
 	match unit:
-		"TB": bytes = value * 1024 * 1024 * 1024 * 1024
-		"GB": bytes = value * 1024 * 1024 * 1024
-		"MB": bytes = value * 1024 * 1024
-		"KB", "K": bytes = value * 1024
-		"B": bytes = value
-		_: bytes = 0.0 
-		
-	return {
-		"value_bytes": bytes,
-		"display_str": "%s %s" % [val_str, unit_str]
-	}
+		"TB": bytes = val * 1024 * 1024 * 1024 * 1024
+		"GB": bytes = val * 1024 * 1024 * 1024
+		"MB": bytes = val * 1024 * 1024
+		"KB", "K": bytes = val * 1024
+		"B": bytes = val
+	return { "value_bytes": bytes, "display_str": size_str }
 
 func _on_item_selection_toggled(app_id: String, is_selected: bool):
 	if is_selected:
-		if not selected_app_ids.has(app_id):
-			selected_app_ids.append(app_id)
+		if not selected_app_ids.has(app_id): selected_app_ids.append(app_id)
 	else:
 		selected_app_ids.erase(app_id)
-	
 	_update_ui_state()
 
 func _update_ui_state():
+	if is_updating:
+		select_all_check_button.disabled = true
+		refresh_button.disabled = true
+		sort_option_button.disabled = true
+		
+		# Disable all checkboxes
+		for child in update_list_container.get_children():
+			if child.has_node("MarginContainer/HBoxContainer/CheckBox"):
+				child.get_node("MarginContainer/HBoxContainer/CheckBox").disabled = true
+			
+		_update_button_style()
+		update_selected_button.text = "Cancel Update"
+		update_selected_button.disabled = false
+		return
+
+	# Normal State
+	select_all_check_button.disabled = false
+	refresh_button.disabled = false
+	sort_option_button.disabled = false
+	
+	for child in update_list_container.get_children():
+		if child.has_node("MarginContainer/HBoxContainer/CheckBox"):
+			child.get_node("MarginContainer/HBoxContainer/CheckBox").disabled = false
+
 	var total_items = available_updates.size()
 	var selected_count = selected_app_ids.size()
 	
-	if total_items > 0:
-		select_all_check_button.button_pressed = (selected_count == total_items)
+	if total_items > 0: select_all_check_button.button_pressed = (selected_count == total_items)
+	else: select_all_check_button.button_pressed = false
 	
 	update_selected_button.disabled = (selected_count == 0)
-	if selected_count > 0:
-		update_selected_button.text = "Update Selected (%d)" % selected_count
+	if selected_count > 0: update_selected_button.text = "Update Selected (%d)" % selected_count
+	else: update_selected_button.text = "Update Selected"
+	
+	_update_button_style()
+
+func _update_button_style():
+	if not is_instance_valid(update_selected_button): return
+	
+	if is_updating:
+		update_selected_button.add_theme_stylebox_override("normal", stylebox_cancel)
+		update_selected_button.add_theme_stylebox_override("hover", stylebox_cancel)
+		update_selected_button.add_theme_stylebox_override("pressed", stylebox_cancel)
 	else:
-		update_selected_button.text = "Update Selected"
+		update_selected_button.add_theme_stylebox_override("normal", stylebox_install)
+		update_selected_button.add_theme_stylebox_override("hover", stylebox_install)
+		update_selected_button.add_theme_stylebox_override("pressed", stylebox_install)
 
 func _on_select_all_pressed():
+	if is_updating: return
 	if audio_player and stream_select: audio_player.play()
-	
 	var total_items = available_updates.size()
 	var selected_count = selected_app_ids.size()
 	var should_select_all = (selected_count < total_items)
-	
 	selected_app_ids.clear()
-	if should_select_all:
-		for update in available_updates:
-			selected_app_ids.append(update.get("app_id"))
-		
-	for child in update_list_container.get_children():
-		if child.has_method("set_selected"):
-			child.set_selected(should_select_all)
-			
+	if should_select_all: for update in available_updates: selected_app_ids.append(update.app_id)
+	for child in update_list_container.get_children(): if child.has_method("set_selected"): child.set_selected(should_select_all)
 	select_all_check_button.set_pressed_no_signal(should_select_all)
 	_update_ui_state()
 
 func _on_refresh_pressed():
+	if is_updating: return
 	if audio_player and stream_select: audio_player.play()
-	print("UpdatesView: Refresh requested.")
 	_start_update_check()
+
+func _on_sort_option_selected(_index):
+	if is_updating: return
+	if audio_player and stream_select: audio_player.play()
+	_populate_list()
+
+func _on_sort_focus_entered():
+	if audio_player and stream_focus: audio_player.play()
 
 func _on_update_selected_pressed():
 	if audio_player and stream_select: audio_player.play()
-	print("UpdatesView: Updating %d apps: %s" % [selected_app_ids.size(), selected_app_ids])
+	
+	if is_updating:
+		_cancel_updates()
+	else:
+		_start_updates()
+
+func _start_updates():
+	if selected_app_ids.is_empty(): return
 	
 	if ProjectSettings.has_setting("autoload/DownloadManager"):
 		var dm = get_node_or_null("/root/DownloadManager")
 		if dm:
+			is_updating = true
+			_update_ui_state()
 			for app_id in selected_app_ids:
+				# Prepare item UI
+				var item = _find_item_by_id(app_id)
+				if item: item.set_progress(0, "Queued")
 				dm.queue_install(app_id)
-			
-			update_selected_button.disabled = true
-			update_selected_button.text = "Queued"
 		else:
 			printerr("UpdatesView: DownloadManager not found!")
 	else:
 		printerr("UpdatesView: Autoload setting not found!")
 
-func update_internal_list_install_status(_installed_apps):
-	pass
+func _cancel_updates():
+	# Cancel all queued/running operations for selected apps
+	# We iterate backwards through our selected list or ask DownloadManager?
+	# DownloadManager.cancel_operation(op_id). We need OpID.
+	# We don't store OpIDs here easily.
+	# But DownloadManager has get_task_status(app_id) which has 'operation_id'.
+	
+	var dm = get_node_or_null("/root/DownloadManager")
+	if dm:
+		for app_id in selected_app_ids:
+			var status = dm.get_task_status(app_id)
+			if status.has("operation_id"):
+				dm.cancel_operation(status.operation_id)
+	
+	# We rely on task_finished signals to reset state, 
+	# OR we force state reset if we want immediate feedback.
+	# Usually task_finished comes back with "cancelled".
+
+func _find_item_by_id(app_id: String) -> Control:
+	for child in update_list_container.get_children():
+		if "app_id" in child and child.app_id == app_id:
+			return child
+	return null
+
+func _on_task_updated(operation_id: String, status_data: Dictionary):
+	if not is_updating: return
+	var app_id = status_data.get("app_id")
+	if not app_id in selected_app_ids: return
+	
+	var item = _find_item_by_id(app_id)
+	var status = status_data.get("status")
+	var progress = status_data.get("progress", 0)
+	
+	if status == "completed":
+		print("UpdatesView: Update completed for ", app_id)
+		# Remove from internal lists
+		selected_app_ids.erase(app_id)
+		for i in range(available_updates.size()):
+			if available_updates[i].app_id == app_id:
+				available_updates.remove_at(i)
+				break
+		# Remove UI Node
+		if item: item.queue_free()
+		
+		# Check if done
+		_check_all_updates_finished()
+		
+	elif status == "failed" or status == "cancelled":
+		print("UpdatesView: Update ", status, " for ", app_id)
+		if item: 
+			item.reset_progress()
+			# Optionally show error? status_data.get("error")
+		# We don't remove failed items, user might try again.
+		# But we should consider them "done" for this batch process?
+		# If we keep is_updating = true, user can't select others.
+		# If failed, we should probably just stop tracking it as "active".
+		# But we queue all at once.
+		# Let's keep them in selected_app_ids but maybe mark as not running?
+		# Actually, if we cancel, we stop updating.
+		pass
+		
+	else:
+		if item:
+			var msg = ""
+			match status:
+				"queued": msg = "Queued"
+				"preparing": msg = "Preparing..."
+				"downloading": 
+					msg = "Downloading"
+					var speed = status_data.get("speed")
+					if speed: msg += " (%s)" % speed
+				"installing": msg = "Installing..."
+			item.set_progress(progress, msg)
+
+func _on_task_finished(operation_id: String, final_status: String, operation_type: String):
+	# Fallback if task_updated didn't catch final state or for cleanup
+	# We mostly handled it in _on_task_updated via status checks
+	# But let's check if we are completely idle now
+	_check_all_updates_finished()
+
+func _check_all_updates_finished():
+	if not is_updating: return
+	
+	# Check if DownloadManager has any running tasks for our selected apps
+	var any_running = false
+	if ProjectSettings.has_setting("autoload/DownloadManager"):
+		var dm = get_node_or_null("/root/DownloadManager")
+		if dm:
+			for app_id in selected_app_ids:
+				var status = dm.get_task_status(app_id)
+				var s = status.get("status")
+				if s != null and not ["completed", "failed", "cancelled"].has(s):
+					any_running = true
+					break
+	
+	if not any_running:
+		print("UpdatesView: All batch updates finished.")
+		is_updating = false
+		_update_ui_state()
