@@ -8,6 +8,7 @@ signal focus_exited_up_from_lists()
 @onready var refresh_button: Button = $MarginContainer/VBoxContainer/HeaderContainer/RefreshContainer/RefreshButton
 @onready var update_selected_button: Button = $MarginContainer/VBoxContainer/HeaderContainer/ActionContainer/UpdateSelectedButton
 @onready var no_updates_label: Label = $MarginContainer/VBoxContainer/NoUpdatesLabel
+@onready var sort_option_button: OptionButton = $MarginContainer/VBoxContainer/HeaderContainer/SortOptionButton
 
 var update_item_scene = preload("res://sections/update_item.tscn")
 var loading_overlay_scene = preload("res://loading_overlay.tscn")
@@ -18,7 +19,7 @@ var loading_overlay_instance: Control = null
 var _initial_check_done: bool = false
 
 var audio_player: AudioStreamPlayer
-var stream_select = preload("res://assets/select.mp3")
+var stream_select = preload("res://assets/nextprev.wav")
 var stream_focus = preload("res://assets/change.mp3")
 
 func _ready():
@@ -33,12 +34,42 @@ func _ready():
 	
 	if is_instance_valid(select_all_check_button):
 		select_all_check_button.pressed.connect(_on_select_all_pressed)
+		select_all_check_button.focus_entered.connect(_on_focus_entered)
 	
 	if is_instance_valid(refresh_button):
 		refresh_button.pressed.connect(_on_refresh_pressed)
+		refresh_button.focus_entered.connect(_on_focus_entered)
 		
 	if is_instance_valid(update_selected_button):
 		update_selected_button.pressed.connect(_on_update_selected_pressed)
+		update_selected_button.focus_entered.connect(_on_focus_entered)
+		
+	# Connect Sort Button signals
+	if is_instance_valid(sort_option_button):
+		sort_option_button.item_selected.connect(_on_sort_option_selected)
+		sort_option_button.focus_entered.connect(_on_sort_focus_entered)
+		sort_option_button.pressed.connect(_on_sort_pressed)
+		
+	# Manual Focus Neighbors for Header (Force Horizontal Flow)
+	if is_instance_valid(select_all_check_button) and is_instance_valid(refresh_button):
+		select_all_check_button.focus_neighbor_right = refresh_button.get_path()
+		refresh_button.focus_neighbor_left = select_all_check_button.get_path()
+		
+	if is_instance_valid(refresh_button) and is_instance_valid(sort_option_button):
+		refresh_button.focus_neighbor_right = sort_option_button.get_path()
+		sort_option_button.focus_neighbor_left = refresh_button.get_path()
+		
+	if is_instance_valid(sort_option_button) and is_instance_valid(update_selected_button):
+		sort_option_button.focus_neighbor_right = update_selected_button.get_path()
+		update_selected_button.focus_neighbor_left = sort_option_button.get_path()
+		
+	# Initial Load
+	_start_update_check()
+
+func _on_focus_entered():
+	if audio_player and stream_focus:
+		audio_player.stream = stream_focus
+		audio_player.play()
 
 func on_view_entered():
 	print("UpdatesView: on_view_entered called.")
@@ -179,10 +210,13 @@ func _process_update_check_result(output: String):
 	_populate_list()
 
 func _populate_list():
-	for child in update_list_container.get_children():
-		child.queue_free()
-	
+	# Ensure sort button is focusable (fix for controller issue)
+	if is_instance_valid(sort_option_button) and sort_option_button.focus_mode == Control.FOCUS_NONE:
+		sort_option_button.focus_mode = Control.FOCUS_ALL
+
 	if available_updates.is_empty():
+		for child in update_list_container.get_children():
+			child.queue_free()
 		no_updates_label.visible = true
 		update_selected_button.disabled = true
 		select_all_check_button.disabled = true
@@ -192,26 +226,132 @@ func _populate_list():
 		no_updates_label.visible = false
 		select_all_check_button.disabled = false
 		
-	for update in available_updates:
-		var item = update_item_scene.instantiate()
-		update_list_container.add_child(item)
+	# Sorting Logic
+	var sort_mode = 0
+	if is_instance_valid(sort_option_button):
+		sort_mode = sort_option_button.selected
+	
+	available_updates.sort_custom(func(a, b):
+		if sort_mode == 2: # Size Descending (▼)
+			var size_a = _parse_size(a.get("size", "0 B")).value_bytes
+			var size_b = _parse_size(b.get("size", "0 B")).value_bytes
+			return size_a > size_b
+		elif sort_mode == 3: # Size Ascending (▲)
+			var size_a = _parse_size(a.get("size", "0 B")).value_bytes
+			var size_b = _parse_size(b.get("size", "0 B")).value_bytes
+			return size_a < size_b
+		elif sort_mode == 1: # Name Descending (Z-A, ▼)
+			var name_a = a.get("name", "").to_lower()
+			var name_b = b.get("name", "").to_lower()
+			return name_a > name_b
+		else: # Name Ascending (A-Z, ▲, Default 0)
+			var name_a = a.get("name", "").to_lower()
+			var name_b = b.get("name", "").to_lower()
+			return name_a < name_b
+	)
+	
+	# Check if we can reuse existing nodes
+	var current_nodes = {}
+	var children_to_remove = []
+	
+	for child in update_list_container.get_children():
+		if "app_id" in child:
+			current_nodes[child.app_id] = child
+		else:
+			children_to_remove.append(child)
+			
+	for child in children_to_remove:
+		child.queue_free()
 		
-		var icon_url = ""
-		item.setup(
-			update.get("app_id"), 
-			update.get("name"), 
-			update.get("old_version"), 
-			update.get("new_version"), 
-			update.get("size"), 
-			icon_url
-		)
-		item.selection_toggled.connect(_on_item_selection_toggled)
-		item.image_load_requested.connect(func(url, rect): emit_signal("image_load_requested", url, rect))
-		
-		if selected_app_ids.has(update.get("app_id")):
-			item.set_selected(true)
+	# Check if set of IDs matches (for sorting vs refreshing)
+	var new_ids = []
+	for u in available_updates: new_ids.append(u.app_id)
+	
+	var can_reuse = true
+	if current_nodes.size() != available_updates.size():
+		can_reuse = false
+	else:
+		for id in new_ids:
+			if not current_nodes.has(id):
+				can_reuse = false
+				break
+	
+	if can_reuse:
+		print("UpdatesView: Reusing existing nodes for sort.")
+		# Just reorder
+		for i in range(available_updates.size()):
+			var u = available_updates[i]
+			var node = current_nodes[u.app_id]
+			update_list_container.move_child(node, i)
+	else:
+		print("UpdatesView: Rebuilding list.")
+		for child in update_list_container.get_children():
+			child.queue_free()
+			
+		for update in available_updates:
+			var item = update_item_scene.instantiate()
+			update_list_container.add_child(item)
+			
+			var icon_url = ""
+			item.setup(
+				update.get("app_id"), 
+				update.get("name"), 
+				update.get("old_version"), 
+				update.get("new_version"), 
+				update.get("size"), 
+				icon_url
+			)
+			item.selection_toggled.connect(_on_item_selection_toggled)
+			item.image_load_requested.connect(func(url, rect): emit_signal("image_load_requested", url, rect))
+			
+			if selected_app_ids.has(update.get("app_id")):
+				item.set_selected(true)
 
 	_update_ui_state()
+
+func _on_sort_option_selected(_index):
+	if audio_player and stream_select:
+		audio_player.stream = stream_select
+		audio_player.play()
+	_populate_list()
+
+func _on_sort_focus_entered():
+	if audio_player and stream_focus:
+		audio_player.stream = stream_focus
+		audio_player.play()
+
+func _on_sort_pressed():
+	if audio_player and stream_select:
+		audio_player.stream = stream_select
+		audio_player.play()
+
+func _parse_size(size_str: String) -> Dictionary:
+	var regex = RegEx.new()
+	regex.compile("([0-9.,]+).*?([A-Za-z]+)") 
+	
+	var match_result = regex.search(size_str)
+	if not match_result:
+		return { "value_bytes": 0.0, "display_str": size_str }
+		
+	var val_str = match_result.get_string(1).replace(",", ".")
+	var unit_str = match_result.get_string(2)
+	
+	var value = val_str.to_float()
+	var unit = unit_str.to_upper()
+	var bytes = 0.0
+	
+	match unit:
+		"TB": bytes = value * 1024 * 1024 * 1024 * 1024
+		"GB": bytes = value * 1024 * 1024 * 1024
+		"MB": bytes = value * 1024 * 1024
+		"KB", "K": bytes = value * 1024
+		"B": bytes = value
+		_: bytes = 0.0 
+		
+	return {
+		"value_bytes": bytes,
+		"display_str": "%s %s" % [val_str, unit_str]
+	}
 
 func _on_item_selection_toggled(app_id: String, is_selected: bool):
 	if is_selected:
