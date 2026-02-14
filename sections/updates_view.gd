@@ -145,30 +145,18 @@ func _execute_update_check_in_thread():
 	var remotes_info = [] 
 	# Check User
 	var cmd_user = "LC_ALL=C flatpak remotes --user --columns=name"
-	OS.execute(spawn_cmd, ["--host", "sh", "-c", cmd_user], [], false) # Simplified for brevity, assume blocking is fine if we ignore output or use output array
 	var output_user = []
 	OS.execute(spawn_cmd, ["--host", "sh", "-c", cmd_user], output_user)
 	if output_user.size() > 0:
 		for line in output_user[0].strip_edges().split("\n"):
 			line = line.strip_edges()
-			if not line.is_empty(): remotes_info.append([line, "user"])
-
-	# Check System
-	var cmd_sys = "LC_ALL=C flatpak remotes --system --columns=name"
-	var output_sys = []
-	OS.execute(spawn_cmd, ["--host", "sh", "-c", cmd_sys], output_sys)
-	if output_sys.size() > 0:
-		for line in output_sys[0].strip_edges().split("\n"):
-			line = line.strip_edges()
-			if not line.is_empty(): remotes_info.append([line, "system"])
+			if not line.is_empty(): remotes_info.append(line)
 	
 	var accumulated_output = ""
 	
 	# 3. Query
-	for info in remotes_info:
-		var remote_name = info[0]
-		var install_type = info[1]
-		var host_cmd_list = "LC_ALL=C flatpak remote-ls --%s %s --updates --app --columns=application,name,version,download-size" % [install_type, remote_name]
+	for remote_name in remotes_info:
+		var host_cmd_list = "LC_ALL=C flatpak remote-ls --user %s --updates --app --columns=application,name,version,download-size" % [remote_name]
 		var output_updates = []
 		var exit_code = OS.execute(spawn_cmd, ["--host", "sh", "-c", host_cmd_list], output_updates, true) 
 		
@@ -212,7 +200,8 @@ func _process_update_check_result(output: String):
 					"old_version": "?",
 					"new_version": new_version,
 					"size": size_str,
-					"icon": "" 
+					"icon": "",
+					"installation": "user"
 				})
 				selected_app_ids.append(app_id)
 
@@ -393,7 +382,15 @@ func _start_updates():
 				# Prepare item UI
 				var item = _find_item_by_id(app_id)
 				if item: item.set_progress(0, "Queued")
-				dm.queue_install(app_id)
+				
+				# Find the update data to pass installation scope
+				var update_data = {}
+				for u in available_updates:
+					if u.app_id == app_id:
+						update_data = u
+						break
+				
+				dm.queue_update(app_id, update_data)
 		else:
 			printerr("UpdatesView: DownloadManager not found!")
 	else:
@@ -430,7 +427,9 @@ func _on_task_updated(operation_id: String, status_data: Dictionary):
 	
 	var item = _find_item_by_id(app_id)
 	var status = status_data.get("status")
-	var progress = status_data.get("progress", 0)
+	var progress = status_data.get("progress")
+	if progress == null: progress = 0.0
+	else: progress = float(progress)
 	
 	if status == "completed":
 		print("UpdatesView: Update completed for ", app_id)

@@ -37,9 +37,12 @@ func setup(p_app_id: String, p_name: String, p_old_version: String, p_new_versio
 	else:
 		_load_icon()
 
-func set_progress(value: float, message: String = ""):
+func set_progress(value, message: String = ""):
+	if value == null: value = 0.0
+	var float_value = float(value)
+	
 	if not progress_bar.visible: progress_bar.visible = true
-	progress_bar.value = value
+	progress_bar.value = float_value
 	
 	if not message.is_empty():
 		if not status_label.visible: status_label.visible = true
