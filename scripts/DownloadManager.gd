@@ -296,12 +296,17 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 						else:
 							line_progress = current_pct
 							
-						line_status = "installing" # Standardstatus bei Fortschritt
+						# Default to downloading if we have progress < 100
+						if line_progress < 100:
+							line_status = "downloading"
+						else:
+							line_status = "installing"
 
 						var speed_match = _regex_speed.search(line)
 						if speed_match:
 							line_speed = speed_match.get_string(1).replace("?", "").strip_edges()
-							line_status = "downloading" # Genauerer Status, wenn Geschwindigkeit erkannt wird
+							# If we have speed, it's definitely downloading
+							line_status = "downloading"
 
 						var eta_match = _regex_eta.search(line)
 						if eta_match:

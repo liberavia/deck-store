@@ -173,6 +173,9 @@ func _process_update_check_result(output: String):
 	if is_instance_valid(loading_overlay_instance):
 		loading_overlay_instance.hide_overlay()
 
+	var old_selected = selected_app_ids.duplicate()
+	var is_first_run = available_updates.is_empty()
+	
 	available_updates.clear()
 	selected_app_ids.clear()
 	
@@ -203,7 +206,10 @@ func _process_update_check_result(output: String):
 					"icon": "",
 					"installation": "user"
 				})
-				selected_app_ids.append(app_id)
+				
+				# Preserve selection or select all on first run
+				if is_first_run or old_selected.has(app_id):
+					selected_app_ids.append(app_id)
 
 	_populate_list()
 
@@ -254,6 +260,8 @@ func _populate_list():
 			var u = available_updates[i]
 			var node = current_nodes[u.app_id]
 			update_list_container.move_child(node, i)
+			if node.has_method("set_selected"):
+				node.set_selected(selected_app_ids.has(u.app_id))
 	else:
 		for child in update_list_container.get_children(): child.queue_free()
 		for update in available_updates:
@@ -466,7 +474,7 @@ func _on_task_updated(operation_id: String, status_data: Dictionary):
 				"queued": msg = "Queued"
 				"preparing": msg = "Preparing..."
 				"downloading": 
-					msg = "Downloading"
+					msg = "Downloading (%d%%)" % progress
 					var speed = status_data.get("speed")
 					if speed: msg += " (%s)" % speed
 				"installing": msg = "Installing..."

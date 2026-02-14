@@ -40,6 +40,7 @@ var detailed_reviews_request: HTTPRequest = null
 var _deckstore_abs_base_path: String = ""
 var _api_cache_abs_path: String = ""
 var _odrs_reviews_cache_abs_path: String = ""
+var pulse_tween: Tween
 
 # --- Constants ---
 const DECKSTORE_BASE_DIR_NAME = ".deck-store" 
@@ -556,6 +557,10 @@ func _on_task_updated_for_progress(operation_id: String, status_data: Dictionary
 			if progress_info: progress_info.visible = true
 			if progress_bar: 
 				progress_bar.value = progress
+				if progress >= 100.0 and status == "installing":
+					_start_pulse()
+				else:
+					_stop_pulse()
 			if progress_label:
 				var label_text = ""
 				match status:
@@ -569,10 +574,24 @@ func _on_task_updated_for_progress(operation_id: String, status_data: Dictionary
 					_: label_text = "Status: %s" % status
 				progress_label.text = label_text
 		else:
+			_stop_pulse()
 			if progress_info: progress_info.visible = false
+
+func _start_pulse():
+	if pulse_tween and pulse_tween.is_valid(): return
+	pulse_tween = create_tween().set_loops()
+	pulse_tween.tween_property(progress_bar, "modulate:a", 0.3, 0.6).set_trans(Tween.TRANS_SINE)
+	pulse_tween.tween_property(progress_bar, "modulate:a", 1.0, 0.6).set_trans(Tween.TRANS_SINE)
+
+func _stop_pulse():
+	if pulse_tween and pulse_tween.is_valid():
+		pulse_tween.kill()
+	if is_instance_valid(progress_bar):
+		progress_bar.modulate.a = 1.0
 			
 func _on_task_finished_for_progress(operation_id: String, final_status: String):
 	if is_instance_valid(action_button) and operation_id == action_button.current_operation_id:
+		_stop_pulse()
 		if progress_info: progress_info.visible = false
 		if progress_bar: progress_bar.value = 0
 

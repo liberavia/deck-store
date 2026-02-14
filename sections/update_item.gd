@@ -17,6 +17,8 @@ var audio_player: AudioStreamPlayer
 var stream_focus = preload("res://assets/change.mp3")
 var stream_select = preload("res://assets/select.mp3")
 
+var pulse_tween: Tween
+
 func _ready():
 	toggle_mode = true
 	pressed.connect(_on_main_button_pressed)
@@ -48,7 +50,25 @@ func set_progress(value, message: String = ""):
 		if not status_label.visible: status_label.visible = true
 		status_label.text = message
 	
+	# Indeterminate / Pulse mode for finishing installation
+	if float_value >= 100.0 and message.to_lower().begins_with("installing"):
+		_start_pulse()
+	else:
+		_stop_pulse()
+
+func _start_pulse():
+	if pulse_tween and pulse_tween.is_valid(): return
+	pulse_tween = create_tween().set_loops()
+	pulse_tween.tween_property(progress_bar, "modulate:a", 0.3, 0.6).set_trans(Tween.TRANS_SINE)
+	pulse_tween.tween_property(progress_bar, "modulate:a", 1.0, 0.6).set_trans(Tween.TRANS_SINE)
+
+func _stop_pulse():
+	if pulse_tween and pulse_tween.is_valid():
+		pulse_tween.kill()
+	progress_bar.modulate.a = 1.0
+
 func reset_progress():
+	_stop_pulse()
 	progress_bar.visible = false
 	status_label.visible = false
 	progress_bar.value = 0
