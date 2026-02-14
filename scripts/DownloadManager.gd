@@ -32,16 +32,19 @@ func _ready():
 	DirAccess.make_dir_absolute(OUTPUT_DIR)
 	_cleanup_old_logs()
 
-	_regex_progress.compile("^Installing(?:\\s[0-9]+\\/[0-9]+)?\\?\\s+\\?+\\s+([0-9]+)%")
-	_regex_speed.compile("([0-9.,]+\\??\\s*(?:k|M|G)i?B\\/s)")
+	_regex_progress.compile("^(?:Installing|Updating)(?:\\s+([0-9]+)\\/([0-9]+))?\\s+.*?\\s+([0-9]+)%")
+	_regex_speed.compile("([0-9.,]+\\s*(?:k|M|G)i?B\\/s)")
 	_regex_eta.compile("([0-9]{1,2}:[0-9]{2}(:[0-9]{2})?)$")
-	_regex_complete.compile("^(Installation|Uninstall) complete\\.?")
+	_regex_complete.compile("^(?:Installation|Uninstall|Update) complete\\.?")
 	_regex_error.compile("(?:Error:|error:)\\s*(.*)")
-	_regex_uninstalling.compile("^Uninstalling\\?")
+	_regex_uninstalling.compile("^Uninstalling")
 
 
 func queue_install(app_id: String, app_data: Dictionary = {}) -> String:
 	return _add_task("install", app_id, app_data)
+
+func queue_update(app_id: String, app_data: Dictionary = {}) -> String:
+	return _add_task("update", app_id, app_data)
 
 func queue_uninstall(app_id: String, app_data: Dictionary = {}) -> String:
 	print("INFO DownloadManager: Queueing Uninstall for ", app_id)
@@ -112,14 +115,15 @@ func _add_task(op_type: String, app_id: String, app_data: Dictionary = {}) -> St
 	
 	var initial_status_data = {
 		"status": "queued", "app_id": app_id, "operation_id": operation_id,
-		"progress": null, "speed": null, "eta": null, "error": null,
+		"progress": 0, "speed": null, "eta": null, "error": null,
 		"name": app_data.get("name", app_id), # Name aus app_data oder app_id als Fallback
 		"icon_url": app_data.get("icon_url", "") # Icon URL aus app_data
 	}
 	
 	var task_data = {
 		"operation_id": operation_id, "app_id": app_id, "operation_type": op_type,
-		"pid": -1, "output_file": "", "status_data": initial_status_data
+		"pid": -1, "output_file": "", "status_data": initial_status_data,
+		"app_data": app_data
 	}
 	
 	task_queue.append(task_data)
@@ -162,8 +166,9 @@ func _execute_task(task_data: Dictionary):
 	if da and FileAccess.file_exists(current_output_file):
 		da.remove(current_output_file.get_file()) # Entferne altes Logfile, falls vorhanden
 
+	var installation = task_data.get("app_data", {}).get("installation", "user")
 	var host_command = "flatpak"
-	var host_args = [task_data.operation_type, "--user", "--assumeyes", task_data.app_id]
+	var host_args = [task_data.operation_type, "--" + installation, "--assumeyes", task_data.app_id]
 	
 	var global_log_path = ProjectSettings.globalize_path(current_output_file)
 	
@@ -263,8 +268,8 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 		var line_error = null
 		var line_matched = false
 
-		# Parsing Logik für "install"
-		if task.operation_type == "install":
+		# Parsing Logik für "install" und "update"
+		if task.operation_type == "install" or task.operation_type == "update":
 			var error_match = _regex_error.search(line)
 			if error_match:
 				line_matched = true
@@ -273,29 +278,42 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 				print("DEBUG: Matched Error: ", line_error)
 			else:
 				var complete_match = _regex_complete.search(line)
-				if complete_match and complete_match.get_string(1) == "Installation":
+				if complete_match:
 					line_matched = true
 					line_status = "completed"
 					line_progress = 100 # Sicherstellen, dass bei Abschluss 100% erreicht wird
-					print("DEBUG: Matched Installation complete")
+					print("DEBUG: Matched completion: ", line)
 				else:
 					var progress_match = _regex_progress.search(line)
 					if progress_match:
 						line_matched = true
-						line_progress = progress_match.get_string(1).to_int()
-						line_status = "installing" # Standardstatus bei Fortschritt
+						var current_pct = progress_match.get_string(3).to_int()
+						var current_idx = progress_match.get_string(1).to_int()
+						var total_idx = progress_match.get_string(2).to_int()
+						
+						if total_idx > 0:
+							line_progress = int(((current_idx - 1) * 100.0 + current_pct) / total_idx)
+						else:
+							line_progress = current_pct
+							
+						# Default to downloading if we have progress < 100
+						if line_progress < 100:
+							line_status = "downloading"
+						else:
+							line_status = "installing"
 
 						var speed_match = _regex_speed.search(line)
 						if speed_match:
 							line_speed = speed_match.get_string(1).replace("?", "").strip_edges()
-							line_status = "downloading" # Genauerer Status, wenn Geschwindigkeit erkannt wird
+							# If we have speed, it's definitely downloading
+							line_status = "downloading"
 
 						var eta_match = _regex_eta.search(line)
 						if eta_match:
 							line_eta = eta_match.get_string(1).strip_edges()
 						
 						# Wenn Download abgeschlossen, aber Installation läuft noch
-						if line_progress == 100 and line_status == "downloading":
+						if line_progress >= 100 and line_status == "downloading":
 							line_status = "installing" 
 		
 		# Parsing Logik für "uninstall"
@@ -325,9 +343,11 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 			if line_status != null and status_data_in_progress.get("status") != line_status:
 				status_data_in_progress.status = line_status
 				changed_locally = true
-			if line_progress != -1 and status_data_in_progress.get("progress") != line_progress:
-				status_data_in_progress.progress = line_progress
-				changed_locally = true
+			if line_progress != -1:
+				var current_p = status_data_in_progress.get("progress")
+				if current_p == null or line_progress > current_p:
+					status_data_in_progress.progress = line_progress
+					changed_locally = true
 			if line_speed != null and status_data_in_progress.get("speed") != line_speed:
 				status_data_in_progress.speed = line_speed
 				changed_locally = true
