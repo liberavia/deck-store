@@ -82,32 +82,13 @@ text = "Available Updates"
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SelectAllContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/HeaderContainer"]
-layout_mode = 2
-theme_override_constants/separation = 5
-
-[node name="LabelPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer/HeaderContainer/SelectAllContainer"]
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_label_combined")
-
-[node name="SelectAllLabel" type="Label" parent="MarginContainer/VBoxContainer/HeaderContainer/SelectAllContainer/LabelPanel"]
+[node name="SelectAllButton" type="Button" parent="MarginContainer/VBoxContainer/HeaderContainer"]
+custom_minimum_size = Vector2(160, 45)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
+theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
 text = "Select All"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="CheckBoxPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer/HeaderContainer/SelectAllContainer"]
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_label_combined")
-
-[node name="SelectAllCheckBox" type="CheckBox" parent="MarginContainer/VBoxContainer/HeaderContainer/SelectAllContainer/CheckBoxPanel"]
-layout_mode = 2
-theme_override_styles/normal = SubResource("StyleBoxEmpty_checkbox")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_checkbox")
-theme_override_styles/disabled = SubResource("StyleBoxEmpty_checkbox")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_checkbox")
-theme_override_styles/focus = SubResource("StyleBoxFlat_focus_expanded")
 
 [node name="SpacerMiddle1" type="Control" parent="MarginContainer/VBoxContainer/HeaderContainer"]
 custom_minimum_size = Vector2(20, 0)

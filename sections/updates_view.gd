@@ -4,7 +4,7 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 signal focus_exited_up_from_lists()
 
 @onready var update_list_container: VBoxContainer = $MarginContainer/VBoxContainer/ScrollContainer/ListMarginContainer/UpdateListContainer
-@onready var select_all_check_button: CheckBox = $MarginContainer/VBoxContainer/HeaderContainer/SelectAllContainer/CheckBoxPanel/SelectAllCheckBox
+@onready var select_all_button: Button = $MarginContainer/VBoxContainer/HeaderContainer/SelectAllButton
 @onready var refresh_button: Button = $MarginContainer/VBoxContainer/HeaderContainer/RefreshContainer/RefreshButton
 @onready var update_selected_button: Button = $MarginContainer/VBoxContainer/HeaderContainer/ActionContainer/UpdateSelectedButton
 @onready var no_updates_label: Label = $MarginContainer/VBoxContainer/NoUpdatesLabel
@@ -40,9 +40,9 @@ func _ready():
 	
 	_setup_styles()
 	
-	if is_instance_valid(select_all_check_button):
-		select_all_check_button.pressed.connect(_on_select_all_pressed)
-		select_all_check_button.focus_entered.connect(_on_focus_entered)
+	if is_instance_valid(select_all_button):
+		select_all_button.pressed.connect(_on_select_all_pressed)
+		select_all_button.focus_entered.connect(_on_focus_entered)
 	
 	if is_instance_valid(refresh_button):
 		refresh_button.pressed.connect(_on_refresh_pressed)
@@ -58,9 +58,9 @@ func _ready():
 		sort_option_button.pressed.connect(_on_sort_pressed)
 		
 	# Manual Focus Neighbors
-	if is_instance_valid(select_all_check_button) and is_instance_valid(refresh_button):
-		select_all_check_button.focus_neighbor_right = refresh_button.get_path()
-		refresh_button.focus_neighbor_left = select_all_check_button.get_path()
+	if is_instance_valid(select_all_button) and is_instance_valid(refresh_button):
+		select_all_button.focus_neighbor_right = refresh_button.get_path()
+		refresh_button.focus_neighbor_left = select_all_button.get_path()
 		
 	if is_instance_valid(refresh_button) and is_instance_valid(sort_option_button):
 		refresh_button.focus_neighbor_right = sort_option_button.get_path()
@@ -222,12 +222,9 @@ func _populate_list():
 		for child in update_list_container.get_children(): child.queue_free()
 		no_updates_label.visible = true
 		update_selected_button.disabled = true
-		select_all_check_button.disabled = true
-		select_all_check_button.button_pressed = false
 		return
 	else:
 		no_updates_label.visible = false
-		select_all_check_button.disabled = false
 		
 	var sort_mode = 0
 	if is_instance_valid(sort_option_button): sort_mode = sort_option_button.selected
@@ -298,7 +295,7 @@ func _on_item_selection_toggled(app_id: String, is_selected: bool):
 
 func _update_ui_state():
 	if is_updating:
-		select_all_check_button.disabled = true
+		select_all_button.disabled = true
 		refresh_button.disabled = true
 		sort_option_button.disabled = true
 		
@@ -313,7 +310,7 @@ func _update_ui_state():
 		return
 
 	# Normal State
-	select_all_check_button.disabled = false
+	select_all_button.disabled = false
 	refresh_button.disabled = false
 	sort_option_button.disabled = false
 	
@@ -324,8 +321,14 @@ func _update_ui_state():
 	var total_items = available_updates.size()
 	var selected_count = selected_app_ids.size()
 	
-	if total_items > 0: select_all_check_button.button_pressed = (selected_count == total_items)
-	else: select_all_check_button.button_pressed = false
+	if total_items > 0:
+		if selected_count == total_items:
+			select_all_button.text = "Deselect All"
+		else:
+			select_all_button.text = "Select All"
+	else:
+		select_all_button.text = "Select All"
+		select_all_button.disabled = true
 	
 	update_selected_button.disabled = (selected_count == 0)
 	if selected_count > 0: update_selected_button.text = "Update Selected (%d)" % selected_count
@@ -350,11 +353,18 @@ func _on_select_all_pressed():
 	if audio_player and stream_select: audio_player.play()
 	var total_items = available_updates.size()
 	var selected_count = selected_app_ids.size()
+	
 	var should_select_all = (selected_count < total_items)
+	
 	selected_app_ids.clear()
-	if should_select_all: for update in available_updates: selected_app_ids.append(update.app_id)
-	for child in update_list_container.get_children(): if child.has_method("set_selected"): child.set_selected(should_select_all)
-	select_all_check_button.set_pressed_no_signal(should_select_all)
+	if should_select_all:
+		for update in available_updates:
+			selected_app_ids.append(update.app_id)
+			
+	for child in update_list_container.get_children():
+		if child.has_method("set_selected"):
+			child.set_selected(should_select_all)
+			
 	_update_ui_state()
 
 func _on_refresh_pressed():
