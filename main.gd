@@ -672,7 +672,8 @@ func _execute_flatpak_in_thread():
 	var spawn_cmd = "/usr/bin/flatpak-spawn"
 	# Use sh -c to set LC_ALL=C for consistent output format (dots for decimals)
 	# and fetch application ID, name, and size.
-	var host_command = "LC_ALL=C flatpak list --app --columns=application,name,size"
+	# We only want user-space apps.
+	var host_command = "LC_ALL=C flatpak list --app --user --columns=application,name,size"
 	var spawn_args = ["--host", "sh", "-c", host_command]
 	
 	var output_array = []

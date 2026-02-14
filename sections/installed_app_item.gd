@@ -4,7 +4,8 @@ signal item_pressed(app_id: String)
 signal image_load_requested(url: String, texture_rect: TextureRect)
 
 @onready var icon_rect: TextureRect = $MarginContainer/HBoxContainer/IconRect
-@onready var name_label: Label = $MarginContainer/HBoxContainer/NameLabel
+@onready var name_label: Label = $MarginContainer/HBoxContainer/InfoContainer/NameLabel
+@onready var id_label: Label = $MarginContainer/HBoxContainer/InfoContainer/IdLabel
 @onready var size_label: Label = $MarginContainer/HBoxContainer/SizeLabel
 
 var app_id: String = ""
@@ -15,6 +16,7 @@ var stream_select = preload("res://assets/nextprev.wav")
 func setup(p_app_id: String, p_name: String, p_size: String):
 	app_id = p_app_id
 	name_label.text = p_name
+	id_label.text = p_app_id
 	size_label.text = p_size
 	_load_icon()
 

@@ -3,36 +3,34 @@
 [ext_resource type="Script" path="res://sections/installed_app_item.gd" id="1_abcde"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_normal"]
-bg_color = Color(0.1, 0.1, 0.1, 0.6)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+bg_color = Color(0, 0, 0, 0.35)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_focus"]
-bg_color = Color(0.1, 0.1, 0.1, 0.6)
+bg_color = Color(0, 0, 0, 0.35)
 border_width_left = 3
 border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
 border_color = Color(0.627451, 0.12549, 0.941176, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hover"]
-bg_color = Color(0.2, 0.2, 0.2, 0.6)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+bg_color = Color(0, 0, 0, 0.35)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.627, 0.125, 0.941, 1)
 
 [node name="InstalledAppItem" type="Button"]
-custom_minimum_size = Vector2(0, 80)
+custom_minimum_size = Vector2(0, 100)
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 80.0
+offset_bottom = 100.0
 grow_horizontal = 2
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hover")
@@ -60,18 +58,27 @@ size_flags_vertical = 4
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="MarginContainer/HBoxContainer"]
+[node name="InfoContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 20
+alignment = 1
+
+[node name="NameLabel" type="Label" parent="MarginContainer/HBoxContainer/InfoContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
 text = "Application Name"
-vertical_alignment = 1
-text_overrun_behavior = 3
+clip_text = true
+
+[node name="IdLabel" type="Label" parent="MarginContainer/HBoxContainer/InfoContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "com.example.app"
+clip_text = true
 
 [node name="SizeLabel" type="Label" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 20
 text = "1.2 GB"
 horizontal_alignment = 2
 vertical_alignment = 1
