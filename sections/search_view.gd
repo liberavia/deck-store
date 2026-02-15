@@ -168,7 +168,7 @@ func _show_virtual_keyboard():
 	print("SearchView: Requesting Virtual Keyboard...")
 	DisplayServer.virtual_keyboard_show(search_input.text)
 
-func _input(event: InputEvent):
+func _unhandled_input(event: InputEvent):
 	if not is_visible_in_tree():
 		return
 
@@ -179,10 +179,7 @@ func _input(event: InputEvent):
 
 	# --- Manual Trigger Detection (Steam + Back) ---
 	if event is InputEventJoypadButton and event.pressed:
-		# Check for Back button (usually index 4 or 6) + Guide held
-		# Godot 4: JOY_BUTTON_BACK=4, JOY_BUTTON_GUIDE=16. 
 		if event.button_index == JOY_BUTTON_BACK:
-			# Check if Guide is held (Input singleton checks physical state)
 			if Input.is_joy_button_pressed(event.device, JOY_BUTTON_GUIDE):
 				print("SearchView: Manual Keyboard Trigger Detected (Guide+Back)")
 				_set_typing_active(true)
@@ -205,39 +202,27 @@ func _input(event: InputEvent):
 				_set_typing_active(true)
 				get_viewport().set_input_as_handled()
 				return
-		elif event.is_action_pressed("ui_cancel"):
-			print("SearchView: B pressed on Search Input (consumed, keeping focus)")
-			# User prefers to keep focus on search input instead of moving up
-			get_viewport().set_input_as_handled()
-			return
 			
 	# Case 2: Typing Mode Active (Keyboard assumed open).
 	if _typing_active:
-
 		# 1. Allow exiting typing mode
 		if event.is_action_pressed("ui_cancel"):
 			print("SearchView: Exiting typing mode via ui_cancel")
 			_set_typing_active(false)
-			# Do NOT release focus here. We want to stay focused on the input box
-			# so the user can navigate downwards to the list.
-			# search_input.release_focus() 
 			if _select_sound_player: _select_sound_player.play()
 			get_viewport().set_input_as_handled()
 			return
 
-		# 1b. Block Section Switching (Conflict with Virtual Keyboard shortcuts, e.g. RT)
+		# 1b. Block Section Switching
 		if event.is_action_pressed("section_next") or event.is_action_pressed("section_previous"):
-			print("SearchView: Blocking section switch during typing: ", event.as_text())
 			get_viewport().set_input_as_handled()
 			return
 
-		# 2. Block ALL navigation actions to prevent background focus changes
+		# 2. Block ALL navigation actions
 		if event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right") or \
 		   event.is_action_pressed("ui_up") or event.is_action_pressed("ui_down") or \
 		   event.is_action_pressed("ui_page_up") or event.is_action_pressed("ui_page_down") or \
 		   event.is_action_pressed("ui_focus_next") or event.is_action_pressed("ui_focus_prev"):
-			
-			print("SearchView: Blocking navigation input during typing: ", event.as_text())
 			get_viewport().set_input_as_handled()
 			return
 
@@ -246,37 +231,32 @@ func _input(event: InputEvent):
 			get_viewport().set_input_as_handled()
 			return
 			
-		# 4. Text Handling (Manual override to ensure consistency)
+		# 4. Text Handling
 		if event is InputEventKey and event.pressed:
-			# Handle Enter key explicitly
 			if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
-				print("SearchView: Enter detected during typing (Manual Submit)")
 				_on_search_submitted(search_input.text)
 				get_viewport().set_input_as_handled()
 				return
 
-			# Handle Character Input
 			if event.unicode != 0:
-				print("SearchView: Manually appending char: ", char(event.unicode))
-				# Force focus if lost (sanity check)
 				if not search_input.has_focus(): search_input.grab_focus()
-				
 				search_input.text += char(event.unicode)
 				search_input.caret_column = search_input.text.length()
 				_reset_debounce_timer()
 				get_viewport().set_input_as_handled()
 			
-			# Handle Backspace
 			elif event.keycode == KEY_BACKSPACE:
-				print("SearchView: Manually handling Backspace")
 				if not search_input.has_focus(): search_input.grab_focus()
-				
 				var t = search_input.text
 				if t.length() > 0:
 					search_input.text = t.substr(0, t.length() - 1)
 					search_input.caret_column = search_input.text.length()
 					_reset_debounce_timer()
 				get_viewport().set_input_as_handled()
+
+# We can remove the old _input completely as it's now handled by _unhandled_input
+func _input(event: InputEvent):
+	pass
 
 func _on_search_submitted(text: String):
 	_set_typing_active(false)

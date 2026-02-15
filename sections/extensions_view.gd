@@ -1,6 +1,8 @@
 # extensions_view.gd
 extends Control
 
+signal focus_exited_up_from_lists
+
 @export var extension_list_item_scene: PackedScene
 
 @onready var list_container: VBoxContainer = $MarginContainer/ScrollContainer/VBoxContainer
@@ -72,3 +74,11 @@ func _on_extension_status_updated(extension_id: String, is_installed: bool):
 				print("DEBUG ExtensionsView: Calling update_status on item.")
 				item.update_status(is_installed)
 				break # Found and updated, no need to continue loop
+
+func _unhandled_input(event: InputEvent):
+	if event.is_action_pressed("go_back"):
+		var focus_owner = get_viewport().gui_get_focus_owner()
+		if is_instance_valid(focus_owner):
+			if list_container.is_ancestor_of(focus_owner):
+				emit_signal("focus_exited_up_from_lists")
+				get_viewport().set_input_as_handled()

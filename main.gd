@@ -33,6 +33,7 @@ var _sections: Array[Dictionary] = [
 var _current_section_index: int = 0
 var _is_switching_section: bool = false
 var _suppress_focus_sound: bool = false
+var _current_connected_item: Control = null
 
 # --- Cache-Constants ---
 const DECKSTORE_BASE_DIR_NAME = ".deck-store"
@@ -154,10 +155,32 @@ func _ready():
 # =============================================================================
 
 func _on_focus_changed(control: Control):
+	# Disconnect from previous item if any
+	if is_instance_valid(_current_connected_item):
+		if _current_connected_item.has_signal("status_changed"):
+			if _current_connected_item.status_changed.is_connected(_update_footer_prompts):
+				_current_connected_item.status_changed.disconnect(_update_footer_prompts)
+		if _current_connected_item is Button:
+			if _current_connected_item.pressed.is_connected(_update_footer_prompts):
+				_current_connected_item.pressed.disconnect(_update_footer_prompts)
+	
+	_current_connected_item = control
+	
+	# Connect to new item signals
+	if is_instance_valid(_current_connected_item):
+		if _current_connected_item.has_signal("status_changed"):
+			_current_connected_item.status_changed.connect(_update_footer_prompts)
+		
+		if _current_connected_item is Button:
+			_current_connected_item.pressed.connect(_update_footer_prompts)
+
 	_update_footer_prompts()
 
 func _update_footer_prompts():
 	if not is_instance_valid(footer_bar): return
+	
+	# Small delay to allow UI state to update (e.g. Button text changes after press)
+	await get_tree().process_frame
 	
 	var actions = []
 	var focus_owner = get_viewport().gui_get_focus_owner()
@@ -173,22 +196,89 @@ func _update_footer_prompts():
 				{"button": "A", "label": "Select"},
 				{"button": "L1 / R1", "label": "Switch Tab"}
 			]
-			# If we are not on Home, Back returns to Home
 			if _current_section_index != 0:
 				actions.append({"button": "B", "label": "Go Home"})
 		else:
-			# In a section (List, Search, etc.)
-			actions = [
-				{"button": "A", "label": "Open"},
-				{"button": "B", "label": "Back to Top"},
-				{"button": "L1 / R1", "label": "Switch Tab"}
-			]
+			# Get section-specific custom actions for A button
+			var custom_a = _get_custom_a_action(focus_owner)
+			actions.append(custom_a)
 			
-			# Special case for Search Input
-			if focus_owner is LineEdit:
-				actions[0] = {"button": "A", "label": "Start Typing"}
+			actions.append({"button": "B", "label": "Back to Top"})
+			actions.append({"button": "L1 / R1", "label": "Switch Tab"})
+			
+			# Add pagination prompts if applicable
+			var pagination_prompts = _get_pagination_prompts(focus_owner)
+			actions.append_array(pagination_prompts)
 	
 	footer_bar.set_actions(actions)
+
+func _get_custom_a_action(focus_owner: Control) -> Dictionary:
+	var section_name = _sections[_current_section_index].name
+	
+	# Detect specialized items by script path or name
+	var script_path = ""
+	if focus_owner.get_script() != null:
+		script_path = focus_owner.get_script().get_path()
+		
+	var is_installed_item = script_path.contains("installed_app_item.gd")
+	var is_update_item = script_path.contains("update_item.gd")
+	var is_extension_item = focus_owner.name.contains("ExtensionItem") or (focus_owner.get_parent() and focus_owner.get_parent().name.contains("ExtensionItem"))
+
+	if is_installed_item:
+		return {"button": "A", "label": "App Details"}
+	
+	if is_update_item:
+		if "is_selected" in focus_owner:
+			return {"button": "A", "label": "Unselect App" if focus_owner.is_selected else "Select App"}
+		return {"button": "A", "label": "Select/Unselect"}
+
+	var action = {"button": "A", "label": "Open"}
+	match section_name:
+		"Home", "Categories", "Search":
+			if focus_owner.name == "ProductBox" or focus_owner.get_parent() is ProductBox or (focus_owner.get_parent().has_method("get_parent") and focus_owner.get_parent().get_parent() is ProductBox):
+				action["label"] = "App Details"
+			elif focus_owner is LineEdit:
+				action["label"] = "Start Typing"
+			elif focus_owner is Button and "SearchButton" in focus_owner.name:
+				action["label"] = "Start Search"
+			elif focus_owner is Button and not focus_owner.text.is_empty():
+				action["label"] = focus_owner.text
+		
+		"Updates":
+			if focus_owner is Button and not focus_owner.text.is_empty():
+				action["label"] = focus_owner.text
+		
+		"Extensions":
+			if is_extension_item:
+				action["label"] = "Manage Extension"
+			elif focus_owner is Button and not focus_owner.text.is_empty():
+				action["label"] = focus_owner.text
+		
+		"Installed":
+			if focus_owner is Button and not focus_owner.text.is_empty():
+				action["label"] = focus_owner.text
+
+	return action
+
+func _get_pagination_prompts(focus_owner: Control) -> Array:
+	var prompts = []
+	var pl: ProductList = null
+	
+	# Find ProductList in ancestors
+	var current_node = focus_owner
+	while is_instance_valid(current_node):
+		if current_node is ProductList:
+			pl = current_node
+			break
+		current_node = current_node.get_parent()
+	
+	if is_instance_valid(pl) and pl.total_pages > 1:
+		if pl.current_page > 1:
+			prompts.append({"button": "L2", "label": "Prev Page"})
+		if pl.current_page < pl.total_pages:
+			prompts.append({"button": "R2", "label": "Next Page"})
+			
+	return prompts
 
 func _unhandled_input(event: InputEvent):
 	var new_section_index = _current_section_index
