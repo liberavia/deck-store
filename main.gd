@@ -173,6 +173,12 @@ func _unhandled_input(event: InputEvent):
 	if not is_instance_valid(focused_control): return
 
 	if top_button_bar.is_ancestor_of(focused_control):
+		if event.is_action_pressed("go_back"):
+			if _current_section_index != 0:
+				_on_top_bar_button_pressed(0)
+				get_viewport().set_input_as_handled()
+				return
+
 		var action_string = ""
 		if event.is_action_pressed("ui_down"): action_string = "ui_down"
 		elif event.is_action_pressed("ui_left"): action_string = "ui_left" # Für Navigation innerhalb der Buttons
