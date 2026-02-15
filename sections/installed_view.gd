@@ -199,6 +199,11 @@ func _populate_list(installed_apps: Dictionary):
 	
 	for app_id in app_ids:
 		var info = installed_apps[app_id]
+		
+		# Only show user apps in this list
+		if info.get("scope") != "user":
+			continue
+			
 		var app_name = info.get("name", app_id)
 		var raw_size_str = info.get("size", "0 B")
 		
