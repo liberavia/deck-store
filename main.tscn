@@ -6,6 +6,7 @@
 [ext_resource type="AudioStream" uid="uid://crqv67kcd0gii" path="res://assets/back.wav" id="9_4c57u"]
 [ext_resource type="AudioStream" uid="uid://bqyhdiitobub2" path="res://assets/menuback.wav" id="9_efxa6"]
 [ext_resource type="PackedScene" uid="uid://cauevp0c1nuys" path="res://details_view.tscn" id="9_kek77"]
+[ext_resource type="PackedScene" path="res://footer_bar.tscn" id="11_footer"]
 [ext_resource type="AudioStream" uid="uid://ef3g1di4j6uw" path="res://assets/nextprev.wav" id="10_4c57u"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_efxa6"]
@@ -104,6 +105,9 @@ text = "Search"
 [node name="SectionViewContainer" type="Control" parent="CanvasLayer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+
+[node name="FooterBar" parent="CanvasLayer/VBoxContainer" instance=ExtResource("11_footer")]
+layout_mode = 2
 
 [node name="FocusSoundPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("3_h2yge")

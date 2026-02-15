@@ -11,6 +11,7 @@ extends Control
 @onready var home_button: Button = $CanvasLayer/VBoxContainer/TopButtonBar/ButtonHome
 @onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/TopButtonBar
 @onready var global_scroll_container: ScrollContainer = $CanvasLayer/VBoxContainer/ContentScrollContainer
+@onready var footer_bar: PanelContainer = $CanvasLayer/VBoxContainer/FooterBar
 @onready var select_sound: AudioStreamPlayer = $SelectSoundPlayer
 @onready var focus_sound: AudioStreamPlayer = $FocusSoundPlayer
 @onready var back_sound: AudioStreamPlayer = $BackSoundPlayer
@@ -139,15 +140,55 @@ func _ready():
 	details_view.move_back_to_main_view.connect(_on_move_back_to_main_view)
 	details_view.image_load_requested.connect(_on_product_list_image_load_requested)
 
+	get_viewport().gui_focus_changed.connect(_on_focus_changed)
+
 	_check_connected_controllers() 
 	print("-----------------------------------------")
 	_switch_to_section(0)
 	home_button.grab_focus()
 	_fetch_installed_apps()
+	_update_footer_prompts()
 	
 # =============================================================================
 # INPUT HANDLING (Nur _unhandled_input)
 # =============================================================================
+
+func _on_focus_changed(control: Control):
+	_update_footer_prompts()
+
+func _update_footer_prompts():
+	if not is_instance_valid(footer_bar): return
+	
+	var actions = []
+	var focus_owner = get_viewport().gui_get_focus_owner()
+	
+	if is_instance_valid(details_view) and details_view.visible:
+		actions = [
+			{"button": "A", "label": "Select"},
+			{"button": "B", "label": "Back"}
+		]
+	elif is_instance_valid(focus_owner):
+		if top_button_bar.is_ancestor_of(focus_owner):
+			actions = [
+				{"button": "A", "label": "Select"},
+				{"button": "L1 / R1", "label": "Switch Tab"}
+			]
+			# If we are not on Home, Back returns to Home
+			if _current_section_index != 0:
+				actions.append({"button": "B", "label": "Go Home"})
+		else:
+			# In a section (List, Search, etc.)
+			actions = [
+				{"button": "A", "label": "Open"},
+				{"button": "B", "label": "Back to Top"},
+				{"button": "L1 / R1", "label": "Switch Tab"}
+			]
+			
+			# Special case for Search Input
+			if focus_owner is LineEdit:
+				actions[0] = {"button": "A", "label": "Start Typing"}
+	
+	footer_bar.set_actions(actions)
 
 func _unhandled_input(event: InputEvent):
 	var new_section_index = _current_section_index
