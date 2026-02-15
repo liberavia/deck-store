@@ -1,6 +1,6 @@
 extends Control
 
-signal move_to_details_view_requested(app_id: String, installed: bool)
+signal move_to_details_view_requested(app_id: String, installed: bool, app_name: String)
 signal focus_exited_up_from_lists()
 signal image_load_requested(url: String, texture_rect: TextureRect)
 
@@ -220,7 +220,10 @@ func _populate_list(installed_apps: Dictionary):
 	total_size_label.text = "Total Size: %s" % _format_size(total_bytes)
 
 func _on_item_pressed(app_id: String):
-	emit_signal("move_to_details_view_requested", app_id, true)
+	var app_name = ""
+	if current_installed_apps_data.has(app_id):
+		app_name = current_installed_apps_data[app_id].get("name", "")
+	emit_signal("move_to_details_view_requested", app_id, true, app_name)
 
 func _parse_size(size_str: String) -> Dictionary:
 	# Returns { "value_bytes": float, "display_str": String }

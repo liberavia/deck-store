@@ -325,7 +325,7 @@ func _on_product_list_focus_exited_up():
 			
 # In main.gd
 
-func _on_move_to_details_view(app_id: String, installed: bool):
+func _on_move_to_details_view(app_id: String, installed: bool, app_name: String = ""):
 	var focused_control = get_viewport().gui_get_focus_owner()
 	_last_focused_product_box = null # Reset before attempting to set
 
@@ -360,7 +360,7 @@ func _on_move_to_details_view(app_id: String, installed: bool):
 		print("INFO Main: Could not determine a specific control to re-focus within the current section.")
 
 	# The rest of your function to switch to details_view
-	details_view.set_initial_state(app_id, installed)
+	details_view.set_initial_state(app_id, installed, app_name)
 	details_view.load_details()
 	if is_instance_valid(select_sound): select_sound.play() # Check if sound player is valid
 	
