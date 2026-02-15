@@ -190,12 +190,21 @@ func _input(event: InputEvent):
 				return
 
 	# User can navigate away (Down) or Start Typing (A).
-	if not _typing_active and search_input.has_focus():
-		if event.is_action_pressed("ui_accept"):
-			print("SearchView: Starting Typing Mode (A pressed)")
-			_set_typing_active(true)
-			get_viewport().set_input_as_handled()
-			return
+	if not _typing_active:
+		if event.is_action_pressed("go_back"):
+			var focus_owner = get_viewport().gui_get_focus_owner()
+			if is_instance_valid(focus_owner):
+				if product_list.is_ancestor_of(focus_owner) or focus_owner == search_input or focus_owner == search_button:
+					emit_signal("focus_exited_up_from_lists")
+					get_viewport().set_input_as_handled()
+					return
+
+		if search_input.has_focus():
+			if event.is_action_pressed("ui_accept"):
+				print("SearchView: Starting Typing Mode (A pressed)")
+				_set_typing_active(true)
+				get_viewport().set_input_as_handled()
+				return
 		elif event.is_action_pressed("ui_cancel"):
 			print("SearchView: B pressed on Search Input (consumed, keeping focus)")
 			# User prefers to keep focus on search input instead of moving up

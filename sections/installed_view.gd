@@ -280,6 +280,13 @@ func focus_first_element():
 			first.grab_focus()
 
 func _unhandled_input(event):
+	if event.is_action_pressed("go_back"):
+		var focus_owner = get_viewport().gui_get_focus_owner()
+		if is_instance_valid(focus_owner) and (app_list_container.is_ancestor_of(focus_owner) or focus_owner == refresh_button or focus_owner == sort_option_button):
+			emit_signal("focus_exited_up_from_lists")
+			get_viewport().set_input_as_handled()
+			return
+
 	if event.is_action_pressed("ui_up"):
 		var focus_owner = get_viewport().gui_get_focus_owner()
 		if is_instance_valid(focus_owner):

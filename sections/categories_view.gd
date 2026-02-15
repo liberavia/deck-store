@@ -253,3 +253,11 @@ func focus_default_element():
 func on_view_entered():
 	# Called when tab is switched to this view
 	focus_default_element()
+
+func _unhandled_input(event: InputEvent):
+	if event.is_action_pressed("go_back"):
+		var focus_owner = get_viewport().gui_get_focus_owner()
+		if is_instance_valid(focus_owner):
+			if category_button_container.is_ancestor_of(focus_owner) or product_list.is_ancestor_of(focus_owner):
+				emit_signal("focus_exited_up_from_lists")
+				get_viewport().set_input_as_handled()

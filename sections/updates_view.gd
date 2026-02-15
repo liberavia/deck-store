@@ -515,3 +515,17 @@ func _check_all_updates_finished():
 		print("UpdatesView: All batch updates finished.")
 		is_updating = false
 		_update_ui_state()
+
+func _unhandled_input(event):
+	if event.is_action_pressed("go_back"):
+		var focus_owner = get_viewport().gui_get_focus_owner()
+		if is_instance_valid(focus_owner):
+			# Check if focus is in list or on header buttons
+			if update_list_container.is_ancestor_of(focus_owner) or \
+			   focus_owner == select_all_button or \
+			   focus_owner == refresh_button or \
+			   focus_owner == sort_option_button or \
+			   focus_owner == update_selected_button:
+				
+				emit_signal("focus_exited_up_from_lists")
+				get_viewport().set_input_as_handled()

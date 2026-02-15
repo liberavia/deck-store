@@ -313,9 +313,12 @@ func _on_product_list_image_load_requested(url: String, texture_rect: TextureRec
 
 		
 func _on_product_list_focus_exited_up():
-	if is_instance_valid(home_button):
-		print("Main: Received focus_exited_up, focusing Home button.") # Debug
-		home_button.grab_focus()
+	var current_section = _sections[_current_section_index]
+	var button_node = top_button_bar.get_node_or_null(current_section.button_node_name) as Button
+	
+	if is_instance_valid(button_node):
+		print("Main: Received focus_exited_up, focusing current section button: ", button_node.name)
+		button_node.grab_focus()
 
 		if is_instance_valid(_current_home_view_instance) and \
 			_current_home_view_instance.name == "HomeView" and \
