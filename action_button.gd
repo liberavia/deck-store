@@ -19,6 +19,7 @@ var _pressed_sound_player: AudioStreamPlayer
 
 var app_name: String = ""
 var icon_url: String = ""
+var app_scope: String = ""
 
 const TEXT_INSTALL = "Install"
 const TEXT_UNINSTALL = "Remove"
@@ -29,6 +30,7 @@ const TEXT_INSTALLING = "Installing..."
 const TEXT_REMOVING = "Removing..."
 const TEXT_ERROR = "Error"
 const TEXT_CANCELLED = "Cancelled"
+const TEXT_SYSTEM = "Installed (System)"
 
 
 func _ready():
@@ -57,16 +59,19 @@ func _ready():
 	if not app_id.is_empty(): _update_ui(DownloadManager.get_task_status(app_id))
 	print("DEBUG UI: ActionButton _ready finished for ", app_id)
 
-func set_app_info(id: String, name: String, url: String):
+func set_app_info(id: String, name: String, url):
 	app_id = id
 	app_name = name # Speichern!
-	icon_url = url   # Speichern!
+	icon_url = str(url) if url != null else ""   # Sicherstellen, dass es ein String ist!
 
 	# Initialen Status basierend auf Installation und DownloadManager setzen
 	var main_node = get_node_or_null("/root/App") # Pfad anpassen!
 	var is_installed = false
+	app_scope = ""
 	if main_node and main_node.has_method("is_app_installed"):
 		is_installed = main_node.is_app_installed(app_id)
+		if is_installed and main_node.has_method("get_app_scope"):
+			app_scope = main_node.get_app_scope(app_id)
 
 	var active_task_status = DownloadManager.get_task_status(app_id)
 	var manager_has_active_task = false
@@ -79,7 +84,7 @@ func set_app_info(id: String, name: String, url: String):
 	if manager_has_active_task:
 		_update_ui(active_task_status)
 	else:
-		if is_installed: _update_ui({"status": "completed", "app_id": app_id, "name": app_name, "icon_url": icon_url}) # Name/Icon mitgeben
+		if is_installed: _update_ui({"status": "completed", "app_id": app_id, "name": app_name, "icon_url": icon_url, "scope": app_scope}) # Name/Icon/Scope mitgeben
 		else: _update_ui({})
 
 
@@ -87,6 +92,11 @@ func set_app_id_and_initial_state(assigned_id: String, is_initially_installed: b
 	# print("DEBUG UI: Setting initial state for ", assigned_id, " - Installed: ", is_initially_installed) # Weniger Output
 	app_id = assigned_id
 	current_operation_id = ""
+	app_scope = ""
+	
+	var main_node = get_node_or_null("/root/App")
+	if is_initially_installed and main_node and main_node.has_method("get_app_scope"):
+		app_scope = main_node.get_app_scope(app_id)
 
 	var active_task_status = DownloadManager.get_task_status(app_id)
 	var manager_has_active_task = false
@@ -101,7 +111,7 @@ func set_app_id_and_initial_state(assigned_id: String, is_initially_installed: b
 		_update_ui(active_task_status)
 	else:
 		# print("DEBUG UI: Initial state from installed flag: ", is_initially_installed) # Weniger Output
-		if is_initially_installed: _update_ui({"status": "completed", "app_id": app_id})
+		if is_initially_installed: _update_ui({"status": "completed", "app_id": app_id, "scope": app_scope})
 		else: _update_ui({})
 
 
@@ -185,6 +195,7 @@ func _update_ui(status_data: Dictionary):
 
 	if not status_data.is_empty():
 		var status = status_data.get("status", "unknown")
+		var scope = status_data.get("scope", app_scope)
 
 		match status:
 			"queued", "preparing":
@@ -196,13 +207,20 @@ func _update_ui(status_data: Dictionary):
 			"removing":
 				button_text = TEXT_REMOVING; button_disabled = true; button_stylebox = stylebox_busy
 			"completed":
-				button_text = TEXT_UNINSTALL; button_disabled = false; button_stylebox = stylebox_remove
+				if scope == "system":
+					button_text = TEXT_SYSTEM; button_disabled = true; button_stylebox = stylebox_busy
+				else:
+					button_text = TEXT_UNINSTALL; button_disabled = false; button_stylebox = stylebox_remove
 			"failed":
 				button_text = TEXT_ERROR; button_disabled = false; button_stylebox = stylebox_normal
 			"cancelled":
 				button_text = TEXT_INSTALL; button_disabled = false; button_stylebox = stylebox_install
 			_:
 				button_text = TEXT_INSTALL; button_disabled = false; button_stylebox = stylebox_install
+	else:
+		# No task data, but check our internal app_scope for initial state
+		if app_scope == "system":
+			button_text = TEXT_SYSTEM; button_disabled = true; button_stylebox = stylebox_busy
 
 	self.text = button_text
 	self.disabled = button_disabled

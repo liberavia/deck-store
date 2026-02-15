@@ -221,6 +221,11 @@ func get_api_cache_dir() -> String:
 func is_app_installed(app_id: String) -> bool:
 	return _installed_flatpak_ids.has(app_id)
 
+func get_app_scope(app_id: String) -> String:
+	if _installed_flatpak_ids.has(app_id):
+		return _installed_flatpak_ids[app_id].get("scope", "user")
+	return ""
+
 func get_installed_ids() -> Dictionary:
 	return _installed_flatpak_ids
 
@@ -325,7 +330,7 @@ func _on_product_list_focus_exited_up():
 			
 # In main.gd
 
-func _on_move_to_details_view(app_id: String, installed: bool):
+func _on_move_to_details_view(app_id: String, installed: bool, app_name: String = ""):
 	var focused_control = get_viewport().gui_get_focus_owner()
 	_last_focused_product_box = null # Reset before attempting to set
 
@@ -360,7 +365,7 @@ func _on_move_to_details_view(app_id: String, installed: bool):
 		print("INFO Main: Could not determine a specific control to re-focus within the current section.")
 
 	# The rest of your function to switch to details_view
-	details_view.set_initial_state(app_id, installed)
+	details_view.set_initial_state(app_id, installed, app_name)
 	details_view.load_details()
 	if is_instance_valid(select_sound): select_sound.play() # Check if sound player is valid
 	
@@ -671,8 +676,8 @@ func _fetch_installed_apps():
 func _execute_flatpak_in_thread():
 	var spawn_cmd = "/usr/bin/flatpak-spawn"
 	# Use sh -c to set LC_ALL=C for consistent output format (dots for decimals)
-	# and fetch application ID, name, and size.
-	var host_command = "LC_ALL=C flatpak list --app --columns=application,name,size"
+	# and fetch application ID, name, size and installation scope.
+	var host_command = "LC_ALL=C flatpak list --app --columns=application,name,size,installation"
 	var spawn_args = ["--host", "sh", "-c", host_command]
 	
 	var output_array = []
@@ -719,17 +724,19 @@ func _process_flatpak_result(output: String, exit_code: int):
 			line = line.strip_edges()
 			if line.is_empty(): continue
 			
-			# Columns: application, name, size
+			# Columns: application, name, size, installation
 			# separated by tabs usually, but let's be robust
 			var parts = line.split("\t")
-			if parts.size() >= 3:
+			if parts.size() >= 4:
 				var app_id = parts[0].strip_edges()
 				var app_name = parts[1].strip_edges()
 				var app_size = parts[2].strip_edges()
+				var scope = parts[3].strip_edges()
 				
 				_installed_flatpak_ids[app_id] = {
 					"name": app_name,
-					"size": app_size
+					"size": app_size,
+					"scope": scope
 				}
 				count += 1
 			else:

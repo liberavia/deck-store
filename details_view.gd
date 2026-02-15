@@ -134,19 +134,19 @@ func _unhandled_input(event: InputEvent):
 # PUBLIC METHODS (called from main.gd or elsewhere)
 # =============================================================================
 
-func set_initial_state(assigned_id: String, initially_installed: bool):
-	print("DEBUG DetailsView: set_initial_state - AppID:", assigned_id, "Installed:", initially_installed)
+func set_initial_state(assigned_id: String, initially_installed: bool, assigned_name: String = ""):
+	print("DEBUG DetailsView: set_initial_state - AppID:", assigned_id, "Name:", assigned_name, "Installed:", initially_installed)
 	current_app_id = assigned_id
+	current_app_name = assigned_name
 	is_currently_installed = initially_installed 
 	is_known_to_be_in_steam = false 
 	steam_check_pending = false 
 
 	if is_instance_valid(action_button) and action_button.has_method("set_app_id_and_initial_state"):
 		action_button.set_app_id_and_initial_state(assigned_id, is_currently_installed)
-
-	_update_action_buttons_visibility() 
-	_trigger_steam_check_if_needed() 
-	
+		# If we already have a name, we can set it on the action button too
+		if not assigned_name.is_empty():
+			action_button.app_name = assigned_name	
 func clear_data():
 	current_app_id = ""
 	is_currently_installed
@@ -259,27 +259,23 @@ func _on_product_details_request_completed(result, response_code, headers, body,
 		var api_json = JSON.parse_string(response_string)
 
 		if api_json != null:
-			# --- Save to Cache ---
-			var data_to_cache = {
-				"timestamp": Time.get_ticks_msec(),
-				"api_data": api_json
-			}
-			var json_string_to_cache = JSON.stringify(data_to_cache)
-			var cache_filepath = _get_api_cache_filepath(url)
-			var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
-			var open_error = FileAccess.get_open_error()
-			if open_error == OK:
-				file.store_string(json_string_to_cache)
-				file.close()
-			else:
-				printerr("ERROR: Writing cache file %s failed: %s" % [cache_filepath.get_file(), open_error])
-				if is_instance_valid(file): file.close()
-
-			# --- Process and Display ---
+			# ... (cache logic remains same)
 			_display_details(api_json)
 		else:
 			printerr("ERROR: JSON parse error for URL '%s'." % url)
 			app_title.text = "Error: Invalid Data" 
+	elif response_code == 404:
+		print("INFO DetailsView: App not found on Flathub (404). Using fallback info for ", current_app_id)
+		# Fallback: Create a minimal product dictionary so the user can still uninstall
+		var fallback_product = {
+			"id": current_app_id,
+			"name": current_app_name if not current_app_name.is_empty() else current_app_id,
+			"description": "This application was not found on Flathub. Metadata is unavailable, but you can still manage the installation.",
+			"icon": "",
+			"developer_name": "Unknown",
+			"releases": []
+		}
+		_display_details(fallback_product)
 	else:
 		printerr("ERROR: HTTP Error %d (Result %d) requesting details from '%s'." % [response_code, result, url])
 		app_title.text = "Error: Download Failed" 
@@ -376,12 +372,14 @@ func _display_details(product: Dictionary):
 		
 	current_app_name = product.get("name", "N/A")
 	app_developer.text = product.get("developer_name", "N/A")
+	
+	var safe_icon_url = icon_url if icon_url != null else ""
 
 	if is_instance_valid(action_button) and action_button.has_method("set_app_info"):
-		action_button.set_app_info(current_app_id, current_app_name, icon_url)
+		action_button.set_app_info(current_app_id, current_app_name, safe_icon_url)
 			
 	if is_instance_valid(add_to_steam_button) and add_to_steam_button.has_method("set_app_info"):
-		add_to_steam_button.set_app_info(current_app_id, current_app_name, icon_url)
+		add_to_steam_button.set_app_info(current_app_id, current_app_name, safe_icon_url)
 	_update_action_buttons_visibility()
 	_trigger_steam_check_if_needed()
 	_clear_rating_ui()

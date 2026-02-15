@@ -1,6 +1,6 @@
 extends Control
 
-signal move_to_details_view_requested(app_id: String, installed: bool)
+signal move_to_details_view_requested(app_id: String, installed: bool, app_name: String)
 signal focus_exited_up_from_lists()
 signal image_load_requested(url: String, texture_rect: TextureRect)
 
@@ -49,6 +49,12 @@ func _ready():
 	# Connect Refresh Button
 	if is_instance_valid(refresh_button):
 		refresh_button.pressed.connect(_on_refresh_pressed)
+		refresh_button.focus_entered.connect(_on_sort_focus_entered) # Use same sound logic
+
+	# Manual Focus Neighbors for Header
+	if is_instance_valid(refresh_button) and is_instance_valid(sort_option_button):
+		refresh_button.focus_neighbor_right = sort_option_button.get_path()
+		sort_option_button.focus_neighbor_left = refresh_button.get_path()
 		
 	# Initial populate if data is already available
 	var main_node = get_node_or_null("/root/App")
@@ -193,6 +199,11 @@ func _populate_list(installed_apps: Dictionary):
 	
 	for app_id in app_ids:
 		var info = installed_apps[app_id]
+		
+		# Only show user apps in this list
+		if info.get("scope") != "user":
+			continue
+			
 		var app_name = info.get("name", app_id)
 		var raw_size_str = info.get("size", "0 B")
 		
@@ -214,7 +225,10 @@ func _populate_list(installed_apps: Dictionary):
 	total_size_label.text = "Total Size: %s" % _format_size(total_bytes)
 
 func _on_item_pressed(app_id: String):
-	emit_signal("move_to_details_view_requested", app_id, true)
+	var app_name = ""
+	if current_installed_apps_data.has(app_id):
+		app_name = current_installed_apps_data[app_id].get("name", "")
+	emit_signal("move_to_details_view_requested", app_id, true, app_name)
 
 func _parse_size(size_str: String) -> Dictionary:
 	# Returns { "value_bytes": float, "display_str": String }
@@ -258,7 +272,9 @@ func _format_size(size_bytes: float) -> String:
 		return "%d B" % size_bytes
 
 func focus_first_element():
-	if app_list_container.get_child_count() > 0:
+	if is_instance_valid(refresh_button):
+		refresh_button.grab_focus()
+	elif app_list_container.get_child_count() > 0:
 		var first = app_list_container.get_child(0)
 		if first is Control:
 			first.grab_focus()
@@ -266,7 +282,12 @@ func focus_first_element():
 func _unhandled_input(event):
 	if event.is_action_pressed("ui_up"):
 		var focus_owner = get_viewport().gui_get_focus_owner()
-		if is_instance_valid(focus_owner) and app_list_container.is_ancestor_of(focus_owner):
-			if focus_owner.get_index() == 0:
+		if is_instance_valid(focus_owner):
+			if app_list_container.is_ancestor_of(focus_owner):
+				if focus_owner.get_index() == 0:
+					if is_instance_valid(refresh_button):
+						refresh_button.grab_focus()
+						get_viewport().set_input_as_handled()
+			elif focus_owner == refresh_button or focus_owner == sort_option_button:
 				emit_signal("focus_exited_up_from_lists")
 				get_viewport().set_input_as_handled()
