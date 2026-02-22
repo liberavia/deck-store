@@ -32,7 +32,7 @@ func _ready():
 	DirAccess.make_dir_absolute(OUTPUT_DIR)
 	_cleanup_old_logs()
 
-	_regex_progress.compile("^(?:Installing|Updating)(?:\\s+([0-9]+)\\/([0-9]+))?\\s+.*?\\s+([0-9]+)%")
+	_regex_progress.compile("^\\s*\\S+(?:\\s+([0-9]+)\\/([0-9]+))?\\s+.*?\\s+([0-9]+)%")
 	_regex_speed.compile("([0-9.,]+\\s*(?:k|M|G)i?B\\/s)")
 	_regex_eta.compile("([0-9]{1,2}:[0-9]{2}(:[0-9]{2})?)$")
 	_regex_complete.compile("^(?:Installation|Uninstall|Update) complete\\.?")
@@ -168,7 +168,18 @@ func _execute_task(task_data: Dictionary):
 
 	var installation = task_data.get("app_data", {}).get("installation", "user")
 	var host_command = "flatpak"
-	var host_args = [task_data.operation_type, "--" + installation, "--assumeyes", task_data.app_id]
+	var host_args = [task_data.operation_type, "--" + installation, "--assumeyes"]
+	
+	# Spezielle Behandlung für Flathub: Sicherstellen, dass wir den Remote-Namen angeben.
+	# Dies behebt Probleme auf Bazzite/SteamOS, wo Flathub möglicherweise ein System-Remote ist,
+	# wir aber als --user installieren wollen. Ohne Angabe des Remotes findet Flatpak 
+	# die App-Referenz möglicherweise nicht.
+	if task_data.operation_type == "install":
+		# Vorerst nehmen wir Flathub an, da dies die Hauptquelle für den DeckStore ist.
+		var remote = task_data.get("app_data", {}).get("remote", "flathub")
+		host_args.append(remote)
+		
+	host_args.append(task_data.app_id)
 	
 	var global_log_path = ProjectSettings.globalize_path(current_output_file)
 	
@@ -263,6 +274,8 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 
 		var line_status = null
 		var line_progress = -1
+		var line_current_idx = -1
+		var line_total_idx = -1
 		var line_speed = null
 		var line_eta = null
 		var line_error = null
@@ -288,15 +301,17 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 					if progress_match:
 						line_matched = true
 						var current_pct = progress_match.get_string(3).to_int()
-						var current_idx = progress_match.get_string(1).to_int()
-						var total_idx = progress_match.get_string(2).to_int()
+						var s1 = progress_match.get_string(1)
+						var s2 = progress_match.get_string(2)
+						line_current_idx = s1.to_int() if not s1.is_empty() else -1
+						line_total_idx = s2.to_int() if not s2.is_empty() else -1
 						
-						if total_idx > 0:
-							line_progress = int(((current_idx - 1) * 100.0 + current_pct) / total_idx)
+						if line_total_idx > 0 and line_current_idx > 0:
+							line_progress = int(((line_current_idx - 1) * 100.0 + current_pct) / line_total_idx)
 						else:
 							line_progress = current_pct
 							
-						# Default to downloading if we have progress < 100
+						# Basis-Status bestimmen
 						if line_progress < 100:
 							line_status = "downloading"
 						else:
@@ -305,16 +320,20 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 						var speed_match = _regex_speed.search(line)
 						if speed_match:
 							line_speed = speed_match.get_string(1).replace("?", "").strip_edges()
-							# If we have speed, it's definitely downloading
-							line_status = "downloading"
+							# Wenn wir eine Geschwindigkeit haben, laden wir aktiv etwas herunter
+							# Aber nur wenn wir nicht schon bei 100% Gesamtfortschritt sind (Puffer für Endphasen)
+							if line_progress < 100:
+								line_status = "downloading"
 
 						var eta_match = _regex_eta.search(line)
 						if eta_match:
 							line_eta = eta_match.get_string(1).strip_edges()
+							# Ein ETA allein sollte den Status nicht auf 'downloading' zurückwerfen, 
+							# wenn wir bereits bei 100% sind (oft Restwert in der Flatpak-Ausgabe)
 						
-						# Wenn Download abgeschlossen, aber Installation läuft noch
-						if line_progress >= 100 and line_status == "downloading":
-							line_status = "installing" 
+						# Konsistenzprüfung: Wenn 100% erreicht, ist es primär 'installing'
+						if line_progress >= 100:
+							line_status = "installing"
 		
 		# Parsing Logik für "uninstall"
 		elif task.operation_type == "uninstall":
@@ -345,7 +364,7 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 				changed_locally = true
 			if line_progress != -1:
 				var current_p = status_data_in_progress.get("progress")
-				if current_p == null or line_progress > current_p:
+				if current_p == null or line_progress != current_p:
 					status_data_in_progress.progress = line_progress
 					changed_locally = true
 			if line_speed != null and status_data_in_progress.get("speed") != line_speed:
@@ -357,6 +376,12 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 			if line_error != null and status_data_in_progress.get("error") != line_error:
 				status_data_in_progress.error = line_error
 				changed_locally = true
+			if line_current_idx != -1:
+				status_data_in_progress.current_idx = line_current_idx
+				changed_locally = true
+			if line_total_idx != -1:
+				status_data_in_progress.total_idx = line_total_idx
+				changed_locally = true
 
 			# Speed und ETA nur anzeigen, wenn Status "downloading" ist
 			if status_data_in_progress.status != "downloading":
@@ -365,6 +390,15 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 					changed_locally = true
 				if status_data_in_progress.get("eta") != null: 
 					status_data_in_progress.eta = null
+					changed_locally = true
+			
+			# Index-Info nur anzeigen wenn relevant
+			if not ["downloading", "installing"].has(status_data_in_progress.status):
+				if status_data_in_progress.has("current_idx"):
+					status_data_in_progress.erase("current_idx")
+					changed_locally = true
+				if status_data_in_progress.has("total_idx"):
+					status_data_in_progress.erase("total_idx")
 					changed_locally = true
 			
 			if changed_locally:

@@ -147,6 +147,7 @@ func _ready():
 	print("-----------------------------------------")
 	_switch_to_section(0)
 	home_button.grab_focus()
+	_ensure_user_remote_exists()
 	_fetch_installed_apps()
 	_update_footer_prompts()
 	
@@ -795,6 +796,36 @@ func _on_joy_connection_changed(device_id: int, connected: bool):
 	if connected: print("CONTROLLER CONNECTED:\n  Device ID: ", device_id, ", Name: ", Input.get_joy_name(device_id))
 	else: print("CONTROLLER DISCONNECTED:\n  Device ID: ", device_id)
 	print("-----------------------------------------")
+
+func _ensure_user_remote_exists():
+	var spawn_cmd = "/usr/bin/flatpak-spawn"
+	if not FileAccess.file_exists(spawn_cmd):
+		return
+
+	# Prüfe ob flathub als user-remote existiert
+	var check_cmd = "flatpak remotes --user --columns=name"
+	var check_args = ["--host", "sh", "-c", "LC_ALL=C " + check_cmd]
+	var check_output = []
+	var exit_code = OS.execute(spawn_cmd, check_args, check_output)
+	
+	var flathub_exists = false
+	if exit_code == 0 and check_output.size() > 0:
+		for line in check_output[0].split("\n"):
+			if line.strip_edges() == "flathub":
+				flathub_exists = true
+				break
+	
+	if not flathub_exists:
+		print("INFO: Flathub user-remote missing. Attempting to add it...")
+		var add_cmd = "flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
+		var add_args = ["--host", "sh", "-c", "LC_ALL=C " + add_cmd]
+		var add_exit = OS.execute(spawn_cmd, add_args, [])
+		if add_exit == 0:
+			print("INFO: Successfully added flathub user-remote.")
+		else:
+			printerr("ERROR: Failed to add flathub user-remote. Exit code: ", add_exit)
+	else:
+		print("INFO: Flathub user-remote already exists.")
 
 # =============================================================================
 # INSTALLED APP HANDLING

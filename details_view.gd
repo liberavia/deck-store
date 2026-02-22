@@ -561,15 +561,23 @@ func _on_task_updated_for_progress(operation_id: String, status_data: Dictionary
 					_stop_pulse()
 			if progress_label:
 				var label_text = ""
+				var current_idx = status_data.get("current_idx", -1)
+				var total_idx = status_data.get("total_idx", -1)
+				var step_info = ""
+				if current_idx != -1 and total_idx != -1:
+					step_info = " (Step %d/%d)" % [current_idx, total_idx]
+
 				match status:
 					"downloading": 
 						label_text = "Downloading (%d%%)" % progress if progress != null else "Downloading..."
+						label_text += step_info
 						var speed = status_data.get("speed", null)
 						var eta = status_data.get("eta", null)
 						if speed: label_text += " [%s]" % speed
 						if eta: label_text += " (%s)" % eta
-					"installing": label_text = "Installing..."
-					_: label_text = "Status: %s" % status
+					"installing": 
+						label_text = "Installing..." + step_info
+					_: label_text = "Status: %s" % status + step_info
 				progress_label.text = label_text
 		else:
 			_stop_pulse()

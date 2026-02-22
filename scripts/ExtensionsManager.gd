@@ -219,10 +219,22 @@ func _execute_operation_script_in_thread(extension_data: Dictionary, operation: 
 	if FileAccess.file_exists(log_file_path):
 		var file = FileAccess.open(log_file_path, FileAccess.READ)
 		print("INFO ExtensionManager: --- Script Output ---")
-		while not file.eof_reached():
-			var line = file.get_line()
-			if not line.is_empty():
-				print("  ", line)
+		var line_count = 0
+		while not file.eof_reached() and line_count < 500:
+			var line = file.get_line().strip_edges()
+			if line.is_empty(): continue
+			
+			# Filter out Flatpak progress bars/lines to avoid console spam
+			# They usually look like: "Installiere 1/6 … ██  10% 354,5 KB/s"
+			if (line.contains("Installiere") or line.contains("Downloading") or line.contains("Updating")) and line.contains("%"):
+				continue
+				
+			print("  ", line)
+			line_count += 1
+		
+		if line_count >= 500:
+			print("  [... further output truncated for console performance ...]")
+			
 		print("INFO ExtensionManager: --- End Script Output ---")
 		file.close()
 		DirAccess.remove_absolute(log_file_path)
