@@ -153,6 +153,7 @@ func _update_typing_visuals():
 
 func _set_typing_active(active: bool):
 	if _typing_active != active:
+		print("SearchView DEBUG: Typing Mode Changed to: ", active)
 		_typing_active = active
 		_update_typing_visuals()
 		if _typing_active:
@@ -215,6 +216,7 @@ func _unhandled_input(event: InputEvent):
 
 		# 1b. Block Section Switching
 		if event.is_action_pressed("section_next") or event.is_action_pressed("section_previous"):
+			print("SearchView DEBUG: Blocking section switch during typing: ", event.as_text())
 			get_viewport().set_input_as_handled()
 			return
 
@@ -255,7 +257,7 @@ func _unhandled_input(event: InputEvent):
 				get_viewport().set_input_as_handled()
 
 # We can remove the old _input completely as it's now handled by _unhandled_input
-func _input(event: InputEvent):
+func _input(_event: InputEvent):
 	pass
 
 func _on_search_submitted(text: String):
@@ -305,3 +307,6 @@ func on_view_entered():
 
 func on_view_exiting():
 	_set_typing_active(false)
+
+func is_typing() -> bool:
+	return _typing_active

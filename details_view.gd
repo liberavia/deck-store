@@ -298,7 +298,7 @@ func _display_details(product: Dictionary):
 		return
 
 	# navbar
-	app_title.text = product.get("name", "N/A")
+	app_title.text = product.get("name") if product.get("name") != null else "N/A"
 	var icon_url = product.get("icon")
 	if icon_url and not icon_url.is_empty():
 		emit_signal("image_load_requested", icon_url, app_icon)
@@ -352,7 +352,7 @@ func _display_details(product: Dictionary):
 	if releases is Array and not releases.is_empty():
 		var latest_release = releases[0]
 		if latest_release is Dictionary:
-			app_current_version.text = latest_release.get("version", "N/A")
+			app_current_version.text = latest_release.get("version") if latest_release.get("version") != null else "N/A"
 			var timestamp_str = str(latest_release.get("timestamp", ""))
 			if not timestamp_str.is_empty() and timestamp_str.is_valid_int():
 				var timestamp_int = int(timestamp_str)
@@ -370,8 +370,8 @@ func _display_details(product: Dictionary):
 		app_current_version.text = "N/A"
 		app_release_date.text = "N/A"
 		
-	current_app_name = product.get("name", "N/A")
-	app_developer.text = product.get("developer_name", "N/A")
+	current_app_name = product.get("name") if product.get("name") != null else "N/A"
+	app_developer.text = product.get("developer_name") if product.get("developer_name") != null else "N/A"
 	
 	var safe_icon_url = icon_url if icon_url != null else ""
 

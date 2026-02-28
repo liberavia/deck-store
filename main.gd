@@ -111,8 +111,10 @@ func _ready():
 			var instance = scene.instantiate()
 			_sections[i].instance = instance 
 			
-			if section_data.name == "Home" and "product_box_scene" in instance:
-				instance.product_box_scene = product_box
+			if section_data.name == "Home":
+				_current_home_view_instance = instance
+				if "product_box_scene" in instance:
+					instance.product_box_scene = product_box
 			
 			_connect_section_signals(instance)
 			
@@ -281,6 +283,19 @@ func _get_pagination_prompts(focus_owner: Control) -> Array:
 			
 	return prompts
 
+func _input(event: InputEvent):
+	# Globally block Joypad inputs if current section is typing
+	# This prevents background focus navigation while using virtual keyboard
+	var current_section_node = _sections[_current_section_index].instance
+	if is_instance_valid(current_section_node) and current_section_node.has_method("is_typing") and current_section_node.is_typing():
+		# Allow exit (B) and confirm (A) actions to pass through to the section
+		if event.is_action("ui_cancel") or event.is_action("ui_accept"):
+			return
+
+		if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+			get_viewport().set_input_as_handled()
+			return
+
 func _unhandled_input(event: InputEvent):
 	var new_section_index = _current_section_index
 	var switched = false
@@ -327,6 +342,9 @@ func _unhandled_input(event: InputEvent):
 # HELPER FUNCTIONS
 # =============================================================================
 func _on_top_bar_button_focus_entered():
+	var focus_owner = get_viewport().gui_get_focus_owner()
+	print("Main DEBUG: Top Bar Button Focus Entered: ", focus_owner.name if is_instance_valid(focus_owner) else "unknown")
+	
 	if _suppress_focus_sound:
 		return
 
@@ -1016,6 +1034,7 @@ func _switch_to_section(target_index: int):
 	
 # Called when a button in the top bar is pressed
 func _on_top_bar_button_pressed(target_index: int):
+	print("Main DEBUG: Top Bar Button Pressed for index: ", target_index, " (", _sections[target_index].name, ")")
 	if is_instance_valid(switch_sound) and _is_switching_section == false:
 		switch_sound.play()
 	_switch_to_section(target_index)
