@@ -63,18 +63,18 @@ func _switch_screenshot(direction: int):
 	if active_tween and active_tween.is_valid(): active_tween.kill()
 	active_tween = create_tween()
 	active_tween.set_parallel(true)
-	active_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	active_tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	
-	active_tween.tween_property(old_tex_rect, "position:x", -offset_x, 0.3)
-	active_tween.tween_property(old_tex_rect, "modulate:a", 0.0, 0.2)
+	active_tween.tween_property(old_tex_rect, "position:x", -offset_x, 0.5)
+	active_tween.tween_property(old_tex_rect, "modulate:a", 0.0, 0.3)
 	
-	active_tween.tween_property(new_tex_rect, "position:x", 0, 0.3)
-	active_tween.tween_property(new_tex_rect, "modulate:a", 1.0, 0.2)
+	active_tween.tween_property(new_tex_rect, "position:x", 0, 0.5)
+	active_tween.tween_property(new_tex_rect, "modulate:a", 1.0, 0.3)
 	
 	# Resize window if needed? Usually screenshots are same aspect, but just in case
 	var final_window_width = display_size.x + margin_container.get_theme_constant("margin_left") + margin_container.get_theme_constant("margin_right")
 	var final_window_height = display_size.y + margin_container.get_theme_constant("margin_top") + margin_container.get_theme_constant("margin_bottom")
-	active_tween.tween_property(self, "size", Vector2i(ceil(final_window_width), ceil(final_window_height)), 0.3)
+	active_tween.tween_property(self, "size", Vector2i(ceil(final_window_width), ceil(final_window_height)), 0.5)
 	
 	active_tween.chain().tween_callback(func():
 		zoomed_texture_rect = new_tex_rect

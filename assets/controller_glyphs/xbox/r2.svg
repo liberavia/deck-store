@@ -1,4 +1,0 @@
-<svg width="60" height="40" viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg">
-  <path d="M5,5 L55,5 L55,30 Q55,35 45,35 L15,35 Q5,35 5,30 Z" fill="#333" stroke="white" stroke-width="2"/>
-  <text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Arial" font-size="16" font-weight="bold">R2</text>
-</svg>

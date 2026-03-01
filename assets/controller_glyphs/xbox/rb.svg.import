@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://pga71iqueigd"
-path="res://.godot/imported/r1.svg-9948a9209c6b72ec889f3ce429e538f1.ctex"
+uid="uid://6c64ypvu5ixd"
+path="res://.godot/imported/rb.svg-0cb2901775df081f430a698397a64af6.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/controller_glyphs/xbox/r1.svg"
-dest_files=["res://.godot/imported/r1.svg-9948a9209c6b72ec889f3ce429e538f1.ctex"]
+source_file="res://assets/controller_glyphs/xbox/rb.svg"
+dest_files=["res://.godot/imported/rb.svg-0cb2901775df081f430a698397a64af6.ctex"]
 
 [params]
 

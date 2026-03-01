@@ -52,6 +52,14 @@ func get_glyph_path(action: String) -> String:
 			"x": filename = "square"
 			"y": filename = "triangle"
 	
+	# Mapping Xbox specific names (LB/RB/LT/RT)
+	elif type_str == "xbox":
+		match filename:
+			"l1": filename = "lb"
+			"r1": filename = "rb"
+			"l2": filename = "lt"
+			"r2": filename = "rt"
+	
 	# Mapping Switch specific names if we had them
 	# elif type_str == "switch": ...
 	
