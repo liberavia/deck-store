@@ -10,8 +10,10 @@ extends Control
 
 @onready var home_button: Button = $CanvasLayer/VBoxContainer/TopButtonBar/ButtonHome
 @onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/TopButtonBar
+@onready var l1_glyph: TextureRect = $CanvasLayer/VBoxContainer/TopButtonBar/L1Glyph
+@onready var r1_glyph: TextureRect = $CanvasLayer/VBoxContainer/TopButtonBar/R1Glyph
 @onready var global_scroll_container: ScrollContainer = $CanvasLayer/VBoxContainer/ContentScrollContainer
-@onready var footer_bar: PanelContainer = $CanvasLayer/VBoxContainer/FooterBar
+@onready var footer_bar: PanelContainer = $CanvasLayer/FooterBar
 @onready var select_sound: AudioStreamPlayer = $SelectSoundPlayer
 @onready var focus_sound: AudioStreamPlayer = $FocusSoundPlayer
 @onready var back_sound: AudioStreamPlayer = $BackSoundPlayer
@@ -143,6 +145,9 @@ func _ready():
 	details_view.move_back_to_main_view.connect(_on_move_back_to_main_view)
 	details_view.image_load_requested.connect(_on_product_list_image_load_requested)
 
+	if l1_glyph: l1_glyph.pressed.connect(_apply_glyph_feedback.bind(-1))
+	if r1_glyph: r1_glyph.pressed.connect(_apply_glyph_feedback.bind(1))
+
 	get_viewport().gui_focus_changed.connect(_on_focus_changed)
 
 	_check_connected_controllers() 
@@ -156,6 +161,23 @@ func _ready():
 # =============================================================================
 # INPUT HANDLING (Nur _unhandled_input)
 # =============================================================================
+
+func _apply_glyph_feedback(is_pressed: bool, direction: int):
+	var target_index = _current_section_index + direction
+	if target_index < 0: target_index = _sections.size() - 1
+	if target_index >= _sections.size(): target_index = 0
+	
+	var button_name = _sections[target_index].button_node_name
+	var btn = top_button_bar.get_node_or_null(button_name) as Button
+	
+	if is_instance_valid(btn):
+		var target_mod = Color(1.5, 1.5, 1.5, 1.0) if is_pressed else Color(1, 1, 1, 1)
+		var target_scale = Vector2(1.05, 1.05) if is_pressed else Vector2(1.0, 1.0)
+		var tween = create_tween()
+		tween.set_parallel(true)
+		tween.tween_property(btn, "modulate", target_mod, 0.1)
+		tween.tween_property(btn, "scale", target_scale, 0.1)
+		btn.pivot_offset = btn.size / 2.0
 
 func _on_focus_changed(control: Control):
 	# Disconnect from previous item if any
@@ -189,10 +211,22 @@ func _update_footer_prompts():
 	var focus_owner = get_viewport().gui_get_focus_owner()
 	
 	if is_instance_valid(details_view) and details_view.visible:
-		actions = [
-			{"button": "A", "label": "Select"},
-			{"button": "B", "label": "Back"}
-		]
+		actions = [{"button": "B", "label": "Back"}]
+		if is_instance_valid(focus_owner) and details_view.is_ancestor_of(focus_owner):
+			if focus_owner == details_view.action_button:
+				actions.append({"button": "A", "label": focus_owner.text})
+			elif focus_owner == details_view.add_to_steam_button:
+				actions.append({"button": "A", "label": "Add to Steam"})
+			elif details_view.screenshot_container.is_ancestor_of(focus_owner):
+				actions.append({"button": "A", "label": "Zoom Screenshot"})
+				if details_view.screenshot_container.get_child_count() > 1:
+					actions.append({"button": "L2 / R2", "label": "Switch Screenshot"})
+			elif focus_owner == details_view.show_reviews_button:
+				actions.append({"button": "A", "label": "Show Reviews"})
+			else:
+				actions.append({"button": "A", "label": "Select"})
+		else:
+			actions.append({"button": "A", "label": "Select"})
 	elif is_instance_valid(focus_owner):
 		if top_button_bar.is_ancestor_of(focus_owner):
 			actions = [

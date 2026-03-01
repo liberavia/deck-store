@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://bubfvije4jq88" path="res://product_box.tscn" id="2_bsby6"]
 [ext_resource type="Script" uid="uid://cbdjfi6c6bvbu" path="res://prev_button.gd" id="3_oosp4"]
 [ext_resource type="Script" uid="uid://bv0d0leqmjrwt" path="res://next_button.gd" id="4_xwbbg"]
+[ext_resource type="PackedScene" path="res://glyph_display.tscn" id="5_glyph"]
 [ext_resource type="PackedScene" uid="uid://c5y1x2z3a4b5" path="res://loading_overlay.tscn" id="6_overlay"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5x0sp"]
@@ -66,6 +67,12 @@ visible = false
 layout_mode = 2
 size_flags_horizontal = 6
 
+[node name="L2Glyph" parent="VBoxContainer/PaginationBar" instance=ExtResource("5_glyph")]
+custom_minimum_size = Vector2(50, 25)
+layout_mode = 2
+size_flags_vertical = 4
+action_name = "L2"
+
 [node name="PrevButton" type="Button" parent="VBoxContainer/PaginationBar"]
 custom_minimum_size = Vector2(100, 40)
 layout_mode = 2
@@ -96,6 +103,12 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_5x0sp")
 theme_override_styles/normal = SubResource("StyleBoxFlat_oosp4")
 text = "Next"
 script = ExtResource("4_xwbbg")
+
+[node name="R2Glyph" parent="VBoxContainer/PaginationBar" instance=ExtResource("5_glyph")]
+custom_minimum_size = Vector2(50, 25)
+layout_mode = 2
+size_flags_vertical = 4
+action_name = "R2"
 
 [node name="MultiLineScroll" type="ScrollContainer" parent="VBoxContainer"]
 custom_minimum_size = Vector2(0, 100)
@@ -131,6 +144,12 @@ visible = false
 layout_mode = 2
 size_flags_horizontal = 6
 
+[node name="L2Glyph" parent="VBoxContainer/PaginationBarBottom" instance=ExtResource("5_glyph")]
+custom_minimum_size = Vector2(50, 25)
+layout_mode = 2
+size_flags_vertical = 4
+action_name = "L2"
+
 [node name="PrevButton" type="Button" parent="VBoxContainer/PaginationBarBottom"]
 custom_minimum_size = Vector2(100, 40)
 layout_mode = 2
@@ -161,6 +180,12 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_5x0sp")
 theme_override_styles/normal = SubResource("StyleBoxFlat_oosp4")
 text = "Next"
 script = ExtResource("4_xwbbg")
+
+[node name="R2Glyph" parent="VBoxContainer/PaginationBarBottom" instance=ExtResource("5_glyph")]
+custom_minimum_size = Vector2(50, 25)
+layout_mode = 2
+size_flags_vertical = 4
+action_name = "R2"
 
 [node name="LoadingOverlay" parent="." instance=ExtResource("6_overlay")]
 visible = false

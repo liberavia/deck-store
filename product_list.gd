@@ -37,6 +37,10 @@ signal products_loaded
 @onready var page_label_bottom: Label = $VBoxContainer/PaginationBarBottom/PageLabel
 @onready var prev_button_bottom: Button = $VBoxContainer/PaginationBarBottom/PrevButton
 @onready var next_button_bottom: Button = $VBoxContainer/PaginationBarBottom/NextButton
+@onready var l2_glyph: TextureRect = $VBoxContainer/PaginationBar/L2Glyph
+@onready var r2_glyph: TextureRect = $VBoxContainer/PaginationBar/R2Glyph
+@onready var l2_glyph_bottom: TextureRect = $VBoxContainer/PaginationBarBottom/L2Glyph
+@onready var r2_glyph_bottom: TextureRect = $VBoxContainer/PaginationBarBottom/R2Glyph
 @onready var no_results_label: Label = $VBoxContainer/NoResultsLabel
 @onready var loading_overlay: Control = $LoadingOverlay
 
@@ -113,8 +117,23 @@ func _ready():
 	# Connect Bottom Pagination
 	if prev_button_bottom: prev_button_bottom.pressed.connect(_on_prev_button_pressed)
 	if next_button_bottom: next_button_bottom.pressed.connect(_on_next_button_pressed)
+	
+	if l2_glyph: l2_glyph.pressed.connect(_apply_button_feedback.bind(prev_button))
+	if r2_glyph: r2_glyph.pressed.connect(_apply_button_feedback.bind(next_button))
+	if l2_glyph_bottom: l2_glyph_bottom.pressed.connect(_apply_button_feedback.bind(prev_button_bottom))
+	if r2_glyph_bottom: r2_glyph_bottom.pressed.connect(_apply_button_feedback.bind(next_button_bottom))
 		
 	print("--- ProductList _ready END for '", title, "' ---")
+
+func _apply_button_feedback(is_pressed: bool, btn: Button):
+	if not is_instance_valid(btn) or btn.disabled: return
+	var target_mod = Color(1.5, 1.5, 1.5, 1.0) if is_pressed else Color(1, 1, 1, 1)
+	var target_scale = Vector2(1.05, 1.05) if is_pressed else Vector2(1.0, 1.0)
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(btn, "modulate", target_mod, 0.1)
+	tween.tween_property(btn, "scale", target_scale, 0.1)
+	btn.pivot_offset = btn.size / 2.0
 
 func set_url(url: String):
 	current_url = url

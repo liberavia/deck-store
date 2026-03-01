@@ -123,12 +123,10 @@ func _unhandled_input(event: InputEvent):
 	if event.is_action_pressed("ui_accept"):
 		var focused_control = get_viewport().gui_get_focus_owner()
 		if focused_control.is_in_group("zoomable_screenshots"):
-			var texture_rect_node = focused_control.get_node_or_null("MarginContainer/Panel/MarginContainer/Screenshot") as TextureRect
-			var texture_to_zoom = texture_rect_node.texture # Direkter Zugriff auf die Textur
-			if texture_to_zoom:
-				_open_screenshot_zoom_popup(texture_to_zoom)
-				get_viewport().set_input_as_handled()
-				return
+			var idx = focused_control.get_index()
+			_open_screenshot_zoom_popup(idx)
+			get_viewport().set_input_as_handled()
+			return
 
 # =============================================================================
 # PUBLIC METHODS (called from main.gd or elsewhere)
@@ -446,23 +444,28 @@ func _clear_rating_ui():
 		show_reviews_button.visible = false
 		show_reviews_button.disabled = true
 
-func _open_screenshot_zoom_popup(texture_to_zoom: Texture2D):
+func _open_screenshot_zoom_popup(start_index: int):
 	if not screenshot_zoom_popup_scene:
 		printerr("DetailsView: ScreenshotZoomPopup scene not preloaded!")
 		return
+
+	var textures: Array[Texture2D] = []
+	for child in screenshot_container.get_children():
+		var tex_rect = child.get_node_or_null("MarginContainer/Panel/MarginContainer/Screenshot") as TextureRect
+		if tex_rect and tex_rect.texture:
+			textures.append(tex_rect.texture)
+
+	if textures.is_empty(): return
 
 	if not is_instance_valid(screenshot_zoom_popup_instance):
 		screenshot_zoom_popup_instance = screenshot_zoom_popup_scene.instantiate()
 		add_child(screenshot_zoom_popup_instance) 
 	
-	if screenshot_zoom_popup_instance.has_method("popup_zoomed_image"):
+	if screenshot_zoom_popup_instance.has_method("popup_zoomed_image_list"):
 		var focused_element_before_popup = get_viewport().gui_get_focus_owner()
-		screenshot_zoom_popup_instance.popup_zoomed_image(texture_to_zoom, focused_element_before_popup)
+		screenshot_zoom_popup_instance.popup_zoomed_image_list(textures, start_index, focused_element_before_popup)
 	else:
-		printerr("DetailsView: ScreenshotZoomPopup instance does not have 'popup_zoomed_image' method.")
-		if is_instance_valid(screenshot_zoom_popup_instance): 
-			screenshot_zoom_popup_instance.queue_free()
-			screenshot_zoom_popup_instance = null
+		printerr("DetailsView: ScreenshotZoomPopup instance does not have 'popup_zoomed_image_list' method.")
 
 # --- Set initial focus when view becomes active ---
 func set_initial_focus():
