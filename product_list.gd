@@ -406,19 +406,12 @@ func _input(event: InputEvent):
 	elif event.is_action_pressed("ui_right"): action_string = "ui_right"
 
 	if action_string != "":
-		if action_string == "ui_left" or action_string == "ui_right":
-			print("DEBUG ProductList Input: Action '%s' detected. Event: %s" % [action_string, event])
-
 		var current_time = Time.get_ticks_msec()
 		if current_time - last_nav_time.get(action_string, 0) > NAV_COOLDOWN_MS:
-			if action_string == "ui_left" or action_string == "ui_right":
-				print("DEBUG ProductList: Cooldown passed, attempting navigation for '%s'" % action_string)
 			if _handle_navigation(action_string):
 				last_nav_time[action_string] = current_time
 				get_viewport().set_input_as_handled()
 		else:
-			if action_string == "ui_left" or action_string == "ui_right":
-				print("DEBUG ProductList: Cooldown ACTIVE for '%s', event consumed." % action_string)
 			get_viewport().set_input_as_handled()
 
 
@@ -470,20 +463,15 @@ func _handle_navigation(action_string: String) -> bool:
 		var target_index = current_index - 1
 		if target_index >= 0:
 			target_node_to_focus = _get_child_if_focusable(target_index)
-			if target_node_to_focus: 
-				navigation_occurred = true
-				print("DEBUG ProductList: Found target_node for 'ui_left' at index %d" % target_index)
+			if target_node_to_focus: navigation_occurred = true
 
 	elif action_string == "ui_right":
 		var target_index = current_index + 1
 		if target_index < child_count:
 			target_node_to_focus = _get_child_if_focusable(target_index)
-			if target_node_to_focus: 
-				navigation_occurred = true
-				print("DEBUG ProductList: Found target_node for 'ui_right' at index %d" % target_index)
+			if target_node_to_focus: navigation_occurred = true
 
 	if navigation_occurred and is_instance_valid(target_node_to_focus):
-		print("DEBUG ProductList: Executing focus change to node: %s" % target_node_to_focus.name)
 		_focus_product_at_index(target_node_to_focus)
 
 	return navigation_occurred
