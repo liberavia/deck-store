@@ -6,6 +6,7 @@ extends Control
 @onready var l2_container: Control = %L2Container
 @onready var r2_container: Control = %R2Container
 @onready var layout: HBoxContainer = $Margin/Layout
+@onready var animation_container: Control = %AnimationContainer
 
 var original_focused_element: Control = null
 var active_tween: Tween = null
@@ -46,25 +47,28 @@ func _switch_screenshot(direction: int):
 	var old_tex_rect = zoomed_texture_rect
 	var new_tex_rect = zoomed_texture_rect.duplicate()
 	
-	var old_idx = old_tex_rect.get_index()
-	layout.add_child(new_tex_rect)
-	layout.move_child(new_tex_rect, old_idx)
+	animation_container.add_child(new_tex_rect)
 	
 	var new_texture = _textures[new_index]
 	new_tex_rect.texture = new_texture
 	
 	# Transition setup
-	var offset_x = size.x * 0.8 * direction
-	new_tex_rect.position.x = offset_x
+	var container_width = animation_container.size.x
+	# New image starts at the edge (right if direction=1, left if direction=-1)
+	new_tex_rect.position.x = container_width * direction
+	new_tex_rect.modulate.a = 1.0 # Ensure full visibility
 	
 	if active_tween and active_tween.is_valid(): active_tween.kill()
 	active_tween = create_tween()
 	active_tween.set_parallel(true)
-	active_tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	active_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	
+	# Current image slides out in opposite direction
+	active_tween.tween_property(old_tex_rect, "position:x", -container_width * direction, 0.4)
 	active_tween.tween_property(old_tex_rect, "modulate:a", 0.0, 0.3)
-	active_tween.tween_property(new_tex_rect, "position:x", 0, 0.5)
-	active_tween.tween_property(new_tex_rect, "modulate:a", 1.0, 0.3)
+	
+	# New image slides into center
+	active_tween.tween_property(new_tex_rect, "position:x", 0, 0.4)
 	
 	active_tween.chain().tween_callback(func():
 		zoomed_texture_rect = new_tex_rect
