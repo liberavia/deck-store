@@ -25,24 +25,23 @@ func _on_gui_input(event: InputEvent):
 			_simulate_action()
 
 func _simulate_action():
-	var action = ""
+	var actions = []
 	match action_name:
-		"A": action = "ui_accept"
-		"B": action = "go_back"
-		"X": action = "ui_select" # or custom
-		"Y": action = "ui_secondary" # or custom
-		"L1": action = "section_previous"
-		"R1": action = "section_next"
-		"L2": action = "ui_page_up"
-		"R2": action = "ui_page_down"
+		"A": actions = ["ui_accept"]
+		"B": actions = ["go_back", "ui_cancel"]
+		"X": actions = ["ui_select"]
+		"Y": actions = ["ui_secondary"]
+		"L1": actions = ["section_previous", "previous_tab"]
+		"R1": actions = ["section_next", "next_tab"]
+		"L2": actions = ["ui_page_up", "previous_tab"]
+		"R2": actions = ["ui_page_down", "next_tab"]
 	
-	if action != "":
+	for action in actions:
 		var a = InputEventAction.new()
 		a.action = action
 		a.pressed = true
 		Input.parse_input_event(a)
 		
-		# Also release immediately for single-fire actions
 		var r = InputEventAction.new()
 		r.action = action
 		r.pressed = false

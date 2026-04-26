@@ -332,6 +332,12 @@ func _input(event: InputEvent):
 			return
 
 func _unhandled_input(event: InputEvent):
+	# Block global section switching if details view is open
+	if is_instance_valid(details_view) and details_view.visible:
+		if event.is_action_pressed("section_next") or event.is_action_pressed("section_previous"):
+			get_viewport().set_input_as_handled()
+			return
+
 	var new_section_index = _current_section_index
 	var switched = false
 	if event.is_action_pressed("section_next"): # R1 / RB

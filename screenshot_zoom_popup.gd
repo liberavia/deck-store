@@ -35,6 +35,10 @@ func _unhandled_input(event: InputEvent):
 		elif event.is_action_pressed("next_tab"): # R2
 			_switch_screenshot(1)
 			get_viewport().set_input_as_handled()
+	elif _textures.size() <= 1:
+		# Consume tab actions even if only one screenshot, to prevent background navigation
+		if event.is_action_pressed("previous_tab") or event.is_action_pressed("next_tab"):
+			get_viewport().set_input_as_handled()
 
 func _switch_screenshot(direction: int):
 	var new_index = _current_index + direction
