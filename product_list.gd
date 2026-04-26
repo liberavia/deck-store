@@ -435,7 +435,6 @@ func _handle_navigation(action_string: String) -> bool:
 		if child_count > 0 and current_index >= 0:
 			if _active_content_container is HFlowContainer:
 				var focused_pos_y = focused_control.global_position.y
-				# Important: find the first child that is NOT queued for deletion
 				var first_valid_child = _get_first_focusable_product()
 				if first_valid_child:
 					var first_child_pos_y = first_valid_child.global_position.y
@@ -444,8 +443,15 @@ func _handle_navigation(action_string: String) -> bool:
 				is_in_first_row = true
 
 		if is_in_first_row:
-			emit_signal("focus_exited_up")
-			navigation_occurred = true
+			# Check if there is anything focusable above this list before exiting
+			var neighbor = focused_control.find_valid_focus_neighbor(SIDE_TOP)
+			if is_instance_valid(neighbor):
+				# Let Godot handle the focus switch to the neighbor above
+				return false
+			else:
+				# Nothing above, exit to top bar
+				emit_signal("focus_exited_up")
+				navigation_occurred = true
 		else:
 			var num_columns = _get_current_column_count()
 			var target_index = current_index - num_columns
