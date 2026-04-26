@@ -258,6 +258,13 @@ func _unhandled_input(event: InputEvent):
 	if event.is_action_pressed("go_back"):
 		var focus_owner = get_viewport().gui_get_focus_owner()
 		if is_instance_valid(focus_owner):
-			if category_button_container.is_ancestor_of(focus_owner) or product_list.is_ancestor_of(focus_owner):
+			# If we are in the product list, go back to the category selection
+			if product_list.is_ancestor_of(focus_owner):
+				focus_default_element()
+				get_viewport().set_input_as_handled()
+				return
+			
+			# If we are already in the category list, exit to the top bar
+			if category_button_container.is_ancestor_of(focus_owner):
 				emit_signal("focus_exited_up_from_lists")
 				get_viewport().set_input_as_handled()
