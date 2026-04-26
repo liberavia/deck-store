@@ -84,6 +84,7 @@ func _setup_paths():
 
 func _setup_product_list():
 	if is_instance_valid(product_list):
+		product_list.use_auto_height = false
 		product_list.move_to_details_view.connect(func(id, installed): emit_signal("move_to_details_view_requested", id, installed))
 		product_list.image_load_requested.connect(func(url, rect): emit_signal("image_load_requested", url, rect))
 		product_list.focus_exited_up.connect(func(): emit_signal("focus_exited_up_from_lists"))

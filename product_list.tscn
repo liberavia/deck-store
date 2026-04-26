@@ -114,7 +114,6 @@ action_name = "R2"
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 size_flags_vertical = 3
-follow_focus = true
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
@@ -129,7 +128,6 @@ theme_override_constants/v_separation = 25
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 size_flags_vertical = 3
-follow_focus = true
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 0
 

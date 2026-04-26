@@ -31,6 +31,7 @@ func _ready():
 	if is_instance_valid(product_list):
 		product_list.title = "" 
 		product_list.visible = false
+		product_list.use_auto_height = false
 
 func _setup_styling():
 	# Define Colors (Matching Main/Section Buttons)

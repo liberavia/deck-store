@@ -512,10 +512,42 @@ func _focus_product_at_index(target_node: Control):
 	if is_instance_valid(target_node):
 		if target_node.focus_mode != Control.FOCUS_NONE:
 			target_node.grab_focus()
-			if display_mode == DisplayMode.MULTI_LINE_WRAP and is_instance_valid(multi_line_scroll):
-				multi_line_scroll.ensure_control_visible(target_node)
-			elif display_mode == DisplayMode.SINGLE_LINE_SCROLL and is_instance_valid(single_line_scroll):
-				single_line_scroll.ensure_control_visible(target_node)
+			
+			# Wait one frame for layout to stabilize and positions to be accurate
+			await get_tree().process_frame
+			if not is_instance_valid(target_node) or not target_node.has_focus():
+				return
+
+			var scroll_container: ScrollContainer = null
+			if display_mode == DisplayMode.MULTI_LINE_WRAP:
+				scroll_container = multi_line_scroll
+			elif display_mode == DisplayMode.SINGLE_LINE_SCROLL:
+				scroll_container = single_line_scroll
+				
+			if is_instance_valid(scroll_container):
+				var margin = 30.0 # Slightly larger margin for better visibility
+				
+				if display_mode == DisplayMode.MULTI_LINE_WRAP:
+					var node_y = target_node.position.y
+					var node_h = target_node.size.y
+					var viewport_h = scroll_container.size.y
+					var current_scroll = scroll_container.scroll_vertical
+					
+					if node_y < current_scroll + margin:
+						scroll_container.scroll_vertical = max(0, node_y - margin)
+					elif node_y + node_h > current_scroll + viewport_h - margin:
+						scroll_container.scroll_vertical = node_y + node_h - viewport_h + margin
+				
+				elif display_mode == DisplayMode.SINGLE_LINE_SCROLL:
+					var node_x = target_node.position.x
+					var node_w = target_node.size.x
+					var viewport_w = scroll_container.size.x
+					var current_scroll = scroll_container.scroll_horizontal
+					
+					if node_x < current_scroll + margin:
+						scroll_container.scroll_horizontal = max(0, node_x - margin)
+					elif node_x + node_w > current_scroll + viewport_w - margin:
+						scroll_container.scroll_horizontal = node_x + node_w - viewport_w + margin
 				
 func _get_first_focusable_product() -> Control:
 	if not is_instance_valid(_active_content_container): return null
