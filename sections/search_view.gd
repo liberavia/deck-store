@@ -121,6 +121,7 @@ func _setup_connections():
 	
 	if is_instance_valid(search_button):
 		search_button.pressed.connect(func(): _on_search_submitted(search_input.text))
+		search_button.mouse_entered.connect(func(): search_button.grab_focus())
 
 	# Product List
 	if is_instance_valid(product_list):

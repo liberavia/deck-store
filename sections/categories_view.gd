@@ -198,6 +198,7 @@ func _populate_category_list(categories: Array):
 		btn.pressed.connect(_on_category_button_pressed.bind(cat_id))
 		btn.gui_input.connect(_on_category_button_gui_input)
 		btn.focus_entered.connect(_on_button_focus_entered)
+		btn.mouse_entered.connect(func(): btn.grab_focus())
 		
 		category_button_container.add_child(btn)
 		

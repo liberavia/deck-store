@@ -10,8 +10,43 @@ func _ready():
 		ControllerManager.controller_type_changed.connect(_on_controller_type_changed)
 		_update_glyph()
 	
+	self.mouse_filter = Control.MOUSE_FILTER_STOP
+	self.gui_input.connect(_on_gui_input)
+	
 	# Initial pivot for scaling
 	self.pivot_offset = custom_minimum_size / 2.0
+
+func _on_gui_input(event: InputEvent):
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		apply_feedback(event.pressed)
+		emit_signal("pressed", event.pressed)
+		
+		if event.pressed:
+			_simulate_action()
+
+func _simulate_action():
+	var action = ""
+	match action_name:
+		"A": action = "ui_accept"
+		"B": action = "go_back"
+		"X": action = "ui_select" # or custom
+		"Y": action = "ui_secondary" # or custom
+		"L1": action = "section_previous"
+		"R1": action = "section_next"
+		"L2": action = "ui_page_up"
+		"R2": action = "ui_page_down"
+	
+	if action != "":
+		var a = InputEventAction.new()
+		a.action = action
+		a.pressed = true
+		Input.parse_input_event(a)
+		
+		# Also release immediately for single-fire actions
+		var r = InputEventAction.new()
+		r.action = action
+		r.pressed = false
+		Input.parse_input_event(r)
 
 func _on_controller_type_changed(_type: String):
 	_update_glyph()

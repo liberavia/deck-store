@@ -136,6 +136,7 @@ func _ready():
 	for btn_node in top_button_bar.get_children():
 		if btn_node is Button:
 			btn_node.focus_entered.connect(_on_top_bar_button_focus_entered)
+			btn_node.mouse_entered.connect(func(): btn_node.grab_focus())
 			
 	load_popular_products()
 	load_trending_products()

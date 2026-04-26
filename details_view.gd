@@ -94,7 +94,14 @@ func _ready():
 		main_app_node.installed_apps_updated.connect(_on_installed_apps_refreshed)
 		
 	if is_instance_valid(show_reviews_button):
-		show_reviews_button.pressed.connect(_on_show_reviews_button_pressed)		
+		show_reviews_button.pressed.connect(_on_show_reviews_button_pressed)
+		show_reviews_button.mouse_entered.connect(func(): show_reviews_button.grab_focus())
+
+	if is_instance_valid(action_button):
+		action_button.mouse_entered.connect(func(): action_button.grab_focus())
+		
+	if is_instance_valid(add_to_steam_button):
+		add_to_steam_button.mouse_entered.connect(func(): add_to_steam_button.grab_focus())
 
 func _on_installed_apps_refreshed():
 	print("DEBUG DetailsView: Installed apps refreshed signal received, updating button visibility for ", current_app_id)
