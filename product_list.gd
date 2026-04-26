@@ -275,8 +275,9 @@ func _build_url(base: String, params: Dictionary) -> String:
 	return base + "?" + query_string
 
 func _show_pagination():
-	# decide wether pagination is shown or not
-	# @TODO: possibly better to decide after all elements have been loaded. For now just true
+	# Do not show pagination for single-line scrolling lists (e.g. on Home View)
+	if display_mode == DisplayMode.SINGLE_LINE_SCROLL:
+		return false
 	return true
 
 func _update_pagination_visibility():
@@ -387,17 +388,18 @@ func _input(event: InputEvent):
 	if not has_focus_ownership:
 		return
 		
-	# Pagination Shortcuts
-	if event.is_action_pressed("ui_page_up"):
-		if current_page > 1:
-			_on_prev_button_pressed()
-			get_viewport().set_input_as_handled()
-			return
-	elif event.is_action_pressed("ui_page_down"):
-		if current_page < total_pages:
-			_on_next_button_pressed()
-			get_viewport().set_input_as_handled()
-			return
+	# Pagination Shortcuts - only for multi-line wrap lists
+	if display_mode == DisplayMode.MULTI_LINE_WRAP:
+		if event.is_action_pressed("ui_page_up"):
+			if current_page > 1:
+				_on_prev_button_pressed()
+				get_viewport().set_input_as_handled()
+				return
+		elif event.is_action_pressed("ui_page_down"):
+			if current_page < total_pages:
+				_on_next_button_pressed()
+				get_viewport().set_input_as_handled()
+				return
 
 	var action_string = ""
 	if event.is_action_pressed("ui_up"): action_string = "ui_up"
