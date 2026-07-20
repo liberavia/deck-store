@@ -2,6 +2,7 @@ extends Control
 
 @export var product_box: PackedScene = preload("res://product_box.tscn")
 @export var product_list_scene: PackedScene = preload("res://product_list.tscn")
+@export var settings_modal_scene: PackedScene = preload("res://settings_modal.tscn")
 
 @onready var details_view: Control = $DetailsView
 @onready var main_view: VBoxContainer = $CanvasLayer/VBoxContainer
@@ -25,6 +26,7 @@ var _flatpak_list_output: String = ""
 var _flatpak_thread: Thread = null
 var _last_focused_product_box: Control = null
 var _current_home_view_instance: Control = null
+var _settings_modal_instance: CanvasLayer = null
 var _sections: Array[Dictionary] = [
 	{"name": "Home", "scene_path": "res://sections/home_view.tscn", "button_node_name": "ButtonHome", "instance": null},
 	{"name": "Categories", "scene_path": "res://sections/categories_view.tscn", "button_node_name": "ButtonCategories", "instance": null},
@@ -154,6 +156,10 @@ func _ready():
 
 	_check_connected_controllers() 
 	print("-----------------------------------------")
+	
+	_settings_modal_instance = settings_modal_scene.instantiate()
+	add_child(_settings_modal_instance)
+	
 	_switch_to_section(0)
 	
 	# Clear focus initially so no sound plays and no interaction is possible
@@ -264,6 +270,8 @@ func _update_footer_prompts():
 			var pagination_prompts = _get_pagination_prompts(focus_owner)
 			actions.append_array(pagination_prompts)
 	
+	actions.append({"button": "Menu", "label": "Settings"})
+	
 	footer_bar.set_actions(actions)
 
 func _get_custom_a_action(focus_owner: Control) -> Dictionary:
@@ -347,6 +355,15 @@ func _input(event: InputEvent):
 			return
 
 func _unhandled_input(event: InputEvent):
+	if event.is_action_pressed("open_settings"):
+		if is_instance_valid(_settings_modal_instance):
+			if _settings_modal_instance.visible:
+				_settings_modal_instance.close_modal()
+			else:
+				_settings_modal_instance.open_modal()
+		get_viewport().set_input_as_handled()
+		return
+
 	# Block global section switching if details view is open
 	if is_instance_valid(details_view) and details_view.visible:
 		if event.is_action_pressed("section_next") or event.is_action_pressed("section_previous"):
