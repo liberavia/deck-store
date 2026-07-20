@@ -160,6 +160,9 @@ func _ready():
 	_settings_modal_instance = settings_modal_scene.instantiate()
 	add_child(_settings_modal_instance)
 	
+	SettingsManager.settings_changed.connect(_on_settings_changed)
+	_apply_ui_sounds_setting(SettingsManager.get_setting("play_ui_sounds", true))
+	
 	_switch_to_section(0)
 	
 	# Clear focus initially so no sound plays and no interaction is possible
@@ -181,6 +184,25 @@ func _ready():
 	home_button.grab_focus()
 	await get_tree().process_frame
 	_suppress_focus_sound = false
+
+func _on_settings_changed(key: String, value):
+	if key == "play_ui_sounds":
+		_apply_ui_sounds_setting(value)
+
+func _apply_ui_sounds_setting(play: bool):
+	var vol = 0.0 if play else -80.0
+	var players = [
+		get_node_or_null("FocusSoundPlayer"),
+		get_node_or_null("SelectSoundPlayer"),
+		get_node_or_null("BackSoundPlayer"),
+		get_node_or_null("ButtonSoundPlayer"),
+		get_node_or_null("ZoomSoundPlayer"),
+		get_node_or_null("SwitchSoundPlayer")
+	]
+	for p in players:
+		if is_instance_valid(p):
+			p.volume_db = vol
+
 # =============================================================================
 # INPUT HANDLING (Nur _unhandled_input)
 # =============================================================================

@@ -5,7 +5,6 @@ signal focus_exited_up_from_lists()
 signal image_load_requested(url: String, texture_rect: TextureRect)
 
 const REFRESH_COOLDOWN_SECONDS = 300
-const INSTALLED_AUTOMATIC_REFRESH = true
 
 @onready var app_list_container: VBoxContainer = $MarginContainer/VBoxContainer/ScrollContainer/ListMarginContainer/AppListContainer
 @onready var total_size_label: Label = $MarginContainer/VBoxContainer/HeaderContainer/TotalSizeLabel
@@ -72,13 +71,18 @@ func _process(_delta):
 	var remaining = REFRESH_COOLDOWN_SECONDS - time_diff
 	
 	if remaining > 0:
-		# Cooldown active
-		if is_instance_valid(refresh_button): 
-			refresh_button.text = "Refresh List (%ds)" % int(remaining)
+		if is_instance_valid(refresh_button):
+			if SettingsManager.get_setting("auto_refresh_installed", true):
+				refresh_button.text = "Refresh List (%ds)" % int(remaining)
+			else:
+				refresh_button.text = "Refresh List"
 		if is_instance_valid(cooldown_progress):
-			cooldown_progress.visible = true
-			var progress = (remaining / float(REFRESH_COOLDOWN_SECONDS)) * 100
-			cooldown_progress.value = progress
+			if SettingsManager.get_setting("auto_refresh_installed", true):
+				cooldown_progress.visible = true
+				var progress = (remaining / float(REFRESH_COOLDOWN_SECONDS)) * 100
+				cooldown_progress.value = progress
+			else:
+				cooldown_progress.visible = false
 	else:
 		# Cooldown expired
 		if is_instance_valid(refresh_button): 
@@ -87,7 +91,7 @@ func _process(_delta):
 			cooldown_progress.visible = false
 			
 		# Auto-Refresh if enabled
-		if INSTALLED_AUTOMATIC_REFRESH and last_refresh_time > 0:
+		if SettingsManager.get_setting("auto_refresh_installed", true) and last_refresh_time > 0:
 			_trigger_refresh()
 
 func _on_refresh_pressed():
@@ -144,7 +148,7 @@ func on_view_entered():
 	var should_refresh = false
 	if current_installed_apps_data.is_empty():
 		should_refresh = true
-	elif INSTALLED_AUTOMATIC_REFRESH and time_diff >= REFRESH_COOLDOWN_SECONDS:
+	elif SettingsManager.get_setting("auto_refresh_installed", true) and time_diff >= REFRESH_COOLDOWN_SECONDS:
 		should_refresh = true
 		
 	if should_refresh:
