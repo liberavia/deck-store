@@ -6,6 +6,8 @@
 [ext_resource type="AudioStream" uid="uid://crqv67kcd0gii" path="res://assets/back.wav" id="9_4c57u"]
 [ext_resource type="AudioStream" uid="uid://bqyhdiitobub2" path="res://assets/menuback.wav" id="9_efxa6"]
 [ext_resource type="PackedScene" uid="uid://cauevp0c1nuys" path="res://details_view.tscn" id="9_kek77"]
+[ext_resource type="PackedScene" path="res://footer_bar.tscn" id="11_footer"]
+[ext_resource type="PackedScene" path="res://glyph_display.tscn" id="12_glyph"]
 [ext_resource type="AudioStream" uid="uid://ef3g1di4j6uw" path="res://assets/nextprev.wav" id="10_4c57u"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_efxa6"]
@@ -41,11 +43,13 @@ visible = false
 layout_mode = 1
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
+layer = 1
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_bottom = -50.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3
@@ -57,6 +61,12 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 0
 alignment = 1
+
+[node name="L1Glyph" parent="CanvasLayer/VBoxContainer/TopButtonBar" instance=ExtResource("12_glyph")]
+custom_minimum_size = Vector2(50, 25)
+layout_mode = 2
+size_flags_vertical = 4
+action_name = "L1"
 
 [node name="ButtonHome" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
@@ -101,9 +111,24 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 text = "Search"
 
+[node name="R1Glyph" parent="CanvasLayer/VBoxContainer/TopButtonBar" instance=ExtResource("12_glyph")]
+custom_minimum_size = Vector2(50, 25)
+layout_mode = 2
+size_flags_vertical = 4
+action_name = "R1"
+
 [node name="SectionViewContainer" type="Control" parent="CanvasLayer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+
+[node name="FooterBar" parent="CanvasLayer" instance=ExtResource("11_footer")]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -50.0
+grow_horizontal = 2
+grow_vertical = 0
 
 [node name="FocusSoundPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("3_h2yge")

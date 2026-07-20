@@ -4,7 +4,7 @@ signal move_to_details_view_requested(app_id: String, installed: bool, app_name:
 signal focus_exited_up_from_lists()
 signal image_load_requested(url: String, texture_rect: TextureRect)
 
-const REFRESH_COOLDOWN_SECONDS = 120
+const REFRESH_COOLDOWN_SECONDS = 300
 const INSTALLED_AUTOMATIC_REFRESH = true
 
 @onready var app_list_container: VBoxContainer = $MarginContainer/VBoxContainer/ScrollContainer/ListMarginContainer/AppListContainer
@@ -24,6 +24,7 @@ var installed_app_item_scene = preload("res://sections/installed_app_item.tscn")
 var current_installed_apps_data: Dictionary = {}
 var last_refresh_time: int = 0
 var last_updated_time_str: String = "--:--"
+var _refresh_pending: bool = false
 
 # Sounds
 var audio_player: AudioStreamPlayer
@@ -64,7 +65,7 @@ func _ready():
 			update_internal_list_install_status(apps)
 
 func _process(_delta):
-	if not self.visible: return
+	if not self.visible or _refresh_pending: return
 	
 	var current_time = Time.get_unix_time_from_system()
 	var time_diff = current_time - last_refresh_time
@@ -86,8 +87,7 @@ func _process(_delta):
 			cooldown_progress.visible = false
 			
 		# Auto-Refresh if enabled
-		if INSTALLED_AUTOMATIC_REFRESH:
-			print("InstalledView: Timer expired, triggering auto-refresh.")
+		if INSTALLED_AUTOMATIC_REFRESH and last_refresh_time > 0:
 			_trigger_refresh()
 
 func _on_refresh_pressed():
@@ -97,6 +97,9 @@ func _on_refresh_pressed():
 	_trigger_refresh()
 
 func _trigger_refresh():
+	if _refresh_pending: return
+	_refresh_pending = true
+	
 	last_refresh_time = Time.get_unix_time_from_system()
 	_update_last_updated_label()
 	
@@ -156,6 +159,7 @@ func on_view_entered():
 		focus_first_element()
 
 func update_internal_list_install_status(installed_apps: Dictionary):
+	_refresh_pending = false
 	# Hide overlay when data arrives
 	if is_instance_valid(loading_overlay_instance):
 		loading_overlay_instance.hide_overlay()
@@ -280,6 +284,13 @@ func focus_first_element():
 			first.grab_focus()
 
 func _unhandled_input(event):
+	if event.is_action_pressed("go_back"):
+		var focus_owner = get_viewport().gui_get_focus_owner()
+		if is_instance_valid(focus_owner) and (app_list_container.is_ancestor_of(focus_owner) or focus_owner == refresh_button or focus_owner == sort_option_button):
+			emit_signal("focus_exited_up_from_lists")
+			get_viewport().set_input_as_handled()
+			return
+
 	if event.is_action_pressed("ui_up"):
 		var focus_owner = get_viewport().gui_get_focus_owner()
 		if is_instance_valid(focus_owner):

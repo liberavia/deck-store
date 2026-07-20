@@ -37,6 +37,10 @@ signal products_loaded
 @onready var page_label_bottom: Label = $VBoxContainer/PaginationBarBottom/PageLabel
 @onready var prev_button_bottom: Button = $VBoxContainer/PaginationBarBottom/PrevButton
 @onready var next_button_bottom: Button = $VBoxContainer/PaginationBarBottom/NextButton
+@onready var l2_glyph: TextureRect = $VBoxContainer/PaginationBar/L2Glyph
+@onready var r2_glyph: TextureRect = $VBoxContainer/PaginationBar/R2Glyph
+@onready var l2_glyph_bottom: TextureRect = $VBoxContainer/PaginationBarBottom/L2Glyph
+@onready var r2_glyph_bottom: TextureRect = $VBoxContainer/PaginationBarBottom/R2Glyph
 @onready var no_results_label: Label = $VBoxContainer/NoResultsLabel
 @onready var loading_overlay: Control = $LoadingOverlay
 
@@ -57,7 +61,7 @@ var current_url = ""
 
 # --- Cooldown Variables ---
 const NAV_COOLDOWN_MS = 250
-var last_nav_time = { "up": 0, "down": 0, "left": 0, "right": 0 }
+var last_nav_time = { "ui_up": 0, "ui_down": 0, "ui_left": 0, "ui_right": 0 }
 
 func _ready():
 	origin_position = Vector2(0, 0)
@@ -113,8 +117,23 @@ func _ready():
 	# Connect Bottom Pagination
 	if prev_button_bottom: prev_button_bottom.pressed.connect(_on_prev_button_pressed)
 	if next_button_bottom: next_button_bottom.pressed.connect(_on_next_button_pressed)
+	
+	if l2_glyph: l2_glyph.pressed.connect(_apply_button_feedback.bind(prev_button))
+	if r2_glyph: r2_glyph.pressed.connect(_apply_button_feedback.bind(next_button))
+	if l2_glyph_bottom: l2_glyph_bottom.pressed.connect(_apply_button_feedback.bind(prev_button_bottom))
+	if r2_glyph_bottom: r2_glyph_bottom.pressed.connect(_apply_button_feedback.bind(next_button_bottom))
 		
 	print("--- ProductList _ready END for '", title, "' ---")
+
+func _apply_button_feedback(is_pressed: bool, btn: Button):
+	if not is_instance_valid(btn) or btn.disabled: return
+	var target_mod = Color(1.5, 1.5, 1.5, 1.0) if is_pressed else Color(1, 1, 1, 1)
+	var target_scale = Vector2(1.05, 1.05) if is_pressed else Vector2(1.0, 1.0)
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(btn, "modulate", target_mod, 0.1)
+	tween.tween_property(btn, "scale", target_scale, 0.1)
+	btn.pivot_offset = btn.size / 2.0
 
 func set_url(url: String):
 	current_url = url
@@ -256,8 +275,9 @@ func _build_url(base: String, params: Dictionary) -> String:
 	return base + "?" + query_string
 
 func _show_pagination():
-	# decide wether pagination is shown or not
-	# @TODO: possibly better to decide after all elements have been loaded. For now just true
+	# Do not show pagination for single-line scrolling lists (e.g. on Home View)
+	if display_mode == DisplayMode.SINGLE_LINE_SCROLL:
+		return false
 	return true
 
 func _update_pagination_visibility():
@@ -358,7 +378,7 @@ func focus_first_product():
 		elif single_line_scroll.visible: single_line_scroll.ensure_control_visible(first_focusable)
 
 
-func _unhandled_input(event: InputEvent):
+func _input(event: InputEvent):
 	if not is_visible_in_tree():
 		return
 
@@ -368,17 +388,18 @@ func _unhandled_input(event: InputEvent):
 	if not has_focus_ownership:
 		return
 		
-	# Pagination Shortcuts
-	if event.is_action_pressed("ui_page_up"):
-		if current_page > 1:
-			_on_prev_button_pressed()
-			get_viewport().set_input_as_handled()
-			return
-	elif event.is_action_pressed("ui_page_down"):
-		if current_page < total_pages:
-			_on_next_button_pressed()
-			get_viewport().set_input_as_handled()
-			return
+	# Pagination Shortcuts - only for multi-line wrap lists
+	if display_mode == DisplayMode.MULTI_LINE_WRAP:
+		if event.is_action_pressed("ui_page_up"):
+			if current_page > 1:
+				_on_prev_button_pressed()
+				get_viewport().set_input_as_handled()
+				return
+		elif event.is_action_pressed("ui_page_down"):
+			if current_page < total_pages:
+				_on_next_button_pressed()
+				get_viewport().set_input_as_handled()
+				return
 
 	var action_string = ""
 	if event.is_action_pressed("ui_up"): action_string = "ui_up"
@@ -393,7 +414,7 @@ func _unhandled_input(event: InputEvent):
 				last_nav_time[action_string] = current_time
 				get_viewport().set_input_as_handled()
 		else:
-			get_viewport().set_input_as_handled() # Cooldown aktiv, trotzdem behandeln
+			get_viewport().set_input_as_handled()
 
 
 # --- Core Navigation Logic  ---
@@ -414,7 +435,6 @@ func _handle_navigation(action_string: String) -> bool:
 		if child_count > 0 and current_index >= 0:
 			if _active_content_container is HFlowContainer:
 				var focused_pos_y = focused_control.global_position.y
-				# Important: find the first child that is NOT queued for deletion
 				var first_valid_child = _get_first_focusable_product()
 				if first_valid_child:
 					var first_child_pos_y = first_valid_child.global_position.y
@@ -423,8 +443,15 @@ func _handle_navigation(action_string: String) -> bool:
 				is_in_first_row = true
 
 		if is_in_first_row:
-			emit_signal("focus_exited_up")
-			navigation_occurred = true
+			# Check if there is anything focusable above this list before exiting
+			var neighbor = focused_control.find_valid_focus_neighbor(SIDE_TOP)
+			if is_instance_valid(neighbor):
+				# Let Godot handle the focus switch to the neighbor above
+				return false
+			else:
+				# Nothing above, exit to top bar
+				emit_signal("focus_exited_up")
+				navigation_occurred = true
 		else:
 			var num_columns = _get_current_column_count()
 			var target_index = current_index - num_columns
@@ -491,10 +518,42 @@ func _focus_product_at_index(target_node: Control):
 	if is_instance_valid(target_node):
 		if target_node.focus_mode != Control.FOCUS_NONE:
 			target_node.grab_focus()
-			if display_mode == DisplayMode.MULTI_LINE_WRAP and is_instance_valid(multi_line_scroll):
-				multi_line_scroll.ensure_control_visible(target_node)
-			elif display_mode == DisplayMode.SINGLE_LINE_SCROLL and is_instance_valid(single_line_scroll):
-				single_line_scroll.ensure_control_visible(target_node)
+			
+			# Wait one frame for layout to stabilize and positions to be accurate
+			await get_tree().process_frame
+			if not is_instance_valid(target_node) or not target_node.has_focus():
+				return
+
+			var scroll_container: ScrollContainer = null
+			if display_mode == DisplayMode.MULTI_LINE_WRAP:
+				scroll_container = multi_line_scroll
+			elif display_mode == DisplayMode.SINGLE_LINE_SCROLL:
+				scroll_container = single_line_scroll
+				
+			if is_instance_valid(scroll_container):
+				var margin = 30.0 # Slightly larger margin for better visibility
+				
+				if display_mode == DisplayMode.MULTI_LINE_WRAP:
+					var node_y = target_node.position.y
+					var node_h = target_node.size.y
+					var viewport_h = scroll_container.size.y
+					var current_scroll = scroll_container.scroll_vertical
+					
+					if node_y < current_scroll + margin:
+						scroll_container.scroll_vertical = max(0, node_y - margin)
+					elif node_y + node_h > current_scroll + viewport_h - margin:
+						scroll_container.scroll_vertical = node_y + node_h - viewport_h + margin
+				
+				elif display_mode == DisplayMode.SINGLE_LINE_SCROLL:
+					var node_x = target_node.position.x
+					var node_w = target_node.size.x
+					var viewport_w = scroll_container.size.x
+					var current_scroll = scroll_container.scroll_horizontal
+					
+					if node_x < current_scroll + margin:
+						scroll_container.scroll_horizontal = max(0, node_x - margin)
+					elif node_x + node_w > current_scroll + viewport_w - margin:
+						scroll_container.scroll_horizontal = node_x + node_w - viewport_w + margin
 				
 func _get_first_focusable_product() -> Control:
 	if not is_instance_valid(_active_content_container): return null

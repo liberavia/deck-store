@@ -1,0 +1,9 @@
+<svg width="60" height="40" viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg">
+  <path d="M5,5 L55,5 L55,30 Q55,35 45,35 L15,35 Q5,35 5,30 Z" fill="#333" stroke="white" stroke-width="2"/>
+  <g transform="translate(16, 9)">
+    <!-- L (Longer bottom) -->
+    <path d="M0,0 L0,16 L10,16" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- 2 -->
+    <path d="M16,2 L24,2 L24,8 L16,8 L16,16 L24,16" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

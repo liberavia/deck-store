@@ -1,6 +1,7 @@
 extends Button
 
 signal selection_toggled(app_id: String, selected: bool)
+signal status_changed
 signal image_load_requested(url: String, texture_rect: TextureRect)
 
 @onready var checkbox: CheckBox = $MarginContainer/HBoxContainer/CheckBox
@@ -85,6 +86,7 @@ func _on_main_button_pressed():
 func _on_checkbox_toggled(toggled_on: bool):
 	is_selected = toggled_on
 	emit_signal("selection_toggled", app_id, is_selected)
+	emit_signal("status_changed")
 
 func _on_focus_entered():
 	if audio_player and stream_focus:

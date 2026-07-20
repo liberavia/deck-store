@@ -143,19 +143,22 @@ func _execute_update_check_in_thread():
 
 	# 2. Remotes
 	var remotes_info = [] 
-	# Check User
-	var cmd_user = "LC_ALL=C flatpak remotes --user --columns=name"
-	var output_user = []
-	OS.execute(spawn_cmd, ["--host", "sh", "-c", cmd_user], output_user)
-	if output_user.size() > 0:
-		for line in output_user[0].strip_edges().split("\n"):
+	# Alle Remotes prüfen (system und user), um Flathub auch auf Bazzite/SteamOS zu finden
+	var cmd_remotes = "LC_ALL=C flatpak remotes --columns=name"
+	var output_remotes = []
+	OS.execute(spawn_cmd, ["--host", "sh", "-c", cmd_remotes], output_remotes)
+	if output_remotes.size() > 0:
+		for line in output_remotes[0].strip_edges().split("\n"):
 			line = line.strip_edges()
-			if not line.is_empty(): remotes_info.append(line)
+			if not line.is_empty() and not remotes_info.has(line): 
+				remotes_info.append(line)
 	
 	var accumulated_output = ""
 	
 	# 3. Query
 	for remote_name in remotes_info:
+		# Wir prüfen weiterhin primär auf User-Updates, da DeckStore --user Installationen bevorzugt.
+		# Falls eine App im System-Scope installiert ist, würde sie hier nicht auftauchen.
 		var host_cmd_list = "LC_ALL=C flatpak remote-ls --user %s --updates --app --columns=application,name,version,download-size" % [remote_name]
 		var output_updates = []
 		var exit_code = OS.execute(spawn_cmd, ["--host", "sh", "-c", host_cmd_list], output_updates, true) 
@@ -515,3 +518,17 @@ func _check_all_updates_finished():
 		print("UpdatesView: All batch updates finished.")
 		is_updating = false
 		_update_ui_state()
+
+func _unhandled_input(event):
+	if event.is_action_pressed("go_back"):
+		var focus_owner = get_viewport().gui_get_focus_owner()
+		if is_instance_valid(focus_owner):
+			# Check if focus is in list or on header buttons
+			if update_list_container.is_ancestor_of(focus_owner) or \
+			   focus_owner == select_all_button or \
+			   focus_owner == refresh_button or \
+			   focus_owner == sort_option_button or \
+			   focus_owner == update_selected_button:
+				
+				emit_signal("focus_exited_up_from_lists")
+				get_viewport().set_input_as_handled()

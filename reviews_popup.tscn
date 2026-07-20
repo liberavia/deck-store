@@ -1,24 +1,31 @@
-[gd_scene load_steps=4 format=3 uid="uid://xc8wsdn6vkae"]
+[gd_scene load_steps=5 format=3 uid="uid://xc8wsdn6vkae"]
 
 [ext_resource type="Script" uid="uid://bj1ar1e1crd6t" path="res://reviews_popup.gd" id="1_hsmpc"]
 [ext_resource type="PackedScene" uid="uid://ny0jkwl7xnql" path="res://review_item.tscn" id="2_hbqj0"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hbqj0"]
-bg_color = Color(0.054902, 0.0117647, 0.0941176, 0.992157)
+bg_color = Color(0, 0, 0, 0.784314)
 
-[node name="ReviewsPopup" type="Window"]
-transparent_bg = true
-title = "Reviews"
-initial_position = 1
-size = Vector2i(1100, 750)
-unresizable = true
-borderless = true
-transparent = true
-popup_window = true
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_close"]
+bg_color = Color(0.358893, 0, 0.00371533, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[node name="ReviewsPopup" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1_hsmpc")
 review_item_scene = ExtResource("2_hbqj0")
 
 [node name="Background" type="Panel" parent="."]
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -27,38 +34,68 @@ grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_hbqj0")
 
 [node name="MainMargin" type="MarginContainer" parent="."]
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 50
+theme_override_constants/margin_bottom = 100
 
-[node name="PopupVBox" type="VBoxContainer" parent="MainMargin"]
+[node name="Panel" type="Panel" parent="MainMargin"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hbqj0")
+
+[node name="ContentMargin" type="MarginContainer" parent="MainMargin/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="PopupVBox" type="VBoxContainer" parent="MainMargin/Panel/ContentMargin"]
 layout_mode = 2
 
-[node name="AppNameLabel" type="Label" parent="MainMargin/PopupVBox"]
+[node name="Header" type="HBoxContainer" parent="MainMargin/Panel/ContentMargin/PopupVBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
+
+[node name="AppNameLabel" type="Label" parent="MainMargin/Panel/ContentMargin/PopupVBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 24
 text = "My Application"
 horizontal_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="MainMargin/PopupVBox"]
+[node name="CloseButton" type="Button" parent="MainMargin/Panel/ContentMargin/PopupVBox/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_close")
+text = "X"
 
-[node name="StatusLabel" type="Label" parent="MainMargin/PopupVBox"]
+[node name="HSeparator" type="HSeparator" parent="MainMargin/Panel/ContentMargin/PopupVBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="StatusLabel" type="Label" parent="MainMargin/Panel/ContentMargin/PopupVBox"]
 visible = false
 layout_mode = 2
 horizontal_alignment = 1
 
-[node name="ReviewScroll" type="ScrollContainer" parent="MainMargin/PopupVBox"]
+[node name="ReviewScroll" type="ScrollContainer" parent="MainMargin/Panel/ContentMargin/PopupVBox"]
 layout_mode = 2
 size_flags_vertical = 3
+follow_focus = true
 
-[node name="ReviewListContainer" type="VBoxContainer" parent="MainMargin/PopupVBox/ReviewScroll"]
+[node name="ReviewListContainer" type="VBoxContainer" parent="MainMargin/Panel/ContentMargin/PopupVBox/ReviewScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 25

@@ -17,12 +17,23 @@ var default_scale: Vector2 = Vector2.ONE
 var scale_tween: Tween = null
 
 func _ready():
-	if panel: _original_panel_style = panel.get_theme_stylebox("panel")
-	else: printerr("Panel node not found in ProductBox!")
+	if panel: 
+		_original_panel_style = panel.get_theme_stylebox("panel")
+		# Ensure children don't block mouse events for the parent
+		panel.mouse_filter = Control.MOUSE_FILTER_PASS
+		for child in panel.get_children():
+			if child is Control:
+				child.mouse_filter = Control.MOUSE_FILTER_PASS
+	else: 
+		printerr("Panel node not found in ProductBox!")
 
 	self.focus_entered.connect(_on_focus_entered_visual)
 	self.focus_exited.connect(_on_focus_exited_visual)
 	self.focus_entered.connect(_on_focus_entered_sound)
+	self.mouse_entered.connect(_on_mouse_entered)
+	self.gui_input.connect(_on_gui_input)
+	
+	self.mouse_filter = Control.MOUSE_FILTER_STOP # Parent should catch everything
 	self.focus_mode = Control.FOCUS_ALL
 	
 	default_scale = self.scale
@@ -84,6 +95,16 @@ func _on_focus_exited_visual():
 
 	panel.remove_theme_stylebox_override("panel")
 	panel.add_theme_stylebox_override("panel", _original_panel_style)
+
+func _on_mouse_entered():
+	# Grab focus on hover for visual consistency with controller navigation
+	self.grab_focus()
+
+func _on_gui_input(event: InputEvent):
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		print("DEBUG ProductBox: Mouse click detected for AppID: ", app_id)
+		emit_signal("move_to_details_view", app_id, is_installed)
+		get_viewport().set_input_as_handled()
 
 func _on_focus_entered_sound():
 	if is_instance_valid(_focus_sound_player):

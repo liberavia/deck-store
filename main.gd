@@ -10,7 +10,11 @@ extends Control
 
 @onready var home_button: Button = $CanvasLayer/VBoxContainer/TopButtonBar/ButtonHome
 @onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/TopButtonBar
-@onready var global_scroll_container: ScrollContainer = $CanvasLayer/VBoxContainer/ContentScrollContainer
+@onready var l1_glyph: TextureRect = $CanvasLayer/VBoxContainer/TopButtonBar/L1Glyph
+@onready var r1_glyph: TextureRect = $CanvasLayer/VBoxContainer/TopButtonBar/R1Glyph
+# ContentScrollContainer was removed from main.tscn, keeping variable for fallback
+var global_scroll_container: ScrollContainer = null
+@onready var footer_bar: PanelContainer = $CanvasLayer/FooterBar
 @onready var select_sound: AudioStreamPlayer = $SelectSoundPlayer
 @onready var focus_sound: AudioStreamPlayer = $FocusSoundPlayer
 @onready var back_sound: AudioStreamPlayer = $BackSoundPlayer
@@ -32,6 +36,7 @@ var _sections: Array[Dictionary] = [
 var _current_section_index: int = 0
 var _is_switching_section: bool = false
 var _suppress_focus_sound: bool = false
+var _current_connected_item: Control = null
 
 # --- Cache-Constants ---
 const DECKSTORE_BASE_DIR_NAME = ".deck-store"
@@ -109,8 +114,10 @@ func _ready():
 			var instance = scene.instantiate()
 			_sections[i].instance = instance 
 			
-			if section_data.name == "Home" and "product_box_scene" in instance:
-				instance.product_box_scene = product_box
+			if section_data.name == "Home":
+				_current_home_view_instance = instance
+				if "product_box_scene" in instance:
+					instance.product_box_scene = product_box
 			
 			_connect_section_signals(instance)
 			
@@ -130,6 +137,7 @@ func _ready():
 	for btn_node in top_button_bar.get_children():
 		if btn_node is Button:
 			btn_node.focus_entered.connect(_on_top_bar_button_focus_entered)
+			btn_node.mouse_entered.connect(func(): btn_node.grab_focus())
 			
 	load_popular_products()
 	load_trending_products()
@@ -139,17 +147,197 @@ func _ready():
 	details_view.move_back_to_main_view.connect(_on_move_back_to_main_view)
 	details_view.image_load_requested.connect(_on_product_list_image_load_requested)
 
+	if l1_glyph: l1_glyph.pressed.connect(_apply_glyph_feedback.bind(-1))
+	if r1_glyph: r1_glyph.pressed.connect(_apply_glyph_feedback.bind(1))
+
+	get_viewport().gui_focus_changed.connect(_on_focus_changed)
+
 	_check_connected_controllers() 
 	print("-----------------------------------------")
 	_switch_to_section(0)
 	home_button.grab_focus()
+	_ensure_user_remote_exists()
 	_fetch_installed_apps()
+	_update_footer_prompts()
 	
 # =============================================================================
 # INPUT HANDLING (Nur _unhandled_input)
 # =============================================================================
 
+func _apply_glyph_feedback(is_pressed: bool, direction: int):
+	var target_index = _current_section_index + direction
+	if target_index < 0: target_index = _sections.size() - 1
+	if target_index >= _sections.size(): target_index = 0
+	
+	var button_name = _sections[target_index].button_node_name
+	var btn = top_button_bar.get_node_or_null(button_name) as Button
+	
+	if is_instance_valid(btn):
+		var target_mod = Color(1.5, 1.5, 1.5, 1.0) if is_pressed else Color(1, 1, 1, 1)
+		var target_scale = Vector2(1.05, 1.05) if is_pressed else Vector2(1.0, 1.0)
+		var tween = create_tween()
+		tween.set_parallel(true)
+		tween.tween_property(btn, "modulate", target_mod, 0.1)
+		tween.tween_property(btn, "scale", target_scale, 0.1)
+		btn.pivot_offset = btn.size / 2.0
+
+func _on_focus_changed(control: Control):
+	# Disconnect from previous item if any
+	if is_instance_valid(_current_connected_item):
+		if _current_connected_item.has_signal("status_changed"):
+			if _current_connected_item.status_changed.is_connected(_update_footer_prompts):
+				_current_connected_item.status_changed.disconnect(_update_footer_prompts)
+		if _current_connected_item is Button:
+			if _current_connected_item.pressed.is_connected(_update_footer_prompts):
+				_current_connected_item.pressed.disconnect(_update_footer_prompts)
+	
+	_current_connected_item = control
+	
+	# Connect to new item signals
+	if is_instance_valid(_current_connected_item):
+		if _current_connected_item.has_signal("status_changed"):
+			_current_connected_item.status_changed.connect(_update_footer_prompts)
+		
+		if _current_connected_item is Button:
+			_current_connected_item.pressed.connect(_update_footer_prompts)
+
+	_update_footer_prompts()
+
+func _update_footer_prompts():
+	if not is_instance_valid(footer_bar): return
+	
+	# Small delay to allow UI state to update (e.g. Button text changes after press)
+	await get_tree().process_frame
+	
+	var actions = []
+	var focus_owner = get_viewport().gui_get_focus_owner()
+	
+	if is_instance_valid(details_view) and details_view.visible:
+		actions = [{"button": "B", "label": "Back"}]
+		if is_instance_valid(focus_owner) and details_view.is_ancestor_of(focus_owner):
+			if focus_owner == details_view.action_button:
+				actions.append({"button": "A", "label": focus_owner.text})
+			elif focus_owner == details_view.add_to_steam_button:
+				actions.append({"button": "A", "label": "Add to Steam"})
+			elif details_view.screenshot_container.is_ancestor_of(focus_owner):
+				actions.append({"button": "A", "label": "Zoom Screenshot"})
+				if details_view.screenshot_container.get_child_count() > 1:
+					actions.append({"button": "L2 / R2", "label": "Switch Screenshot"})
+			elif focus_owner == details_view.show_reviews_button:
+				actions.append({"button": "A", "label": "Show Reviews"})
+			else:
+				actions.append({"button": "A", "label": "Select"})
+		else:
+			actions.append({"button": "A", "label": "Select"})
+	elif is_instance_valid(focus_owner):
+		if top_button_bar.is_ancestor_of(focus_owner):
+			actions = [
+				{"button": "A", "label": "Select"},
+				{"button": "L1 / R1", "label": "Switch Tab"}
+			]
+			if _current_section_index != 0:
+				actions.append({"button": "B", "label": "Go Home"})
+		else:
+			# Get section-specific custom actions for A button
+			var custom_a = _get_custom_a_action(focus_owner)
+			actions.append(custom_a)
+			
+			actions.append({"button": "B", "label": "Back to Top"})
+			actions.append({"button": "L1 / R1", "label": "Switch Tab"})
+			
+			# Add pagination prompts if applicable
+			var pagination_prompts = _get_pagination_prompts(focus_owner)
+			actions.append_array(pagination_prompts)
+	
+	footer_bar.set_actions(actions)
+
+func _get_custom_a_action(focus_owner: Control) -> Dictionary:
+	var section_name = _sections[_current_section_index].name
+	
+	# Detect specialized items by script path or class
+	var script_path = ""
+	if focus_owner.get_script() != null:
+		script_path = focus_owner.get_script().get_path()
+		
+	var is_product_box = (focus_owner is ProductBox)
+	var is_installed_item = script_path.contains("installed_app_item.gd")
+	var is_update_item = script_path.contains("update_item.gd")
+	var is_extension_item = focus_owner.name.contains("ExtensionItem") or (focus_owner.get_parent() and focus_owner.get_parent().name.contains("ExtensionItem"))
+
+	if is_product_box or is_installed_item:
+		return {"button": "A", "label": "App Details"}
+	
+	if is_update_item:
+		if "is_selected" in focus_owner:
+			return {"button": "A", "label": "Unselect App" if focus_owner.is_selected else "Select App"}
+		return {"button": "A", "label": "Select/Unselect"}
+
+	var action = {"button": "A", "label": "Open"}
+	match section_name:
+		"Home", "Categories", "Search":
+			if focus_owner is LineEdit:
+				action["label"] = "Start Typing"
+			elif focus_owner is Button and "SearchButton" in focus_owner.name:
+				action["label"] = "Start Search"
+			elif focus_owner is Button and not focus_owner.text.is_empty():
+				action["label"] = focus_owner.text
+		
+		"Updates":
+			if focus_owner is Button and not focus_owner.text.is_empty():
+				action["label"] = focus_owner.text
+		
+		"Extensions":
+			if is_extension_item:
+				action["label"] = "Manage Extension"
+			elif focus_owner is Button and not focus_owner.text.is_empty():
+				action["label"] = focus_owner.text
+		
+		"Installed":
+			if focus_owner is Button and not focus_owner.text.is_empty():
+				action["label"] = focus_owner.text
+
+	return action
+
+func _get_pagination_prompts(focus_owner: Control) -> Array:
+	var prompts = []
+	var pl: ProductList = null
+	
+	# Find ProductList in ancestors
+	var current_node = focus_owner
+	while is_instance_valid(current_node):
+		if current_node is ProductList:
+			pl = current_node
+			break
+		current_node = current_node.get_parent()
+	
+	if is_instance_valid(pl) and pl.total_pages > 1:
+		if pl.current_page > 1:
+			prompts.append({"button": "L2", "label": "Prev Page"})
+		if pl.current_page < pl.total_pages:
+			prompts.append({"button": "R2", "label": "Next Page"})
+			
+	return prompts
+
+func _input(event: InputEvent):
+	# Globally block Joypad inputs if current section is typing
+	# This prevents background focus navigation while using virtual keyboard
+	var current_section_node = _sections[_current_section_index].instance
+	if is_instance_valid(current_section_node) and current_section_node.has_method("is_typing") and current_section_node.is_typing():
+		# Allow exit (B) and confirm (A) actions to pass through to the section
+		if event.is_action("ui_cancel") or event.is_action("ui_accept"):
+			return
+
+		if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+			get_viewport().set_input_as_handled()
+			return
+
 func _unhandled_input(event: InputEvent):
+	# Block global section switching if details view is open
+	if is_instance_valid(details_view) and details_view.visible:
+		if event.is_action_pressed("section_next") or event.is_action_pressed("section_previous"):
+			get_viewport().set_input_as_handled()
+			return
+
 	var new_section_index = _current_section_index
 	var switched = false
 	if event.is_action_pressed("section_next"): # R1 / RB
@@ -173,6 +361,12 @@ func _unhandled_input(event: InputEvent):
 	if not is_instance_valid(focused_control): return
 
 	if top_button_bar.is_ancestor_of(focused_control):
+		if event.is_action_pressed("go_back"):
+			if _current_section_index != 0:
+				_on_top_bar_button_pressed(0)
+				get_viewport().set_input_as_handled()
+				return
+
 		var action_string = ""
 		if event.is_action_pressed("ui_down"): action_string = "ui_down"
 		elif event.is_action_pressed("ui_left"): action_string = "ui_left" # Für Navigation innerhalb der Buttons
@@ -189,6 +383,9 @@ func _unhandled_input(event: InputEvent):
 # HELPER FUNCTIONS
 # =============================================================================
 func _on_top_bar_button_focus_entered():
+	var focus_owner = get_viewport().gui_get_focus_owner()
+	print("Main DEBUG: Top Bar Button Focus Entered: ", focus_owner.name if is_instance_valid(focus_owner) else "unknown")
+	
 	if _suppress_focus_sound:
 		return
 
@@ -313,9 +510,12 @@ func _on_product_list_image_load_requested(url: String, texture_rect: TextureRec
 
 		
 func _on_product_list_focus_exited_up():
-	if is_instance_valid(home_button):
-		print("Main: Received focus_exited_up, focusing Home button.") # Debug
-		home_button.grab_focus()
+	var current_section = _sections[_current_section_index]
+	var button_node = top_button_bar.get_node_or_null(current_section.button_node_name) as Button
+	
+	if is_instance_valid(button_node):
+		print("Main: Received focus_exited_up, focusing current section button: ", button_node.name)
+		button_node.grab_focus()
 
 		if is_instance_valid(_current_home_view_instance) and \
 			_current_home_view_instance.name == "HomeView" and \
@@ -656,6 +856,36 @@ func _on_joy_connection_changed(device_id: int, connected: bool):
 	else: print("CONTROLLER DISCONNECTED:\n  Device ID: ", device_id)
 	print("-----------------------------------------")
 
+func _ensure_user_remote_exists():
+	var spawn_cmd = "/usr/bin/flatpak-spawn"
+	if not FileAccess.file_exists(spawn_cmd):
+		return
+
+	# Prüfe ob flathub als user-remote existiert
+	var check_cmd = "flatpak remotes --user --columns=name"
+	var check_args = ["--host", "sh", "-c", "LC_ALL=C " + check_cmd]
+	var check_output = []
+	var exit_code = OS.execute(spawn_cmd, check_args, check_output)
+	
+	var flathub_exists = false
+	if exit_code == 0 and check_output.size() > 0:
+		for line in check_output[0].split("\n"):
+			if line.strip_edges() == "flathub":
+				flathub_exists = true
+				break
+	
+	if not flathub_exists:
+		print("INFO: Flathub user-remote missing. Attempting to add it...")
+		var add_cmd = "flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
+		var add_args = ["--host", "sh", "-c", "LC_ALL=C " + add_cmd]
+		var add_exit = OS.execute(spawn_cmd, add_args, [])
+		if add_exit == 0:
+			print("INFO: Successfully added flathub user-remote.")
+		else:
+			printerr("ERROR: Failed to add flathub user-remote. Exit code: ", add_exit)
+	else:
+		print("INFO: Flathub user-remote already exists.")
+
 # =============================================================================
 # INSTALLED APP HANDLING
 # =============================================================================
@@ -845,6 +1075,7 @@ func _switch_to_section(target_index: int):
 	
 # Called when a button in the top bar is pressed
 func _on_top_bar_button_pressed(target_index: int):
+	print("Main DEBUG: Top Bar Button Pressed for index: ", target_index, " (", _sections[target_index].name, ")")
 	if is_instance_valid(switch_sound) and _is_switching_section == false:
 		switch_sound.play()
 	_switch_to_section(target_index)

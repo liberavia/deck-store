@@ -34,7 +34,15 @@ var current_app_name: String = ""
 var current_icon_url: String = ""
 var is_known_to_be_in_steam: bool = true
 var steam_check_pending: bool = false
-var screenshot_zoom_popup_instance: Window = null
+var screenshot_zoom_popup_instance = null
+var reviews_popup_instance: Control = null
+
+func is_any_modal_open() -> bool:
+	if is_instance_valid(screenshot_zoom_popup_instance) and screenshot_zoom_popup_instance.visible:
+		return true
+	if is_instance_valid(reviews_popup_instance) and reviews_popup_instance.visible:
+		return true
+	return false
 var current_detailed_reviews: Array = []
 var detailed_reviews_request: HTTPRequest = null
 var _deckstore_abs_base_path: String = ""
@@ -94,7 +102,14 @@ func _ready():
 		main_app_node.installed_apps_updated.connect(_on_installed_apps_refreshed)
 		
 	if is_instance_valid(show_reviews_button):
-		show_reviews_button.pressed.connect(_on_show_reviews_button_pressed)		
+		show_reviews_button.pressed.connect(_on_show_reviews_button_pressed)
+		show_reviews_button.mouse_entered.connect(func(): show_reviews_button.grab_focus())
+
+	if is_instance_valid(action_button):
+		action_button.mouse_entered.connect(func(): action_button.grab_focus())
+		
+	if is_instance_valid(add_to_steam_button):
+		add_to_steam_button.mouse_entered.connect(func(): add_to_steam_button.grab_focus())
 
 func _on_installed_apps_refreshed():
 	print("DEBUG DetailsView: Installed apps refreshed signal received, updating button visibility for ", current_app_id)
@@ -111,7 +126,7 @@ func _unhandled_input(event: InputEvent):
 	if not self.visible:
 		return
 
-	if is_instance_valid(screenshot_zoom_popup_instance) and screenshot_zoom_popup_instance.visible:
+	if is_any_modal_open():
 		return
 		
 	if event.is_action_pressed("ui_cancel"):
@@ -123,12 +138,10 @@ func _unhandled_input(event: InputEvent):
 	if event.is_action_pressed("ui_accept"):
 		var focused_control = get_viewport().gui_get_focus_owner()
 		if focused_control.is_in_group("zoomable_screenshots"):
-			var texture_rect_node = focused_control.get_node_or_null("MarginContainer/Panel/MarginContainer/Screenshot") as TextureRect
-			var texture_to_zoom = texture_rect_node.texture # Direkter Zugriff auf die Textur
-			if texture_to_zoom:
-				_open_screenshot_zoom_popup(texture_to_zoom)
-				get_viewport().set_input_as_handled()
-				return
+			var idx = focused_control.get_index()
+			_open_screenshot_zoom_popup(idx)
+			get_viewport().set_input_as_handled()
+			return
 
 # =============================================================================
 # PUBLIC METHODS (called from main.gd or elsewhere)
@@ -298,7 +311,7 @@ func _display_details(product: Dictionary):
 		return
 
 	# navbar
-	app_title.text = product.get("name", "N/A")
+	app_title.text = product.get("name") if product.get("name") != null else "N/A"
 	var icon_url = product.get("icon")
 	if icon_url and not icon_url.is_empty():
 		emit_signal("image_load_requested", icon_url, app_icon)
@@ -352,7 +365,7 @@ func _display_details(product: Dictionary):
 	if releases is Array and not releases.is_empty():
 		var latest_release = releases[0]
 		if latest_release is Dictionary:
-			app_current_version.text = latest_release.get("version", "N/A")
+			app_current_version.text = latest_release.get("version") if latest_release.get("version") != null else "N/A"
 			var timestamp_str = str(latest_release.get("timestamp", ""))
 			if not timestamp_str.is_empty() and timestamp_str.is_valid_int():
 				var timestamp_int = int(timestamp_str)
@@ -370,8 +383,8 @@ func _display_details(product: Dictionary):
 		app_current_version.text = "N/A"
 		app_release_date.text = "N/A"
 		
-	current_app_name = product.get("name", "N/A")
-	app_developer.text = product.get("developer_name", "N/A")
+	current_app_name = product.get("name") if product.get("name") != null else "N/A"
+	app_developer.text = product.get("developer_name") if product.get("developer_name") != null else "N/A"
 	
 	var safe_icon_url = icon_url if icon_url != null else ""
 
@@ -446,23 +459,28 @@ func _clear_rating_ui():
 		show_reviews_button.visible = false
 		show_reviews_button.disabled = true
 
-func _open_screenshot_zoom_popup(texture_to_zoom: Texture2D):
+func _open_screenshot_zoom_popup(start_index: int):
 	if not screenshot_zoom_popup_scene:
 		printerr("DetailsView: ScreenshotZoomPopup scene not preloaded!")
 		return
+
+	var textures: Array[Texture2D] = []
+	for child in screenshot_container.get_children():
+		var tex_rect = child.get_node_or_null("MarginContainer/Panel/MarginContainer/Screenshot") as TextureRect
+		if tex_rect and tex_rect.texture:
+			textures.append(tex_rect.texture)
+
+	if textures.is_empty(): return
 
 	if not is_instance_valid(screenshot_zoom_popup_instance):
 		screenshot_zoom_popup_instance = screenshot_zoom_popup_scene.instantiate()
 		add_child(screenshot_zoom_popup_instance) 
 	
-	if screenshot_zoom_popup_instance.has_method("popup_zoomed_image"):
+	if screenshot_zoom_popup_instance.has_method("popup_zoomed_image_list"):
 		var focused_element_before_popup = get_viewport().gui_get_focus_owner()
-		screenshot_zoom_popup_instance.popup_zoomed_image(texture_to_zoom, focused_element_before_popup)
+		screenshot_zoom_popup_instance.popup_zoomed_image_list(textures, start_index, focused_element_before_popup)
 	else:
-		printerr("DetailsView: ScreenshotZoomPopup instance does not have 'popup_zoomed_image' method.")
-		if is_instance_valid(screenshot_zoom_popup_instance): 
-			screenshot_zoom_popup_instance.queue_free()
-			screenshot_zoom_popup_instance = null
+		printerr("DetailsView: ScreenshotZoomPopup instance does not have 'popup_zoomed_image_list' method.")
 
 # --- Set initial focus when view becomes active ---
 func set_initial_focus():
@@ -561,15 +579,23 @@ func _on_task_updated_for_progress(operation_id: String, status_data: Dictionary
 					_stop_pulse()
 			if progress_label:
 				var label_text = ""
+				var current_idx = status_data.get("current_idx", -1)
+				var total_idx = status_data.get("total_idx", -1)
+				var step_info = ""
+				if current_idx != -1 and total_idx != -1:
+					step_info = " (Step %d/%d)" % [current_idx, total_idx]
+
 				match status:
 					"downloading": 
 						label_text = "Downloading (%d%%)" % progress if progress != null else "Downloading..."
+						label_text += step_info
 						var speed = status_data.get("speed", null)
 						var eta = status_data.get("eta", null)
 						if speed: label_text += " [%s]" % speed
 						if eta: label_text += " (%s)" % eta
-					"installing": label_text = "Installing..."
-					_: label_text = "Status: %s" % status
+					"installing": 
+						label_text = "Installing..." + step_info
+					_: label_text = "Status: %s" % status + step_info
 				progress_label.text = label_text
 		else:
 			_stop_pulse()
@@ -795,37 +821,26 @@ func _on_detailed_reviews_request_completed(result, response_code, headers, body
 
 func _show_reviews_popup(reviews_array: Array, has_error: bool = false):
 	print("DEBUG Called _show_reviews_popup")
-	var popup_node_name = "ReviewsPopupInstance" 
-	var popup_instance = get_node_or_null(popup_node_name)
-
-	if not is_instance_valid(popup_instance):
+	
+	if not is_instance_valid(reviews_popup_instance):
 		print("DEBUG Instance not yet valid. Create instance...")
 		if not reviews_popup_scene:
 			printerr("DetailsView: reviews_popup_scene not loaded!")
 			return
-		popup_instance = reviews_popup_scene.instantiate()
-		popup_instance.name = popup_node_name
+		reviews_popup_instance = reviews_popup_scene.instantiate()
+		add_child(reviews_popup_instance)
 		
-		get_tree().root.add_child(popup_instance) 
-		popup_instance.connect("close_requested", Callable(popup_instance,"queue_free"), CONNECT_ONE_SHOT)
-		if popup_instance.has_method("connect_signals"):
-			popup_instance.connect_signals()
 		show_reviews_button.disabled = false
 		show_reviews_button.text = DEFAULT_REVIEWS_BUTTON_CAPTION
 
-	if not is_instance_valid(popup_instance):
-		printerr("DetailsView: KCoudl not instantiate Review-Popup.")
+	if not is_instance_valid(reviews_popup_instance):
+		printerr("DetailsView: Could not instantiate Review-Popup.")
 		return
 	
-	if popup_instance.has_method("display_reviews"):
-		var app_display_name = current_app_name
-		popup_instance.display_reviews(reviews_array, app_display_name, has_error)
+	if reviews_popup_instance.has_method("display_reviews"):
+		reviews_popup_instance.display_reviews(reviews_array, current_app_name, has_error)
+	
+	if reviews_popup_instance.has_method("show_modal"):
+		reviews_popup_instance.show_modal()
 	else:
-		printerr("DetailsView: 'reviews_popup.tscn' hat keine Methode 'display_reviews(reviews_array, app_name, has_error)'.")
-
-	if popup_instance is Window:
-		popup_instance.popup_centered()
-	elif popup_instance.has_method("show_modal"):
-		popup_instance.show_modal()
-	elif popup_instance.has_method("show"):
-		popup_instance.show()
+		reviews_popup_instance.visible = true

@@ -1,0 +1,9 @@
+<svg width="60" height="30" viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg">
+  <rect x="2" y="2" width="56" height="26" rx="10" fill="#444" stroke="white" stroke-width="2"/>
+  <g transform="translate(17, 7)">
+    <!-- L -->
+    <path d="M0,0 L0,16 L10,16" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- B (Centered) -->
+    <path d="M16,0 L16,16 M16,0 L24,0 C28,0 29,2 29,4 C29,6 28,8 24,8 L16,8 M16,8 L24,8 C28,8 29,10 29,12 C29,14 28,16 24,16 L16,16" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
