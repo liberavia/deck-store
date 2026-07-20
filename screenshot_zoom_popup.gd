@@ -5,8 +5,9 @@ extends Control
 @onready var background_panel: Panel = $Background 
 @onready var l2_container: Control = %L2Container
 @onready var r2_container: Control = %R2Container
-@onready var layout: HBoxContainer = $Margin/Layout
+@onready var layout: HBoxContainer = %Layout # Using % since it's unique now
 @onready var animation_container: Control = %AnimationContainer
+@onready var close_button: Button = %CloseButton
 
 var original_focused_element: Control = null
 var active_tween: Tween = null
@@ -19,6 +20,16 @@ var _is_animating: bool = false
 
 func _ready():
 	self.visible = false
+	if is_instance_valid(background_panel):
+		background_panel.gui_input.connect(_on_background_gui_input)
+	if is_instance_valid(close_button):
+		close_button.pressed.connect(animate_and_hide)
+		close_button.mouse_entered.connect(func(): close_button.grab_focus())
+
+func _on_background_gui_input(event: InputEvent):
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		animate_and_hide()
+		get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent):
 	if not visible or _is_hiding: return
@@ -29,15 +40,15 @@ func _unhandled_input(event: InputEvent):
 		return
 		
 	if _textures.size() > 1 and not _is_animating:
-		if event.is_action_pressed("previous_tab"): # L2
+		if event.is_action_pressed("ui_page_up"): # L2
 			_switch_screenshot(-1)
 			get_viewport().set_input_as_handled()
-		elif event.is_action_pressed("next_tab"): # R2
+		elif event.is_action_pressed("ui_page_down"): # R2
 			_switch_screenshot(1)
 			get_viewport().set_input_as_handled()
 	elif _textures.size() <= 1:
 		# Consume tab actions even if only one screenshot, to prevent background navigation
-		if event.is_action_pressed("previous_tab") or event.is_action_pressed("next_tab"):
+		if event.is_action_pressed("ui_page_up") or event.is_action_pressed("ui_page_down"):
 			get_viewport().set_input_as_handled()
 
 func _switch_screenshot(direction: int):

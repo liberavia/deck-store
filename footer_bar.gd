@@ -28,10 +28,12 @@ func _create_action_item(button_str: String, label_text: String) -> HBoxContaine
 	var hbox = HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 10)
 	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE # Don't block
 	
 	# Add spacing before item
 	var spacer = Control.new()
 	spacer.custom_minimum_size = Vector2(20, 0)
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(spacer)
 	
 	# Split by "/" for multiple buttons
@@ -40,32 +42,31 @@ func _create_action_item(button_str: String, label_text: String) -> HBoxContaine
 	for i in range(button_names.size()):
 		var b_name = button_names[i].strip_edges()
 		
-		# Button Icon (SVG)
-		var glyph_rect = TextureRect.new()
-		glyph_rect.name = "Glyph_" + b_name
-		glyph_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		glyph_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		# Instantiate our interactive GlyphDisplay
+		var glyph_scene = load("res://glyph_display.tscn")
+		var glyph_instance = glyph_scene.instantiate()
+		glyph_instance.name = "Glyph_" + b_name
+		glyph_instance.action_name = b_name
 		
 		# Determine size based on button type
 		if b_name.length() > 1:
-			glyph_rect.custom_minimum_size = Vector2(50, 25)
+			glyph_instance.custom_minimum_size = Vector2(50, 25)
 		else:
-			glyph_rect.custom_minimum_size = Vector2(30, 30)
+			glyph_instance.custom_minimum_size = Vector2(30, 30)
 		
-		var glyph_path = ControllerManager.get_glyph_path(b_name)
-		glyph_rect.texture = load(glyph_path)
-		
-		hbox.add_child(glyph_rect)
+		hbox.add_child(glyph_instance)
 		
 		# Add "/" separator label if not the last one
 		if i < button_names.size() - 1:
 			var sep = Label.new()
 			sep.text = "/"
+			sep.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			hbox.add_child(sep)
 	
 	# Action Label
 	var action_label = Label.new()
 	action_label.text = label_text
+	action_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	action_label.add_theme_font_size_override("font_size", 18)
 	hbox.add_child(action_label)
 	
@@ -94,12 +95,5 @@ func _apply_feedback(btn_name: String, pressed: bool):
 		if not hbox is HBoxContainer: continue
 		
 		for child in hbox.get_children():
-			if child is TextureRect and child.name == "Glyph_" + btn_name:
-				var target_scale = Vector2(1.2, 1.2) if pressed else Vector2(1.0, 1.0)
-				var target_mod = Color(1.5, 1.5, 1.5, 1.0) if pressed else Color(1, 1, 1, 1)
-				
-				var tween = create_tween()
-				tween.set_parallel(true)
-				tween.tween_property(child, "scale", target_scale, 0.1)
-				tween.tween_property(child, "modulate", target_mod, 0.1)
-				child.pivot_offset = child.custom_minimum_size / 2.0
+			if child.name == "Glyph_" + btn_name and child.has_method("apply_feedback"):
+				child.apply_feedback(pressed)

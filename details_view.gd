@@ -35,6 +35,14 @@ var current_icon_url: String = ""
 var is_known_to_be_in_steam: bool = true
 var steam_check_pending: bool = false
 var screenshot_zoom_popup_instance = null
+var reviews_popup_instance: Control = null
+
+func is_any_modal_open() -> bool:
+	if is_instance_valid(screenshot_zoom_popup_instance) and screenshot_zoom_popup_instance.visible:
+		return true
+	if is_instance_valid(reviews_popup_instance) and reviews_popup_instance.visible:
+		return true
+	return false
 var current_detailed_reviews: Array = []
 var detailed_reviews_request: HTTPRequest = null
 var _deckstore_abs_base_path: String = ""
@@ -118,7 +126,7 @@ func _unhandled_input(event: InputEvent):
 	if not self.visible:
 		return
 
-	if is_instance_valid(screenshot_zoom_popup_instance) and screenshot_zoom_popup_instance.visible:
+	if is_any_modal_open():
 		return
 		
 	if event.is_action_pressed("ui_cancel"):
@@ -813,37 +821,26 @@ func _on_detailed_reviews_request_completed(result, response_code, headers, body
 
 func _show_reviews_popup(reviews_array: Array, has_error: bool = false):
 	print("DEBUG Called _show_reviews_popup")
-	var popup_node_name = "ReviewsPopupInstance" 
-	var popup_instance = get_node_or_null(popup_node_name)
-
-	if not is_instance_valid(popup_instance):
+	
+	if not is_instance_valid(reviews_popup_instance):
 		print("DEBUG Instance not yet valid. Create instance...")
 		if not reviews_popup_scene:
 			printerr("DetailsView: reviews_popup_scene not loaded!")
 			return
-		popup_instance = reviews_popup_scene.instantiate()
-		popup_instance.name = popup_node_name
+		reviews_popup_instance = reviews_popup_scene.instantiate()
+		add_child(reviews_popup_instance)
 		
-		get_tree().root.add_child(popup_instance) 
-		popup_instance.connect("close_requested", Callable(popup_instance,"queue_free"), CONNECT_ONE_SHOT)
-		if popup_instance.has_method("connect_signals"):
-			popup_instance.connect_signals()
 		show_reviews_button.disabled = false
 		show_reviews_button.text = DEFAULT_REVIEWS_BUTTON_CAPTION
 
-	if not is_instance_valid(popup_instance):
-		printerr("DetailsView: KCoudl not instantiate Review-Popup.")
+	if not is_instance_valid(reviews_popup_instance):
+		printerr("DetailsView: Could not instantiate Review-Popup.")
 		return
 	
-	if popup_instance.has_method("display_reviews"):
-		var app_display_name = current_app_name
-		popup_instance.display_reviews(reviews_array, app_display_name, has_error)
+	if reviews_popup_instance.has_method("display_reviews"):
+		reviews_popup_instance.display_reviews(reviews_array, current_app_name, has_error)
+	
+	if reviews_popup_instance.has_method("show_modal"):
+		reviews_popup_instance.show_modal()
 	else:
-		printerr("DetailsView: 'reviews_popup.tscn' hat keine Methode 'display_reviews(reviews_array, app_name, has_error)'.")
-
-	if popup_instance is Window:
-		popup_instance.popup_centered()
-	elif popup_instance.has_method("show_modal"):
-		popup_instance.show_modal()
-	elif popup_instance.has_method("show"):
-		popup_instance.show()
+		reviews_popup_instance.visible = true

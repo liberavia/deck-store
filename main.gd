@@ -12,7 +12,8 @@ extends Control
 @onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/TopButtonBar
 @onready var l1_glyph: TextureRect = $CanvasLayer/VBoxContainer/TopButtonBar/L1Glyph
 @onready var r1_glyph: TextureRect = $CanvasLayer/VBoxContainer/TopButtonBar/R1Glyph
-@onready var global_scroll_container: ScrollContainer = $CanvasLayer/VBoxContainer/ContentScrollContainer
+# ContentScrollContainer was removed from main.tscn, keeping variable for fallback
+var global_scroll_container: ScrollContainer = null
 @onready var footer_bar: PanelContainer = $CanvasLayer/FooterBar
 @onready var select_sound: AudioStreamPlayer = $SelectSoundPlayer
 @onready var focus_sound: AudioStreamPlayer = $FocusSoundPlayer
@@ -253,16 +254,17 @@ func _update_footer_prompts():
 func _get_custom_a_action(focus_owner: Control) -> Dictionary:
 	var section_name = _sections[_current_section_index].name
 	
-	# Detect specialized items by script path or name
+	# Detect specialized items by script path or class
 	var script_path = ""
 	if focus_owner.get_script() != null:
 		script_path = focus_owner.get_script().get_path()
 		
+	var is_product_box = (focus_owner is ProductBox)
 	var is_installed_item = script_path.contains("installed_app_item.gd")
 	var is_update_item = script_path.contains("update_item.gd")
 	var is_extension_item = focus_owner.name.contains("ExtensionItem") or (focus_owner.get_parent() and focus_owner.get_parent().name.contains("ExtensionItem"))
 
-	if is_installed_item:
+	if is_product_box or is_installed_item:
 		return {"button": "A", "label": "App Details"}
 	
 	if is_update_item:
@@ -273,9 +275,7 @@ func _get_custom_a_action(focus_owner: Control) -> Dictionary:
 	var action = {"button": "A", "label": "Open"}
 	match section_name:
 		"Home", "Categories", "Search":
-			if focus_owner.name == "ProductBox" or focus_owner.get_parent() is ProductBox or (focus_owner.get_parent().has_method("get_parent") and focus_owner.get_parent().get_parent() is ProductBox):
-				action["label"] = "App Details"
-			elif focus_owner is LineEdit:
+			if focus_owner is LineEdit:
 				action["label"] = "Start Typing"
 			elif focus_owner is Button and "SearchButton" in focus_owner.name:
 				action["label"] = "Start Search"
