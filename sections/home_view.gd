@@ -97,10 +97,6 @@ func focus_first_product_in_popular_list():
 # Placeholder for any specific logic this view might need when it becomes active
 func on_view_entered():
 	print("HomeView entered")
-	if is_instance_valid(popular_product_list) and popular_product_list.get_child_count() > 0:
-		var current_focus = get_viewport().gui_get_focus_owner()
-		if not is_instance_valid(current_focus) or not self.is_ancestor_of(current_focus):
-			popular_product_list.focus_first_product()
 
 # Placeholder for any specific logic this view might need when it's about to be hidden
 func on_view_exiting():

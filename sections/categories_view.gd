@@ -206,7 +206,7 @@ func _populate_category_list(categories: Array):
 	if _first_load and category_button_container.get_child_count() > 0:
 		var first_btn = category_button_container.get_child(0)
 		first_btn.set_pressed_no_signal(true)
-		_on_category_button_pressed(categories[0]) # Manually trigger load
+		_on_category_button_pressed(categories[0], false) # Manually trigger load without sound
 		_first_load = false
 
 func _on_button_focus_entered():
@@ -219,9 +219,9 @@ func _on_category_button_gui_input(event: InputEvent):
 			product_list.focus_first_product()
 			get_viewport().set_input_as_handled()
 
-func _on_category_button_pressed(category_id: String):
+func _on_category_button_pressed(category_id: String, play_sound: bool = true):
 	print("Selected Category ID: ", category_id)
-	if _select_sound_player:
+	if play_sound and _select_sound_player:
 		_select_sound_player.play()
 	
 	if product_list:
@@ -253,8 +253,7 @@ func focus_default_element():
 		back_button.grab_focus()
 
 func on_view_entered():
-	# Called when tab is switched to this view
-	focus_default_element()
+	pass
 
 func _unhandled_input(event: InputEvent):
 	if event.is_action_pressed("go_back"):
