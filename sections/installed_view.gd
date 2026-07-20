@@ -153,11 +153,6 @@ func on_view_entered():
 	else:
 		print("InstalledView: Skipping auto-refresh (Cooldown active or disabled).")
 
-	# Focus first element if nothing focused
-	var focus_owner = get_viewport().gui_get_focus_owner()
-	if not is_instance_valid(focus_owner) or not is_ancestor_of(focus_owner):
-		focus_first_element()
-
 func update_internal_list_install_status(installed_apps: Dictionary):
 	_refresh_pending = false
 	# Hide overlay when data arrives

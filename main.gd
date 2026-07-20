@@ -155,11 +155,26 @@ func _ready():
 	_check_connected_controllers() 
 	print("-----------------------------------------")
 	_switch_to_section(0)
-	home_button.grab_focus()
+	
+	# Clear focus initially so no sound plays and no interaction is possible
+	var current_focus = get_viewport().gui_get_focus_owner()
+	if current_focus:
+		current_focus.release_focus()
+		
 	_ensure_user_remote_exists()
 	_fetch_installed_apps()
 	_update_footer_prompts()
 	
+	# Start transition to reveal UI smoothly
+	if GlobalBackgroundShader.has_method("transition_to_background"):
+		GlobalBackgroundShader.transition_to_background()
+		await GlobalBackgroundShader.transition_finished
+		
+	# Now that the transition is done, give focus to the home button silently
+	_suppress_focus_sound = true
+	home_button.grab_focus()
+	await get_tree().process_frame
+	_suppress_focus_sound = false
 # =============================================================================
 # INPUT HANDLING (Nur _unhandled_input)
 # =============================================================================
@@ -386,7 +401,7 @@ func _on_top_bar_button_focus_entered():
 	var focus_owner = get_viewport().gui_get_focus_owner()
 	print("Main DEBUG: Top Bar Button Focus Entered: ", focus_owner.name if is_instance_valid(focus_owner) else "unknown")
 	
-	if _suppress_focus_sound:
+	if _suppress_focus_sound or _is_switching_section:
 		return
 
 	if is_instance_valid(focus_sound):
@@ -1070,7 +1085,7 @@ func _switch_to_section(target_index: int):
 	
 	# Update the top bar focus and re-enable switching after animation
 	await tween.finished
-	_update_top_bar_button_focus()
+	await _update_top_bar_button_focus()
 	_is_switching_section = false
 	
 # Called when a button in the top bar is pressed
@@ -1102,6 +1117,8 @@ func _connect_section_signals(view_node: Control):
 
 # Helper to update focus and style on top bar buttons
 func _update_top_bar_button_focus():
+	_suppress_focus_sound = true
+	
 	for i in range(_sections.size()):
 		var button_name = _sections[i].button_node_name
 		var button_node = top_button_bar.get_node_or_null(button_name) as Button
@@ -1110,15 +1127,13 @@ func _update_top_bar_button_focus():
 			continue
 
 		if i == _current_section_index:
-			# Suppress the sound *before* grabbing focus
-			_suppress_focus_sound = true
 			button_node.grab_focus()
 			button_node.set_pressed_no_signal(true)
-
-			await get_tree().process_frame
-			_suppress_focus_sound = false
 		else:
 			button_node.set_pressed_no_signal(false)
+			
+	await get_tree().process_frame
+	_suppress_focus_sound = false
 			
 func refresh_installed_apps_list():
 	print("INFO Main: Refreshing installed apps list due to recent install/uninstall.")

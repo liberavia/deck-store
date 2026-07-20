@@ -312,7 +312,7 @@ func focus_default_element():
 		search_input.grab_focus()
 
 func on_view_entered():
-	focus_default_element()
+	pass
 
 func on_view_exiting():
 	_set_typing_active(false)

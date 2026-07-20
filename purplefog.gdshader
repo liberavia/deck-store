@@ -58,6 +58,7 @@ void fragment() {
 
     // Additiver Nebel über dem dunklen Hintergrund des ColorRect
     // Multipliziere mit brightness, um die Gesamtintensität zu steuern.
+    float original_alpha = COLOR.a;
     COLOR = COLOR + fog_color * final_noise * brightness;
-    COLOR.a = 1.0; // Stelle sicher, dass der Hintergrund voll deckend ist
+    COLOR.a = original_alpha; // Respektiert modulate.a für smoothes Fading
 }

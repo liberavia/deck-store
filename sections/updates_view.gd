@@ -102,13 +102,6 @@ func on_view_entered():
 	if not _initial_check_done:
 		_initial_check_done = true
 		_start_update_check()
-		
-	var focus_owner = get_viewport().gui_get_focus_owner()
-	if not is_instance_valid(focus_owner) or not is_ancestor_of(focus_owner):
-		if update_list_container.get_child_count() > 0:
-			update_list_container.get_child(0).grab_focus()
-		elif is_instance_valid(refresh_button):
-			refresh_button.grab_focus()
 
 func _on_focus_entered():
 	if audio_player and stream_focus:
