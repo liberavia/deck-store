@@ -46,8 +46,8 @@ signal products_loaded
 
 # --- Internal Variables ---
 var _active_content_container: Container 
-var _product_box_min_width: float = 210.0 
-var _product_box_min_height: float = 350.0
+var _product_box_min_width: float = 160.0 
+var _product_box_min_height: float = 240.0
 var installed_ids: Dictionary = {}
 var origin_position := Vector2.ZERO
 var origin_size := Vector2.ZERO
@@ -72,12 +72,12 @@ func _ready():
 		_product_box_min_width = temp_box.custom_minimum_size.x
 		_product_box_min_height = temp_box.custom_minimum_size.y
 		temp_box.queue_free()
-		if _product_box_min_width <= 0: _product_box_min_width = 210.0
-		if _product_box_min_height <= 0: _product_box_min_height = 350.0
+		if _product_box_min_width <= 0: _product_box_min_width = 160.0
+		if _product_box_min_height <= 0: _product_box_min_height = 240.0
 	else:
 		printerr("ProductList: product_box_scene is not assigned!")
-		_product_box_min_width = 210.0
-		_product_box_min_height = 350.0
+		_product_box_min_width = 160.0
+		_product_box_min_height = 240.0
 			
 	if title_label:
 		if not title.is_empty():
@@ -104,7 +104,7 @@ func _ready():
 		var temp_box = product_box_scene.instantiate()
 		_product_box_min_width = temp_box.custom_minimum_size.x
 		temp_box.queue_free()
-		if _product_box_min_width <= 0: _product_box_min_width = 210.0
+		if _product_box_min_width <= 0: _product_box_min_width = 160.0
 	else:
 		printerr("ProductList: product_box_scene ist nicht zugewiesen!")
 		
@@ -228,6 +228,12 @@ func set_products(product_data: Array):
 			var product_logo_rect = product_box_instance.get_node_or_null("Panel/ProductLogo") as TextureRect
 			if product_logo_rect:
 				emit_signal("image_load_requested", image_url, product_logo_rect)
+		
+		product_box_instance.focus_entered.connect(func():
+			if product_box_instance.get_index() == 0 and display_mode == DisplayMode.SINGLE_LINE_SCROLL and is_instance_valid(single_line_scroll):
+				single_line_scroll.scroll_horizontal = 0
+		)
+				
 		product_box_instance.move_to_details_view.connect(_on_emit_move_to_details_view)
 		_active_content_container.add_child(product_box_instance)
 

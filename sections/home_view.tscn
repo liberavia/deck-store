@@ -3,6 +3,8 @@
 [ext_resource type="PackedScene" uid="uid://b8fwocgf5txps" path="res://product_list.tscn" id="1_7dlyt"]
 [ext_resource type="Script" uid="uid://bph32vq4nct13" path="res://sections/home_view.gd" id="1_dgius"]
 
+[ext_resource type="PackedScene" uid="uid://b82x3qherocar" path="res://sections/hero_carousel.tscn" id="2_herocar"]
+
 [node name="HomeView" type="Control" unique_id=1432337587]
 layout_mode = 3
 anchors_preset = 15
@@ -29,6 +31,10 @@ vertical_scroll_mode = 3
 [node name="VBoxContainer" type="VBoxContainer" parent="ContentScrollContainer" unique_id=533252289]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="HeroCarousel" parent="ContentScrollContainer/VBoxContainer" instance=ExtResource("2_herocar")]
+layout_mode = 2
+size_flags_vertical = 1
 
 [node name="PopularProductList" parent="ContentScrollContainer/VBoxContainer" unique_id=1009667972 instance=ExtResource("1_7dlyt")]
 layout_mode = 2

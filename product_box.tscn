@@ -12,39 +12,39 @@ border_width_bottom = 1
 border_color = Color(0.638305, 0.47971, 0.698417, 1)
 
 [node name="ProductBox" type="Control"]
-custom_minimum_size = Vector2(210, 350)
+custom_minimum_size = Vector2(160, 240)
 layout_mode = 3
 anchors_preset = 0
 offset_top = 1.0
-offset_right = 210.0
-offset_bottom = 351.0
+offset_right = 160.0
+offset_bottom = 240.0
 size_flags_vertical = 3
 script = ExtResource("1_pn8qf")
 
 [node name="Panel" type="Panel" parent="."]
 layout_mode = 0
-offset_left = 7.5
+offset_left = 5.0
 offset_top = 10.0
-offset_right = 200.5
-offset_bottom = 327.0
+offset_right = 155.0
+offset_bottom = 235.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_mvps1")
 
 [node name="ProductLogo" type="TextureRect" parent="Panel"]
 layout_mode = 0
-offset_left = 7.0
+offset_left = 15.0
 offset_top = 9.0
-offset_right = 186.0
-offset_bottom = 199.0
+offset_right = 135.0
+offset_bottom = 135.0
 
 [node name="ProductName" type="Label" parent="Panel"]
 layout_mode = 0
-offset_left = 11.0
-offset_top = 217.0
-offset_right = 184.0
-offset_bottom = 307.0
-theme_override_font_sizes/font_size = 16
+offset_left = 10.0
+offset_top = 145.0
+offset_right = 140.0
+offset_bottom = 225.0
+theme_override_font_sizes/font_size = 14
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3

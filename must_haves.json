@@ -1,0 +1,9 @@
+{
+	"must_have_apps": [
+		"tv.kodi.Kodi",
+		"com.heroicgameslauncher.hgl",
+		"net.lutris.Lutris",
+		"net.davidotek.pupgui2",
+		"com.discordapp.Discord"
+	]
+}
