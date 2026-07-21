@@ -97,3 +97,31 @@ func _apply_feedback(btn_name: String, pressed: bool):
 		for child in hbox.get_children():
 			if child.name == "Glyph_" + btn_name and child.has_method("apply_feedback"):
 				child.apply_feedback(pressed)
+
+func set_action_pulsing(btn_name: String, pulsing: bool):
+	for hbox in container.get_children():
+		if not hbox is HBoxContainer: continue
+		for child in hbox.get_children():
+			if child.name == "Glyph_" + btn_name:
+				var action_label = hbox.get_child(hbox.get_child_count() - 1) as Label
+				if pulsing:
+					if not child.has_meta("is_pulsing") or not child.get_meta("is_pulsing"):
+						child.set_meta("is_pulsing", true)
+						_start_pulse(child)
+						_start_pulse(action_label)
+				else:
+					child.set_meta("is_pulsing", false)
+					if child.has_meta("pulse_tween"):
+						var t = child.get_meta("pulse_tween") as Tween
+						if is_instance_valid(t): t.kill()
+						child.modulate.a = 1.0
+					if action_label.has_meta("pulse_tween"):
+						var t = action_label.get_meta("pulse_tween") as Tween
+						if is_instance_valid(t): t.kill()
+						action_label.modulate.a = 1.0
+
+func _start_pulse(node: Control):
+	var t = create_tween().set_loops()
+	t.tween_property(node, "modulate:a", 0.4, 1.0).set_trans(Tween.TRANS_SINE)
+	t.tween_property(node, "modulate:a", 1.0, 1.0).set_trans(Tween.TRANS_SINE)
+	node.set_meta("pulse_tween", t)

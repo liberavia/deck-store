@@ -78,7 +78,7 @@ func _update_install_status():
 		var DownloadManager = get_node_or_null("/root/DownloadManager")
 		if DownloadManager:
 			var task_status = DownloadManager.get_task_status(app_id)
-			if task_status.get("status") in ["running", "pending"]:
+			if not task_status.is_empty() and task_status.get("status") not in ["completed", "error"]:
 				_show_installing(task_status)
 			else:
 				_hide_installing()

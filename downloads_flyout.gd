@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 signal closed
+signal opened
 
 @onready var color_rect = $ColorRect
 @onready var flyout_panel = $FlyoutPanel
@@ -25,6 +26,7 @@ func open_flyout():
 	if visible: return
 	_previous_focus_owner = get_viewport().gui_get_focus_owner()
 	show()
+	emit_signal("opened")
 	_update_queue()
 	_queue_timer.start()
 	
@@ -61,6 +63,10 @@ func _update_queue():
 	no_tasks_label.visible = not has_tasks
 	scroll_container.visible = has_tasks
 	
+	if not has_tasks and visible:
+		no_tasks_label.focus_mode = Control.FOCUS_ALL
+		no_tasks_label.grab_focus()
+	
 	for app_id in active_tasks:
 		var task = active_tasks[app_id]
 		var task_btn = queue_container.get_node_or_null(app_id)
@@ -68,6 +74,8 @@ func _update_queue():
 			task_btn = Button.new()
 			task_btn.name = app_id
 			task_btn.custom_minimum_size = Vector2(0, 60)
+			task_btn.focus_neighbor_left = NodePath(".")
+			task_btn.focus_neighbor_right = NodePath(".")
 			
 			var hbox = HBoxContainer.new()
 			hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -115,10 +123,11 @@ func _update_queue():
 		var status_lbl = status_hbox.get_node("StatusLabel") as Label
 		
 		name_lbl.text = task.get("app_name", app_id)
-		pbar.value = task.get("progress", 0)
-		var status_text = task.get("status", "pending")
+		var status_data = task.get("status_data", {})
+		pbar.value = status_data.get("progress", 0)
+		var status_text = status_data.get("status", "pending")
 		if status_text == "pending": status_text = "In Queue"
-		status_lbl.text = str(task.get("progress", 0)) + "% - " + status_text.capitalize()
+		status_lbl.text = str(status_data.get("progress", 0)) + "% - " + status_text.capitalize()
 
 func _focus_first_item():
 	if queue_container.get_child_count() > 0:

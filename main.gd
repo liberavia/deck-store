@@ -174,6 +174,8 @@ func _ready():
 		
 	if downloads_flyout_scene:
 		_downloads_flyout_instance = downloads_flyout_scene.instantiate()
+		_downloads_flyout_instance.opened.connect(_update_footer_prompts)
+		_downloads_flyout_instance.closed.connect(_update_footer_prompts)
 		add_child(_downloads_flyout_instance)
 	
 	SettingsManager.settings_changed.connect(_on_settings_changed)
@@ -200,10 +202,9 @@ func _ready():
 			if dm.has_signal("task_updated"): dm.task_updated.connect(_on_download_task_updated)
 			if dm.has_signal("task_finished"): dm.task_finished.connect(_on_download_task_finished)
 			
-	# Start pulse animation for queue indicator
-	var tween = create_tween().set_loops()
-	tween.tween_property(queue_indicator, "modulate:a", 0.6, 1.0).set_trans(Tween.TRANS_SINE)
-	tween.tween_property(queue_indicator, "modulate:a", 1.0, 1.0).set_trans(Tween.TRANS_SINE)
+			var footer = get_node_or_null("CanvasLayer/FooterBar")
+			if is_instance_valid(footer) and footer.has_method("set_context_actions"):
+				footer.call_deferred("update_context_actions")
 	
 	_switch_to_section(0)
 	
@@ -302,6 +303,14 @@ func _update_footer_prompts():
 	var actions = []
 	var focus_owner = get_viewport().gui_get_focus_owner()
 	
+	if is_instance_valid(_downloads_flyout_instance) and _downloads_flyout_instance.visible:
+		actions = [
+			{"button": "A", "label": "Select"},
+			{"button": "B", "label": "Back"}
+		]
+		footer_bar.set_actions(actions)
+		return
+		
 	if is_instance_valid(details_view) and details_view.visible:
 		actions = [{"button": "B", "label": "Back"}]
 		if is_instance_valid(focus_owner) and details_view.is_ancestor_of(focus_owner):
@@ -342,7 +351,18 @@ func _update_footer_prompts():
 	actions.append({"button": "View", "label": "App Menu"})
 	actions.append({"button": "Menu", "label": "Settings"})
 	
+	var dm = get_node_or_null("/root/DownloadManager")
+	var has_downloads = false
+	if dm and dm.running_tasks.size() > 0:
+		has_downloads = true
+		actions.append({"button": "Y", "label": str(dm.running_tasks.size()) + " Downloads"})
+	else:
+		actions.append({"button": "Y", "label": "Downloads"})
+	
 	footer_bar.set_actions(actions)
+	
+	if footer_bar.has_method("set_action_pulsing"):
+		footer_bar.set_action_pulsing("Y", has_downloads)
 
 func _get_custom_a_action(focus_owner: Control) -> Dictionary:
 	var section_name = _sections[_current_section_index].name
@@ -452,8 +472,13 @@ func _unhandled_input(event: InputEvent):
 		get_viewport().set_input_as_handled()
 		return
 
-	# Block global section switching if details view is open
+	# Block global section switching if details view or flyout is open
 	if is_instance_valid(details_view) and details_view.visible:
+		if event.is_action_pressed("section_next") or event.is_action_pressed("section_previous"):
+			get_viewport().set_input_as_handled()
+			return
+			
+	if is_instance_valid(_downloads_flyout_instance) and _downloads_flyout_instance.visible:
 		if event.is_action_pressed("section_next") or event.is_action_pressed("section_previous"):
 			get_viewport().set_input_as_handled()
 			return
@@ -1228,17 +1253,13 @@ func refresh_installed_apps_list():
 	print("INFO Main: Refreshing installed apps list due to recent install/uninstall.")
 	_fetch_installed_apps()
 
-func _on_download_task_updated(app_id: String, app_name: String, status: String, progress: float):
-	var DownloadManager = get_node_or_null("/root/DownloadManager")
-	if DownloadManager:
-		queue_indicator.visible = DownloadManager.running_tasks.size() > 0
+func _on_download_task_updated(operation_id: String, status_data: Dictionary):
+	_update_footer_prompts()
 
-func _on_download_task_finished(app_id: String, app_name: String, success: bool):
-	var DownloadManager = get_node_or_null("/root/DownloadManager")
-	if DownloadManager:
-		queue_indicator.visible = DownloadManager.running_tasks.size() > 0
-		
-	var msg = app_name + (" finished successfully" if success else " failed")
+func _on_download_task_finished(operation_id: String, final_status: String, op_type: String):
+	_update_footer_prompts()
+	var success = (final_status == "completed")
+	var msg = operation_id + (" finished successfully" if success else " failed")
 	_show_toast(msg, success)
 
 func _show_toast(message: String, success: bool = true):
