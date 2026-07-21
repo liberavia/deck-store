@@ -6,8 +6,26 @@ signal shortcut_action_completed(action: String, appid_tag: String, success: boo
 
 var _shortcut_thread: Thread = null
 
+var is_steam_initialized: bool = false
+
 func _ready():
-	pass
+	_initialize_steam()
+
+func _initialize_steam():
+	if Engine.has_singleton("Steam"):
+		var INIT: Dictionary = Steam.steamInitEx()
+		print("Steamworks Initialized: ", INIT)
+		if INIT["status"] == 0:
+			is_steam_initialized = true
+			if Steam.has_method("inputInit"):
+				var input_init_success = Steam.inputInit(false)
+				print("Steam Input Initialized: ", input_init_success)
+	else:
+		print("GodotSteam singleton not found!")
+
+func _process(_delta):
+	if is_steam_initialized and Engine.has_singleton("Steam"):
+		Steam.run_callbacks()
 
 # Führt den steam_shortcut_manager in einem separaten Thread aus
 func _execute_shortcut_manager_in_thread(args: Array):

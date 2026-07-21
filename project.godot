@@ -51,6 +51,10 @@ window/per_pixel_transparency/allowed=true
 version_control/plugin_name="GitPlugin"
 version_control/autoload_on_startup=true
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godotsteam/plugin.cfg")
+
 [input]
 
 ui_accept={
