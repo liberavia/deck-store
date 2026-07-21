@@ -116,7 +116,8 @@ func set_app_id_and_initial_state(assigned_id: String, is_initially_installed: b
 
 
 func _on_focus_entered_sound():
-	if is_instance_valid(_focus_sound_player): _focus_sound_player.play()
+	if is_instance_valid(_focus_sound_player) and SettingsManager.get_setting("play_ui_sounds", true): 
+		_focus_sound_player.play()
 
 
 func _on_pressed():
@@ -128,7 +129,7 @@ func _on_pressed():
 		return
 
 	_pressed_sound_player = get_node_or_null("/root/App/ButtonSoundPlayer")
-	if _pressed_sound_player:
+	if _pressed_sound_player and SettingsManager.get_setting("play_ui_sounds", true):
 		_pressed_sound_player.play()
 
 	match self.text:

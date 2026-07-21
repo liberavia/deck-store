@@ -99,6 +99,8 @@ func _ready():
 	# Focus Style (Reuse existing focus style logic or create similar if needed, 
 	# but buttons already have overrides from scene. We just add 'pressed')
 	
+	var style_normal = StyleBoxEmpty.new()
+	
 	home_button.focus_mode = Control.FOCUS_ALL
 	for btn in top_button_bar.get_children():
 		if btn is Button: 
@@ -106,8 +108,7 @@ func _ready():
 			btn.toggle_mode = true
 			btn.button_group = section_btn_group
 			btn.add_theme_stylebox_override("pressed", style_pressed)
-			# Optional: Make hover look like focus if not already consistent
-			# btn.add_theme_stylebox_override("hover", ...) 
+			btn.add_theme_stylebox_override("normal", style_normal)
 
 	for i in range(_sections.size()):
 		var section_data = _sections[i]

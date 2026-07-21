@@ -210,7 +210,7 @@ func _populate_category_list(categories: Array):
 		_first_load = false
 
 func _on_button_focus_entered():
-	if _focus_sound_player:
+	if _focus_sound_player and SettingsManager.get_setting("play_ui_sounds", true):
 		_focus_sound_player.play()
 
 func _on_category_button_gui_input(event: InputEvent):
@@ -221,7 +221,7 @@ func _on_category_button_gui_input(event: InputEvent):
 
 func _on_category_button_pressed(category_id: String, play_sound: bool = true):
 	print("Selected Category ID: ", category_id)
-	if play_sound and _select_sound_player:
+	if play_sound and _select_sound_player and SettingsManager.get_setting("play_ui_sounds", true):
 		_select_sound_player.play()
 	
 	if product_list:

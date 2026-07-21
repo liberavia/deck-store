@@ -76,8 +76,10 @@ ds_send_progress() {
 # Determine execution environment and appropriate flatpak command
 if [ -f /.flatpak-info ]; then
     DS_FLATPAK_CMD="flatpak-spawn --host flatpak"
+    DS_HOST_SPAWN="flatpak-spawn --host"
 else
     DS_FLATPAK_CMD="flatpak"
+    DS_HOST_SPAWN=""
 fi
 
 # Check if a command exists
