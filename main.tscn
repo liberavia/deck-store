@@ -68,6 +68,10 @@ layout_mode = 2
 size_flags_vertical = 4
 action_name = "L1"
 
+[node name="SpacerL1" type="Control" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+
 [node name="ButtonHome" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
@@ -110,6 +114,10 @@ layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
 text = "Search"
+
+[node name="SpacerR1" type="Control" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
 
 [node name="R1Glyph" parent="CanvasLayer/VBoxContainer/TopButtonBar" instance=ExtResource("12_glyph")]
 custom_minimum_size = Vector2(50, 25)
