@@ -169,6 +169,11 @@ func _ready():
 	SettingsManager.settings_changed.connect(_on_settings_changed)
 	_apply_ui_sounds_setting(SettingsManager.get_setting("play_ui_sounds", true))
 	
+	if Engine.has_singleton("OnlineStatusManager"):
+		var online_mgr = get_node("/root/OnlineStatusManager")
+		online_mgr.online_status_changed.connect(_on_online_status_changed)
+		_on_online_status_changed(online_mgr.is_online)
+	
 	_switch_to_section(0)
 	
 	# Clear focus initially so no sound plays and no interaction is possible
@@ -194,6 +199,11 @@ func _ready():
 func _on_settings_changed(key: String, value):
 	if key == "play_ui_sounds":
 		_apply_ui_sounds_setting(value)
+
+func _on_online_status_changed(is_online: bool):
+	var indicator = top_button_bar.get_node_or_null("OfflineIndicator")
+	if is_instance_valid(indicator):
+		indicator.visible = not is_online
 
 func _apply_ui_sounds_setting(play: bool):
 	var vol = 0.0 if play else -80.0

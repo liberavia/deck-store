@@ -253,6 +253,11 @@ func _load_details_data(app_id_to_load: String):
 			if is_instance_valid(file): file.close()
 
 	# --- Cache MISS or expired: Start HTTP Request ---
+	if Engine.has_singleton("OnlineStatusManager") and not get_node("/root/OnlineStatusManager").is_online:
+		print("INFO DetailsView: App is offline. Using fallback info for ", current_app_id)
+		_show_fallback_product()
+		return
+		
 	var http_request = HTTPRequest.new()
 	add_child(http_request)
 	http_request.request_completed.connect(
@@ -261,8 +266,7 @@ func _load_details_data(app_id_to_load: String):
 	var error = http_request.request(detail_api_url)
 	if error != OK:
 		printerr("ERROR: Starting details request failed for '%s' (%s): %s" % [app_id_to_load, detail_api_url, error])
-		# hide_loading_indicator() # Optional
-		app_title.text = "Error: Request Failed"
+		_show_fallback_product()
 		if is_instance_valid(http_request): http_request.queue_free()
 
 # --- Handle request completion: Save to cache and display ---
@@ -279,24 +283,26 @@ func _on_product_details_request_completed(result, response_code, headers, body,
 			app_title.text = "Error: Invalid Data" 
 	elif response_code == 404:
 		print("INFO DetailsView: App not found on Flathub (404). Using fallback info for ", current_app_id)
-		# Fallback: Create a minimal product dictionary so the user can still uninstall
-		var fallback_product = {
-			"id": current_app_id,
-			"name": current_app_name if not current_app_name.is_empty() else current_app_id,
-			"description": "This application was not found on Flathub. Metadata is unavailable, but you can still manage the installation.",
-			"icon": "",
-			"developer_name": "Unknown",
-			"releases": []
-		}
-		_display_details(fallback_product)
+		_show_fallback_product()
 	else:
 		printerr("ERROR: HTTP Error %d (Result %d) requesting details from '%s'." % [response_code, result, url])
-		app_title.text = "Error: Download Failed" 
+		_show_fallback_product()
 
 	# --- Cleanup ---
 	# hide_loading_indicator() # Optional
 	if is_instance_valid(http_request):
 		http_request.queue_free()
+
+func _show_fallback_product():
+	var fallback_product = {
+		"id": current_app_id,
+		"name": current_app_name if not current_app_name.is_empty() else current_app_id,
+		"description": "Metadata is currently unavailable because the application is not listed on Flathub or you are offline. You can still manage the installation if it is installed locally.",
+		"icon": "",
+		"developer_name": "Unknown",
+		"releases": []
+	}
+	_display_details(fallback_product)
 
 
 # =============================================================================

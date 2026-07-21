@@ -117,6 +117,14 @@ layout_mode = 2
 size_flags_vertical = 4
 action_name = "R1"
 
+[node name="OfflineIndicator" type="Label" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+theme_override_font_sizes/font_size = 18
+text = " OFFLINE"
+vertical_alignment = 1
+
 [node name="SectionViewContainer" type="Control" parent="CanvasLayer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3

@@ -227,6 +227,11 @@ func _update_ui(status_data: Dictionary):
 		button_text = "Blacklisted"
 		button_disabled = true
 		button_stylebox = stylebox_busy
+		
+	if button_text == TEXT_INSTALL and Engine.has_singleton("OnlineStatusManager") and not get_node("/root/OnlineStatusManager").is_online:
+		button_text = "Offline"
+		button_disabled = true
+		button_stylebox = stylebox_busy
 
 	self.text = button_text
 	self.disabled = button_disabled
