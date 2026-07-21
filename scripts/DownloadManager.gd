@@ -494,6 +494,8 @@ func _finish_task(op_id: String, exit_code: int, cancelled: bool = false, error_
 						printerr("DownloadManager ERROR: Cannot add to Steam: App name is missing or same as app_id for ", app_id)
 					elif global_icon_path_abs.is_empty(): # Prüfen, ob ein gültiger Icon-Pfad vorhanden ist
 						printerr("DownloadManager ERROR: Cannot add to Steam: Icon path is missing for ", app_id)
+					elif not SettingsManager.get_setting("auto_add_to_steam", true):
+						print("INFO DownloadManager: Skipping automatic 'Add to Steam' (Setting disabled) for ", app_id)
 					elif steam_integration_node.has_method("add_to_steam"):
 						# Definiere exe_path und launch_params für Flatpak
 						var flatpak_exe = DEFAULT_FLATPAK_EXE_PATH

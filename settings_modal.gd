@@ -26,6 +26,7 @@ func _populate_settings():
 		
 	_create_check_setting("Play UI Sounds", "play_ui_sounds")
 	_create_check_setting("Auto Refresh Installed Apps", "auto_refresh_installed")
+	_create_check_setting("Add installed Apps automatically to Steam", "auto_add_to_steam")
 
 func _create_check_setting(label_text: String, setting_key: String):
 	var hbox = HBoxContainer.new()

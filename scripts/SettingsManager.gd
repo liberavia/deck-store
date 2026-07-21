@@ -10,6 +10,7 @@ var _settings_filepath: String = ""
 var settings = {
 	"play_ui_sounds": true,
 	"auto_refresh_installed": true,
+	"auto_add_to_steam": true,
 	"install_scope": "user"
 }
 
