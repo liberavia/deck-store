@@ -130,6 +130,16 @@ func _setup_connections():
 		product_list.focus_exited_up.connect(func(): emit_signal("focus_exited_up_from_lists"))
 		product_list.load_new_page.connect(func(url, list): emit_signal("load_new_page_requested", url, list))
 
+	if Engine.has_singleton("Steam") and Steam.has_signal("floating_gamepad_text_input_dismissed"):
+		Steam.floating_gamepad_text_input_dismissed.connect(_on_floating_keyboard_dismissed)
+
+func _on_floating_keyboard_dismissed():
+	print("SearchView: Steam floating keyboard dismissed callback received")
+	# We exit typing mode and allow inputs to resume natively.
+	# But we only do it if typing was actually active.
+	if _typing_active:
+		_set_typing_active(false)
+
 # --- Logic ---
 
 func _on_search_input_focus_entered():
@@ -166,10 +176,18 @@ func _set_typing_active(active: bool):
 		else:
 			# Stop timer if we leave typing mode
 			if is_instance_valid(_debounce_timer): _debounce_timer.stop()
+			if Engine.has_singleton("Steam") and Steam.has_method("dismissFloatingGamepadTextInput"):
+				Steam.dismissFloatingGamepadTextInput()
+			DisplayServer.virtual_keyboard_hide()
 
 func _show_virtual_keyboard():
 	print("SearchView: Requesting Virtual Keyboard...")
-	DisplayServer.virtual_keyboard_show(search_input.text)
+	if Engine.has_singleton("Steam") and get_node_or_null("/root/SteamIntegration") and get_node("/root/SteamIntegration").is_steam_initialized:
+		var rect = search_input.get_global_rect()
+		# EFloatingGamepadTextInputMode 0 = ModeSingleLine
+		Steam.showFloatingGamepadTextInput(0, int(rect.position.x), int(rect.position.y), int(rect.size.x), int(rect.size.y))
+	else:
+		DisplayServer.virtual_keyboard_show(search_input.text)
 
 func _unhandled_input(event: InputEvent):
 	if not is_visible_in_tree():
@@ -283,7 +301,6 @@ func _on_search_submitted(text: String):
 		_post_submit_cooldown_timer.start()
 		
 	# search_input.release_focus() # Keep focus on input
-	DisplayServer.virtual_keyboard_hide()
 	
 	_last_search_query = text.strip_edges() # Update last query to prevent re-search if timer was running
 	_perform_search(text)
