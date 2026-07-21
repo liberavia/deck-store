@@ -43,6 +43,7 @@ func get_type_string() -> String:
 func get_glyph_path(action: String) -> String:
 	var type_str = get_type_string()
 	var filename = action.to_lower()
+	var fallback_filename = filename
 	
 	# Mapping PlayStation specific names
 	if type_str == "ps":
@@ -61,12 +62,17 @@ func get_glyph_path(action: String) -> String:
 			"l2": filename = "lt"
 			"r2": filename = "rt"
 	
-	# Mapping Switch specific names if we had them
-	# elif type_str == "switch": ...
-	
 	var path = "res://assets/controller_glyphs/%s/%s.svg" % [type_str, filename]
-	if FileAccess.file_exists(path):
+	if ResourceLoader.exists(path):
 		return path
 	
 	# Fallback to xbox if ps/switch glyph missing
-	return "res://assets/controller_glyphs/xbox/%s.svg" % filename
+	# We use fallback_filename (e.g. "a" instead of "cross") and apply Xbox mapping rules to it
+	var xbox_filename = fallback_filename
+	match fallback_filename:
+		"l1": xbox_filename = "lb"
+		"r1": xbox_filename = "rb"
+		"l2": xbox_filename = "lt"
+		"r2": xbox_filename = "rt"
+		
+	return "res://assets/controller_glyphs/xbox/%s.svg" % xbox_filename

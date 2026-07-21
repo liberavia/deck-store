@@ -19,7 +19,7 @@ SERVICE_FILE="$SYSTEMD_USER_DIR/decky-loader.service"
 ds_init "$EXTENSION_ID" "$LOG_FILE"
 
 check_host_access() {
-    if ! flatpak-spawn --host true 2>/dev/null; then
+    if ! $DS_HOST_SPAWN true 2>/dev/null; then
         ds_log "ERROR: Cannot execute commands on host. Missing permissions?"
         return 1
     fi
@@ -51,19 +51,19 @@ install_decky() {
     ds_send_progress 30 "Creating directories..."
     
     # Create directories on host
-    flatpak-spawn --host mkdir -p "$DECKY_DIR"
-    flatpak-spawn --host mkdir -p "$DECKY_PLUGINS"
-    flatpak-spawn --host mkdir -p "$SYSTEMD_USER_DIR"
+    $DS_HOST_SPAWN mkdir -p "$DECKY_DIR"
+    $DS_HOST_SPAWN mkdir -p "$DECKY_PLUGINS"
+    $DS_HOST_SPAWN mkdir -p "$SYSTEMD_USER_DIR"
     
     ds_send_progress 50 "Downloading PluginLoader..."
     
     # Download binary to host
-    if ! flatpak-spawn --host curl -L "$DOWNLOAD_URL" -o "$DECKY_DIR/PluginLoader"; then
+    if ! $DS_HOST_SPAWN curl -L "$DOWNLOAD_URL" -o "$DECKY_DIR/PluginLoader"; then
         ds_log "ERROR: Download failed."
         exit 1
     fi
     
-    flatpak-spawn --host chmod +x "$DECKY_DIR/PluginLoader"
+    $DS_HOST_SPAWN chmod +x "$DECKY_DIR/PluginLoader"
     
     ds_send_progress 70 "Creating Systemd Service..."
     
@@ -86,13 +86,16 @@ WantedBy=default.target"
 
     # We use base64 to safely transport the content through flatpak-spawn
     ENCODED_CONTENT=$(echo "$SERVICE_CONTENT" | base64 -w 0)
-    flatpak-spawn --host sh -c "echo '$ENCODED_CONTENT' | base64 -d > '$SERVICE_FILE'"
+    $DS_HOST_SPAWN sh -c "echo '$ENCODED_CONTENT' | base64 -d > '$SERVICE_FILE'"
     
-    ds_send_progress 80 "Enabling Service..."
+    ds_send_progress 80 "Enabling CEF Debugging for Steam..."
+    $DS_HOST_SPAWN touch "$HOME/.steam/steam/.cef-enable-remote-debugging"
+    
+    ds_send_progress 90 "Enabling Service..."
     
     # Reload daemon and enable service
-    flatpak-spawn --host systemctl --user daemon-reload
-    if flatpak-spawn --host systemctl --user enable --now decky-loader; then
+    $DS_HOST_SPAWN systemctl --user daemon-reload
+    if $DS_HOST_SPAWN systemctl --user enable --now decky-loader; then
         ds_send_progress 100 "Installation completed."
         ds_log "SUCCESS: Decky Loader installed and started."
         
@@ -111,9 +114,9 @@ case "$OPERATION" in
         
     "check")
         check_host_access || exit 1
-        if flatpak-spawn --host systemctl --user is-active decky-loader > /dev/null 2>&1; then
+        if $DS_HOST_SPAWN systemctl --user is-active decky-loader > /dev/null 2>&1; then
             exit 0
-        elif flatpak-spawn --host test -f "$DECKY_DIR/PluginLoader"; then
+        elif $DS_HOST_SPAWN test -f "$DECKY_DIR/PluginLoader"; then
              # Binary exists but maybe not running? Return true as 'installed' but maybe issue warning?
              # For ExtensionsManager, exit 0 means installed.
              exit 0
@@ -127,14 +130,14 @@ case "$OPERATION" in
         check_host_access || exit 1
         
         ds_send_progress 20 "Stopping service..."
-        flatpak-spawn --host systemctl --user disable --now decky-loader
-        flatpak-spawn --host rm "$SERVICE_FILE"
-        flatpak-spawn --host systemctl --user daemon-reload
+        $DS_HOST_SPAWN systemctl --user disable --now decky-loader
+        $DS_HOST_SPAWN rm "$SERVICE_FILE"
+        $DS_HOST_SPAWN systemctl --user daemon-reload
         
         ds_send_progress 50 "Removing files..."
         # Optional: Ask user if they want to keep plugins? For now we remove the loader binary but keep data?
         # Standard uninstall usually removes everything. Let's be safe and remove loader binary.
-        flatpak-spawn --host rm "$DECKY_DIR/PluginLoader"
+        $DS_HOST_SPAWN rm "$DECKY_DIR/PluginLoader"
         # We keep plugins folder to not delete user data accidentally
         
         ds_send_progress 100 "Uninstalled."
@@ -150,7 +153,7 @@ case "$OPERATION" in
     "version")
         # Extract version using host shell to resolve paths correctly
         # We rely on $HOME resolving correctly on host side if we use sh -c
-        VERSION=$(flatpak-spawn --host sh -c 'grep "Environment=PluginLoader_VERSION=" "$HOME/.config/systemd/user/decky-loader.service"' 2>/dev/null | sed -E 's/.*Environment=PluginLoader_VERSION=(.*)/\1/')
+        VERSION=$($DS_HOST_SPAWN sh -c 'grep "Environment=PluginLoader_VERSION=" "$HOME/.config/systemd/user/decky-loader.service"' 2>/dev/null | sed -E 's/.*Environment=PluginLoader_VERSION=(.*)/\1/')
         
         if [ -z "$VERSION" ]; then
              echo "0.0.0" > "$LOG_FILE"

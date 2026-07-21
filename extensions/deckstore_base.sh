@@ -73,6 +73,15 @@ ds_send_progress() {
     echo "${percent}|${message}" > "$progress_file"
 }
 
+# Determine execution environment and appropriate flatpak command
+if [ -f /.flatpak-info ]; then
+    DS_FLATPAK_CMD="flatpak-spawn --host flatpak"
+    DS_HOST_SPAWN="flatpak-spawn --host"
+else
+    DS_FLATPAK_CMD="flatpak"
+    DS_HOST_SPAWN=""
+fi
+
 # Check if a command exists
 ds_command_exists() {
     command -v "$1" &> /dev/null
@@ -80,11 +89,15 @@ ds_command_exists() {
 
 # Basic dependency check
 ds_check_dependencies() {
-    ds_log "Checking dependencies: flatpak-spawn, curl, jq..."
-    if ! ds_command_exists flatpak-spawn; then
-        ds_log "ERROR: flatpak-spawn command not found. This script must be run in a Flatpak environment."
+    ds_log "Checking dependencies: curl, jq, and flatpak..."
+    
+    # Check base command of DS_FLATPAK_CMD
+    local base_cmd=$(echo "$DS_FLATPAK_CMD" | awk '{print $1}')
+    if ! ds_command_exists "$base_cmd"; then
+        ds_log "ERROR: $base_cmd command not found. Cannot manage Flatpaks."
         exit 1
     fi
+    
     if ! ds_command_exists curl; then
         ds_log "ERROR: curl command not found. Please install curl."
         exit 1

@@ -4,7 +4,7 @@ signal task_added(operation_id, app_id, operation_type)
 signal task_updated(operation_id, status_data)
 signal task_finished(operation_id, final_status, operation_type)
 
-const FLATPAK_SPAWN_CMD = "/usr/bin/flatpak-spawn"
+
 const OUTPUT_DIR = "user://flatpak_logs"
 
 # Standardpfad für die Flatpak-Executable
@@ -148,10 +148,7 @@ func _execute_task(task_data: Dictionary):
 	current_output_file = OUTPUT_DIR.path_join("flatpak_output_%s.log" % current_op_id)
 	last_read_pos = 0
 
-	if not FileAccess.file_exists(FLATPAK_SPAWN_CMD):
-		printerr("FEHLER: flatpak-spawn not found: ", FLATPAK_SPAWN_CMD)
-		_finish_task(current_op_id, -1, false, "flatpak-spawn not found")
-		return
+
 
 	task_data.output_file = current_output_file
 	# Update status_data for the task in running_tasks
@@ -191,16 +188,17 @@ func _execute_task(task_data: Dictionary):
 	# Leite stdout und stderr in dieselbe Logdatei um
 	host_shell_command += " > '%s' 2>&1" % global_log_path.replace("'", "'\\''")
 
-	var spawn_args = ["--host", "sh", "-c", host_shell_command]
+	var run_cmd = SystemUtils.get_host_sh_cmd()
+	var spawn_args = SystemUtils.get_host_sh_args(host_shell_command)
 	
 	print("Attempting OS.create_process:")
-	print("  Command: ", FLATPAK_SPAWN_CMD)
+	print("  Command: ", run_cmd)
 	print("  Arguments: ", spawn_args)
 	
-	var pid = OS.create_process(FLATPAK_SPAWN_CMD, spawn_args)
+	var pid = OS.create_process(run_cmd, spawn_args)
 	if pid <= 0: # OS.create_process gibt bei Fehler 0 oder -1 zurück
-		printerr("Failed to start flatpak-spawn process for ", task_data.app_id)
-		_finish_task(current_op_id, -1, false, "Failed to start flatpak-spawn")
+		printerr("Failed to start process for ", task_data.app_id)
+		_finish_task(current_op_id, -1, false, "Failed to start process")
 		return
 		
 	current_pid = pid

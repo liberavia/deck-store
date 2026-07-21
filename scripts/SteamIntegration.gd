@@ -3,8 +3,6 @@ extends Node
 
 signal shortcut_action_completed(action: String, appid_tag: String, success: bool)
 
-# Pfad zu flatpak-spawn, falls die Godot-App selbst als Flatpak läuft
-const FLATPAK_SPAWN_CMD = "/usr/bin/flatpak-spawn" 
 
 var _shortcut_thread: Thread = null
 
@@ -24,16 +22,14 @@ func _execute_shortcut_manager_in_thread(args: Array):
 		call_deferred("_process_shortcut_manager_result", args, -99, PackedStringArray()) 
 		return
 
-	# Wenn flatpak-spawn existiert (Godot-App läuft wahrscheinlich als Flatpak),
-	# verwende es, um das Helfer-Skript außerhalb der Sandbox auszuführen.
-	if FileAccess.file_exists(FLATPAK_SPAWN_CMD):
-		command_to_run = FLATPAK_SPAWN_CMD
-		# flatpak-spawn --host flatpak run <appid> <args>
-		final_args = ["--host", "flatpak", "run", "io.github.liberavia.steamshortcutmanager"] + args
+	command_to_run = SystemUtils.get_host_sh_cmd()
+	var run_args = ["run", "io.github.liberavia.steamshortcutmanager"] + args
+	final_args = []
+	if SystemUtils._is_flatpak_container:
+		final_args = ["--host", "flatpak"] + run_args
 	else:
-		# Development/Host mode: just run 'flatpak run ...'
 		command_to_run = "flatpak"
-		final_args = ["run", "io.github.liberavia.steamshortcutmanager"] + args
+		final_args = run_args
 
 	print("SteamIntegration Thread: Führe aus: '", command_to_run, "' mit Argumenten: ", final_args)
 

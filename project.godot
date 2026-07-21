@@ -17,6 +17,8 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 config/name="DeckStore"
 run/main_scene="uid://bl8qcy5u1yua6"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+boot_splash/bg_color=Color(0, 0, 0, 1)
+boot_splash/show_image=false
 config/icon="res://icon.svg"
 
 [autoload]
@@ -28,11 +30,20 @@ OdrsRatingsCache="*res://scripts/OdrsRatingsCache.gd"
 ExtensionsManager="*res://scripts/ExtensionsManager.gd"
 ControllerManager="*res://scripts/ControllerManager.gd"
 SettingsManager="*res://scripts/SettingsManager.gd"
+SystemUtils="*res://scripts/SystemUtils.gd"
+
+[debug]
+
+file_logging/enable_file_logging=true
+file_logging/log_path="user://logs/deck-store.log"
 
 [display]
 
 window/size/viewport_width=1280
 window/size/viewport_height=800
+window/size/mode=3
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 window/per_pixel_transparency/allowed=true
 
 [editor]

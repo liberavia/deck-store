@@ -67,12 +67,12 @@ func _setup_audio():
 	add_child(audio_player)
 
 func _play_focus_sound():
-	if audio_player and stream_focus:
+	if audio_player and stream_focus and SettingsManager.get_setting("play_ui_sounds", true):
 		audio_player.stream = stream_focus
 		audio_player.play()
 
 func _play_select_sound():
-	if audio_player and stream_select:
+	if audio_player and stream_select and SettingsManager.get_setting("play_ui_sounds", true):
 		audio_player.stream = stream_select
 		audio_player.play()
 
@@ -237,7 +237,7 @@ func set_data(extension_data: Dictionary):
 	
 	if not icon_filename.is_empty() and not internal_path.is_empty():
 		var icon_path = internal_path.path_join(icon_filename)
-		if FileAccess.file_exists(icon_path):
+		if ResourceLoader.exists(icon_path):
 			var texture = load(icon_path) as Texture2D
 			if texture:
 				icon_texture.texture = texture

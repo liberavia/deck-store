@@ -208,7 +208,7 @@ func _execute_operation_script_in_thread(extension_data: Dictionary, operation: 
 		call_deferred("_process_operation_result", extension_data, operation, -1)
 		return
 
-	var script_path = ProjectSettings.globalize_path(internal_path.path_join(script_name))
+	var script_path = _get_executable_script_path(internal_path, script_name)
 	var log_file_path = ProjectSettings.globalize_path(TMP_LOG_FILE)
 	
 	if FileAccess.file_exists(log_file_path):
@@ -351,7 +351,7 @@ func _execute_check_script_in_thread(extension_data: Dictionary):
 		call_deferred("_process_check_result", extension_data, -1)
 		return
 		
-	var script_path = ProjectSettings.globalize_path(internal_path.path_join(script_name))
+	var script_path = _get_executable_script_path(internal_path, script_name)
 	var log_file_path = ProjectSettings.globalize_path(TMP_LOG_FILE)
 	
 	if FileAccess.file_exists(log_file_path):
@@ -450,7 +450,7 @@ func _on_github_release_request_completed(extension_data: Dictionary, result: in
 	var script_name = extension_data.get("script_name", "")
 	var internal_path = extension_data.get("internal_path", "")
 	
-	var script_path = ProjectSettings.globalize_path(internal_path.path_join(script_name))
+	var script_path = _get_executable_script_path(internal_path, script_name)
 	var log_file_path = ProjectSettings.globalize_path(TMP_LOG_FILE)
 	
 	var exit_code = OS.execute("sh", [script_path, "version", log_file_path], [], true, true)
@@ -478,19 +478,47 @@ func _on_github_release_request_completed(extension_data: Dictionary, result: in
 func _compare_versions(version1: String, version2: String) -> int:
 	var v1_parts = version1.split(".")
 	var v2_parts = version2.split(".")
-
-	for i in range(max(v1_parts.size(), v2_parts.size())):
-		var p1 = 0
-		if i < v1_parts.size() and v1_parts[i].is_valid_int():
-			p1 = int(v1_parts[i])
-		
-		var p2 = 0
-		if i < v2_parts.size() and v2_parts[i].is_valid_int():
-			p2 = int(v2_parts[i])
-		
-		if p1 < p2:
-			return -1
-		if p1 > p2:
+	
+	for i in range(min(v1_parts.size(), v2_parts.size())):
+		var part1 = v1_parts[i].to_int()
+		var part2 = v2_parts[i].to_int()
+		if part1 > part2:
 			return 1
-			
+		elif part1 < part2:
+			return -1
+
+	if v1_parts.size() > v2_parts.size():
+		return 1
+	elif v1_parts.size() < v2_parts.size():
+		return -1
+
 	return 0
+
+func _get_executable_script_path(internal_path: String, script_name: String) -> String:
+	var tmp_dir = "user://tmp_scripts"
+	var tmp_ext_dir = tmp_dir.path_join(internal_path.get_file())
+	
+	if not DirAccess.dir_exists_absolute(tmp_ext_dir):
+		DirAccess.make_dir_recursive_absolute(tmp_ext_dir)
+		
+	# Copy deckstore_base.sh
+	var base_res = "res://extensions/deckstore_base.sh"
+	var base_user = tmp_dir.path_join("deckstore_base.sh")
+	if FileAccess.file_exists(base_res):
+		var base_content = FileAccess.get_file_as_string(base_res)
+		var f_base = FileAccess.open(base_user, FileAccess.WRITE)
+		if f_base:
+			f_base.store_string(base_content)
+			f_base.close()
+			
+	# Copy target script
+	var target_res = internal_path.path_join(script_name)
+	var target_user = tmp_ext_dir.path_join(script_name)
+	if FileAccess.file_exists(target_res):
+		var target_content = FileAccess.get_file_as_string(target_res)
+		var f_target = FileAccess.open(target_user, FileAccess.WRITE)
+		if f_target:
+			f_target.store_string(target_content)
+			f_target.close()
+			
+	return ProjectSettings.globalize_path(target_user)
