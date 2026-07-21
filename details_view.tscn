@@ -287,6 +287,17 @@ text = "Last Release:"
 [node name="ReleaseDate" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate"]
 layout_mode = 2
 
+[node name="ContainerInstalledSize" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails"]
+layout_mode = 2
+
+[node name="LabelInstalledSize" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerInstalledSize"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+text = "Installed Size:"
+
+[node name="InstalledSize" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerInstalledSize"]
+layout_mode = 2
+
 [node name="RatingContainer" type="VBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails"]
 layout_mode = 2
 theme_override_constants/separation = 20

@@ -17,6 +17,7 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @onready var app_release_date: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate/ReleaseDate
 @onready var action_button: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ActionButton
 @onready var add_to_steam_button: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/AddToSteamButton
+@onready var app_installed_size: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerInstalledSize/InstalledSize
 @onready var progress_info: VBoxContainer = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo
 @onready var progress_bar: ProgressBar = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo/ProgressBar
 @onready var progress_label: Label = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo/ProgressLabel
@@ -221,6 +222,8 @@ func _get_api_cache_filepath(url: String) -> String:
 	
 # --- Load details: Check cache or start request ---
 func _load_details_data(app_id_to_load: String):
+	_fetch_summary(app_id_to_load)
+	
 	var detail_api_url = "https://flathub.org/api/v2/appstream/%s?locale=en" % app_id_to_load
 
 	# --- File Cache Check ---
@@ -290,6 +293,44 @@ func _on_product_details_request_completed(result, response_code, headers, body,
 
 	# --- Cleanup ---
 	# hide_loading_indicator() # Optional
+	if is_instance_valid(http_request):
+		http_request.queue_free()
+
+func _fetch_summary(app_id: String):
+	app_installed_size.text = "Loading..."
+	if Engine.has_singleton("OnlineStatusManager") and not get_node("/root/OnlineStatusManager").is_online:
+		app_installed_size.text = "Offline"
+		return
+
+	var summary_url = "https://flathub.org/api/v2/summary/%s" % app_id
+	var http_request = HTTPRequest.new()
+	add_child(http_request)
+	http_request.request_completed.connect(
+		_on_summary_request_completed.bind(http_request)
+	)
+	var error = http_request.request(summary_url)
+	if error != OK:
+		printerr("ERROR: Starting summary request failed for '%s' (%s): %s" % [app_id, summary_url, error])
+		app_installed_size.text = "Unknown"
+		if is_instance_valid(http_request): http_request.queue_free()
+
+func _on_summary_request_completed(result, response_code, headers, body, http_request: HTTPRequest):
+	if response_code == 200 and result == HTTPRequest.RESULT_SUCCESS:
+		var response_string = body.get_string_from_utf8()
+		var summary_json = JSON.parse_string(response_string)
+		if summary_json != null and summary_json is Dictionary:
+			var size_bytes = summary_json.get("installed_size", 0)
+			if size_bytes > 0:
+				app_installed_size.text = String.humanize_size(int(size_bytes))
+				if is_instance_valid(action_button):
+					action_button.app_size_bytes = int(size_bytes)
+			else:
+				app_installed_size.text = "Unknown"
+		else:
+			app_installed_size.text = "Unknown"
+	else:
+		app_installed_size.text = "Unknown"
+
 	if is_instance_valid(http_request):
 		http_request.queue_free()
 

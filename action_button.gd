@@ -6,8 +6,9 @@ extends Button
 @export var normal_color := Color.from_string("#626262", Color.GRAY) # Standardfarbe, wenn nichts zutrifft
 
 @export var app_id: String = ""
-
+@export var is_initially_installed: bool = false
 var current_operation_id: String = ""
+var app_size_bytes: int = 0
 var _focus_sound_player: AudioStreamPlayer
 
 var stylebox_normal: StyleBoxFlat
@@ -134,6 +135,19 @@ func _on_pressed():
 
 	match self.text:
 		TEXT_INSTALL, TEXT_ERROR, TEXT_CANCELLED: 
+			var space_left: int = 0
+			var dir = DirAccess.open("user://")
+			if dir:
+				space_left = dir.get_space_left()
+				
+			if space_left > 0 and app_size_bytes > 0:
+				# Add 10% safety buffer
+				if space_left < (app_size_bytes * 1.1):
+					print("ActionButton: Not enough space! Need ", app_size_bytes, " but have ", space_left)
+					self.text = "Not enough space"
+					self.disabled = true
+					return
+
 			print("ActionButton: Choosing INSTALL path based on text '", self.text, "'")
 			self.disabled = true; self.text = TEXT_WAITING; add_theme_stylebox_override("normal", stylebox_busy)
 			var app_data_for_task = {"name": app_name, "icon_url": icon_url}
