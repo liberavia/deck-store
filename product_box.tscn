@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://d3yiqlqnvtqyr" path="res://product_box.gd" id="1_pn8qf"]
 [ext_resource type="Texture2D" uid="uid://cyceumguanpq3" path="res://assets/check_green.png" id="2_mvps1"]
+[ext_resource type="Texture2D" path="res://assets/spinner.svg" id="3_spin"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mvps1"]
 bg_color = Color(0, 0, 0, 0.35)
@@ -59,3 +60,48 @@ offset_left = -25.0
 offset_bottom = 25.0
 grow_horizontal = 0
 texture = ExtResource("2_mvps1")
+
+[node name="LoadingSpinner" type="TextureRect" parent="Panel"]
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -25.0
+offset_bottom = 25.0
+grow_horizontal = 0
+texture = ExtResource("3_spin")
+expand_mode = 1
+
+[node name="InstallOverlay" type="ColorRect" parent="Panel"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/InstallOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="StatusLabel" type="Label" parent="Panel/InstallOverlay/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+text = "Installing..."
+autowrap_mode = 3
+
+[node name="ProgressBar" type="ProgressBar" parent="Panel/InstallOverlay/VBoxContainer"]
+custom_minimum_size = Vector2(100, 10)
+layout_mode = 2
+size_flags_horizontal = 4
+show_percentage = false
+

@@ -185,7 +185,7 @@ func _show_virtual_keyboard():
 	if Engine.has_singleton("Steam") and get_node_or_null("/root/SteamIntegration") and get_node("/root/SteamIntegration").is_steam_initialized:
 		var rect = search_input.get_global_rect()
 		# EFloatingGamepadTextInputMode 0 = ModeSingleLine
-		Steam.showFloatingGamepadTextInput(0, int(rect.position.x), int(rect.position.y), int(rect.size.x), int(rect.size.y))
+		Steam.showFloatingGamepadTextInput(Steam.FLOATING_GAMEPAD_TEXT_INPUT_MODE_SINGLE_LINE, int(rect.position.x), int(rect.position.y), int(rect.size.x), int(rect.size.y))
 	else:
 		DisplayServer.virtual_keyboard_show(search_input.text)
 

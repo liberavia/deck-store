@@ -328,6 +328,10 @@ func check_all_extensions_status():
 	_start_next_check()
 
 func _start_next_check():
+	if _check_thread != null and _check_thread.is_started():
+		_check_thread.wait_to_finish()
+		_check_thread = null
+
 	if _check_queue.is_empty():
 		_is_checking = false
 		check_for_updates_for_all_installed_extensions()
@@ -335,9 +339,6 @@ func _start_next_check():
 		
 	_is_checking = true
 	var extension_to_check = _check_queue.pop_front()
-	
-	if _check_thread != null and _check_thread.is_alive():
-		_check_thread.wait_to_finish()
 	
 	_check_thread = Thread.new()
 	var callable_func = func(): _execute_check_script_in_thread(extension_to_check)

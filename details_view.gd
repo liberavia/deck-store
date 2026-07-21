@@ -242,10 +242,12 @@ func _load_details_data(app_id_to_load: String):
 				var api_data = cache_content.get("api_data")
 				var current_time = Time.get_ticks_msec()
 				var cache_age = current_time - timestamp
+				
+				var online_mgr = get_node_or_null("/root/OnlineStatusManager")
+				var is_online = online_mgr.is_online if online_mgr else true
 
-				if cache_age < CACHE_DURATION_MSEC and api_data != null:
+				if (not is_online or cache_age < CACHE_DURATION_MSEC) and api_data != null:
 					_display_details(api_data)
-					# hide_loading_indicator() # Optional
 					return
 				else:
 					DirAccess.remove_absolute(cache_filepath)
@@ -429,6 +431,12 @@ func _display_details(product: Dictionary):
 	else:
 		app_current_version.text = "N/A"
 		app_release_date.text = "N/A"
+		
+	var main_app_node = get_node_or_null("/root/App")
+	if main_app_node and main_app_node._installed_flatpak_ids.has(current_app_id):
+		app_installed_size.text = main_app_node._installed_flatpak_ids[current_app_id].get("size", "Unknown")
+	else:
+		app_installed_size.text = "N/A"
 		
 	current_app_name = product.get("name") if product.get("name") != null else "N/A"
 	app_developer.text = product.get("developer_name") if product.get("developer_name") != null else "N/A"

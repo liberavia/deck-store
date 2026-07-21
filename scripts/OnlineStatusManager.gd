@@ -30,6 +30,11 @@ func _on_request_completed(result, response_code, _headers, _body):
 	_set_online(new_status)
 
 func _set_online(status: bool):
-	if status != is_online:
-		is_online = status
+	var steam_online = true
+	if Engine.has_singleton("Steam"):
+		steam_online = Steam.loggedOn()
+		
+	var new_status = status and steam_online
+	if new_status != is_online:
+		is_online = new_status
 		emit_signal("online_status_changed", is_online)

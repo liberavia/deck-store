@@ -4,11 +4,15 @@ extends Control
 @export var product_list_scene: PackedScene = preload("res://product_list.tscn")
 @export var settings_modal_scene: PackedScene = preload("res://settings_modal.tscn")
 @export var app_menu_modal_scene: PackedScene = preload("res://app_menu_modal.tscn")
+@export var downloads_flyout_scene: PackedScene = preload("res://downloads_flyout.tscn")
 
 @onready var details_view: Control = $DetailsView
 @onready var main_view: VBoxContainer = $CanvasLayer/VBoxContainer
 
 @onready var section_view_container: Control = $CanvasLayer/VBoxContainer/SectionViewContainer
+
+@onready var queue_indicator: HBoxContainer = $CanvasLayer/QueueIndicator
+@onready var toast_container: VBoxContainer = VBoxContainer.new()
 
 @onready var home_button: Button = $CanvasLayer/VBoxContainer/TopButtonBar/ButtonHome
 @onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/TopButtonBar
@@ -29,6 +33,7 @@ var _last_focused_product_box: Control = null
 var _current_home_view_instance: Control = null
 var _settings_modal_instance: CanvasLayer = null
 var _app_menu_modal_instance: CanvasLayer = null
+var _downloads_flyout_instance: CanvasLayer = null
 var _sections: Array[Dictionary] = [
 	{"name": "Home", "scene_path": "res://sections/home_view.tscn", "button_node_name": "ButtonHome", "instance": null},
 	{"name": "Categories", "scene_path": "res://sections/categories_view.tscn", "button_node_name": "ButtonCategories", "instance": null},
@@ -163,8 +168,13 @@ func _ready():
 	_settings_modal_instance = settings_modal_scene.instantiate()
 	add_child(_settings_modal_instance)
 	
-	_app_menu_modal_instance = app_menu_modal_scene.instantiate()
-	add_child(_app_menu_modal_instance)
+	if app_menu_modal_scene:
+		_app_menu_modal_instance = app_menu_modal_scene.instantiate()
+		add_child(_app_menu_modal_instance)
+		
+	if downloads_flyout_scene:
+		_downloads_flyout_instance = downloads_flyout_scene.instantiate()
+		add_child(_downloads_flyout_instance)
 	
 	SettingsManager.settings_changed.connect(_on_settings_changed)
 	_apply_ui_sounds_setting(SettingsManager.get_setting("play_ui_sounds", true))
@@ -173,6 +183,27 @@ func _ready():
 		var online_mgr = get_node("/root/OnlineStatusManager")
 		online_mgr.online_status_changed.connect(_on_online_status_changed)
 		_on_online_status_changed(online_mgr.is_online)
+	
+	$CanvasLayer.add_child(toast_container)
+	toast_container.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	toast_container.anchor_left = 1.0
+	toast_container.anchor_right = 1.0
+	toast_container.offset_left = -320
+	toast_container.offset_right = -20
+	toast_container.offset_top = 20
+	toast_container.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	toast_container.add_theme_constant_override("separation", 10)
+	
+	if ProjectSettings.has_setting("autoload/DownloadManager"):
+		var dm = get_node_or_null("/root/DownloadManager")
+		if dm:
+			if dm.has_signal("task_updated"): dm.task_updated.connect(_on_download_task_updated)
+			if dm.has_signal("task_finished"): dm.task_finished.connect(_on_download_task_finished)
+			
+	# Start pulse animation for queue indicator
+	var tween = create_tween().set_loops()
+	tween.tween_property(queue_indicator, "modulate:a", 0.6, 1.0).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(queue_indicator, "modulate:a", 1.0, 1.0).set_trans(Tween.TRANS_SINE)
 	
 	_switch_to_section(0)
 	
@@ -409,6 +440,15 @@ func _unhandled_input(event: InputEvent):
 				_app_menu_modal_instance.close_modal()
 			else:
 				_app_menu_modal_instance.open_modal()
+		get_viewport().set_input_as_handled()
+		return
+
+	if event.is_action_pressed("open_downloads"):
+		if is_instance_valid(_downloads_flyout_instance):
+			if _downloads_flyout_instance.visible:
+				_downloads_flyout_instance.close_flyout()
+			else:
+				_downloads_flyout_instance.open_flyout()
 		get_viewport().set_input_as_handled()
 		return
 
@@ -1060,20 +1100,12 @@ func _process_flatpak_result(output: String, exit_code: int):
 	_flatpak_thread = null
 
 func _update_all_lists_install_status():
-	print("INFO Main: Updating install status in current section...")
-	if _current_section_index >= 0 and _current_section_index < _sections.size():
-		var current_section_node = _sections[_current_section_index].instance
+	print("INFO Main: Updating install status in all sections...")
+	for section in _sections:
+		var current_section_node = section.instance
 		if is_instance_valid(current_section_node) and current_section_node.has_method("update_internal_list_install_status"):
-			# The current section's script (e.g., home_view.gd, categories_view.gd)
-			# must implement update_internal_list_install_status(installed_ids_dict)
 			current_section_node.update_internal_list_install_status(_installed_flatpak_ids)
 			print("INFO Main: Called update_internal_list_install_status on: ", current_section_node.name)
-		elif is_instance_valid(current_section_node):
-			print("DEBUG Main: Current section '", current_section_node.name, "' does not have 'update_internal_list_install_status' method.")
-		else:
-			print("DEBUG Main: Current section instance is invalid.")
-	else:
-		print("DEBUG Main: No valid current section index to update install status for.")
 
 # Switches to the section at the given index with a carousel animation
 func _switch_to_section(target_index: int):
@@ -1126,7 +1158,7 @@ func _switch_to_section(target_index: int):
 	tween.set_ease(Tween.EASE_OUT)
 
 	# Animate the new section into view
-	tween.tween_property(new_section_instance, "position:x", 0, transition_time_section_change)
+	tween.tween_property(new_section_instance, "position:x", 0.0, transition_time_section_change)
 
 	# Animate the old section out of view
 	if is_instance_valid(old_section_instance):
@@ -1195,3 +1227,41 @@ func _update_top_bar_button_focus():
 func refresh_installed_apps_list():
 	print("INFO Main: Refreshing installed apps list due to recent install/uninstall.")
 	_fetch_installed_apps()
+
+func _on_download_task_updated(app_id: String, app_name: String, status: String, progress: float):
+	var DownloadManager = get_node_or_null("/root/DownloadManager")
+	if DownloadManager:
+		queue_indicator.visible = DownloadManager.running_tasks.size() > 0
+
+func _on_download_task_finished(app_id: String, app_name: String, success: bool):
+	var DownloadManager = get_node_or_null("/root/DownloadManager")
+	if DownloadManager:
+		queue_indicator.visible = DownloadManager.running_tasks.size() > 0
+		
+	var msg = app_name + (" finished successfully" if success else " failed")
+	_show_toast(msg, success)
+
+func _show_toast(message: String, success: bool = true):
+	var panel = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.2, 0.6, 0.2, 0.9) if success else Color(0.8, 0.2, 0.2, 0.9)
+	style.set_corner_radius_all(8)
+	style.content_margin_left = 15
+	style.content_margin_right = 15
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
+	panel.add_theme_stylebox_override("panel", style)
+	
+	var lbl = Label.new()
+	lbl.text = message
+	lbl.add_theme_font_size_override("font_size", 16)
+	panel.add_child(lbl)
+	
+	toast_container.add_child(panel)
+	
+	panel.modulate.a = 0
+	var tween = create_tween()
+	tween.tween_property(panel, "modulate:a", 1.0, 0.3)
+	tween.tween_interval(3.0)
+	tween.tween_property(panel, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(panel.queue_free)

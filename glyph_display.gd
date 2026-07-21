@@ -30,7 +30,7 @@ func _simulate_action():
 		"A": actions = ["ui_accept"]
 		"B": actions = ["go_back", "ui_cancel"]
 		"X": actions = ["ui_select"]
-		"Y": actions = ["ui_secondary"]
+		"Y": actions = ["ui_secondary", "open_downloads"]
 		"L1": actions = ["section_previous", "previous_tab"]
 		"R1": actions = ["section_next", "next_tab"]
 		"L2": actions = ["ui_page_up", "previous_tab"]

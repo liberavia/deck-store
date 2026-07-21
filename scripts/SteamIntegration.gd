@@ -67,6 +67,8 @@ func _execute_shortcut_manager_in_thread(args: Array):
 # Verarbeitet das Ergebnis des Thread-Aufrufs im Hauptthread
 func _process_shortcut_manager_result(args: Array, exit_code: int, output_array: PackedStringArray):
 	print("SteamIntegration MainThread: Verarbeite Ergebnis für args: ", args, ", ExitCode: ", exit_code)
+	if _shortcut_thread != null and _shortcut_thread.is_started():
+		_shortcut_thread.wait_to_finish()
 	_shortcut_thread = null # Thread als beendet markieren
 
 	var action: String = ""
