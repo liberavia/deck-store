@@ -12,50 +12,54 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
-[node name="HSplitContainer" type="HBoxContainer" parent="."]
+[node name="ListMargin" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 20
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_right = 30
 
-[node name="LeftPanel" type="PanelContainer" parent="HSplitContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_stretch_ratio = 0.25
-
-[node name="VBoxContainer" type="VBoxContainer" parent="HSplitContainer/LeftPanel"]
+[node name="HSplitContainer" type="HBoxContainer" parent="ListMargin"]
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="Label" type="Label" parent="HSplitContainer/LeftPanel/VBoxContainer"]
+[node name="LeftPanel" type="PanelContainer" parent="ListMargin/HSplitContainer"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ListMargin/HSplitContainer/LeftPanel"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Label" type="Label" parent="ListMargin/HSplitContainer/LeftPanel/VBoxContainer"]
 layout_mode = 2
 text = "Categories"
 horizontal_alignment = 1
 uppercase = true
 
-[node name="BackButton" type="Button" parent="HSplitContainer/LeftPanel/VBoxContainer"]
+[node name="BackButton" type="Button" parent="ListMargin/HSplitContainer/LeftPanel/VBoxContainer"]
 visible = false
 layout_mode = 2
 text = "< Back"
 
-[node name="ScrollContainer" type="ScrollContainer" parent="HSplitContainer/LeftPanel/VBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="ListMargin/HSplitContainer/LeftPanel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 follow_focus = true
 
-[node name="CategoryList" type="VBoxContainer" parent="HSplitContainer/LeftPanel/VBoxContainer/ScrollContainer"]
+[node name="CategoryList" type="VBoxContainer" parent="ListMargin/HSplitContainer/LeftPanel/VBoxContainer/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="RightPanel" type="PanelContainer" parent="HSplitContainer"]
+[node name="RightPanel" type="PanelContainer" parent="ListMargin/HSplitContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 0.75
+size_flags_stretch_ratio = 1.0
 
-[node name="ProductList" parent="HSplitContainer/RightPanel" instance=ExtResource("2_plist")]
+[node name="ProductList" parent="ListMargin/HSplitContainer/RightPanel" instance=ExtResource("2_plist")]
 layout_mode = 2
 title = "Select a Category"
 display_mode = 0

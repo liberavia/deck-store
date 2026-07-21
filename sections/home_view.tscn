@@ -28,21 +28,27 @@ follow_focus = true
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ContentScrollContainer" unique_id=533252289]
+[node name="ListMargin" type="MarginContainer" parent="ContentScrollContainer" unique_id=533252289]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_right = 30
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ContentScrollContainer/ListMargin"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="HeroCarousel" parent="ContentScrollContainer/VBoxContainer" instance=ExtResource("2_herocar")]
+[node name="HeroCarousel" parent="ContentScrollContainer/ListMargin/VBoxContainer" instance=ExtResource("2_herocar")]
 layout_mode = 2
 size_flags_vertical = 1
 
-[node name="PopularProductList" parent="ContentScrollContainer/VBoxContainer" unique_id=1009667972 instance=ExtResource("1_7dlyt")]
+[node name="PopularProductList" parent="ContentScrollContainer/ListMargin/VBoxContainer" unique_id=1009667972 instance=ExtResource("1_7dlyt")]
 layout_mode = 2
 size_flags_vertical = 1
 display_mode = 1
 title = "Popular"
 
-[node name="TrendingProductList" parent="ContentScrollContainer/VBoxContainer" unique_id=1567437332 instance=ExtResource("1_7dlyt")]
+[node name="TrendingProductList" parent="ContentScrollContainer/ListMargin/VBoxContainer" unique_id=1567437332 instance=ExtResource("1_7dlyt")]
 layout_mode = 2
 size_flags_vertical = 1
 display_mode = 1

@@ -5,10 +5,10 @@ extends Control
 @export var product_box_scene: PackedScene
 
 # Node references - ADJUST THESE PATHS to your actual node structure within HomeView.tscn
-@onready var hero_carousel = $ContentScrollContainer/VBoxContainer/HeroCarousel
-@onready var popular_product_list: ProductList = $ContentScrollContainer/VBoxContainer/PopularProductList # Example path, ADJUST
-@onready var trending_product_list: ProductList = $ContentScrollContainer/VBoxContainer/TrendingProductList # Example path, ADJUST
-@onready var content_scroll_container: ScrollContainer = $ContentScrollContainer # Example path, ADJUST
+@onready var hero_carousel = $ContentScrollContainer/ListMargin/VBoxContainer/HeroCarousel
+@onready var popular_product_list: ProductList = $ContentScrollContainer/ListMargin/VBoxContainer/PopularProductList
+@onready var trending_product_list: ProductList = $ContentScrollContainer/ListMargin/VBoxContainer/TrendingProductList
+@onready var content_scroll_container: ScrollContainer = $ContentScrollContainer
 
 # --- Signals to be emitted to main.gd ---
 signal move_to_details_view_requested(app_id: String, installed: bool)

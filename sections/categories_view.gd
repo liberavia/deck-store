@@ -7,9 +7,9 @@ signal focus_exited_up_from_lists()
 signal load_new_page_requested(url: String, target_list: ProductList)
 
 # --- UI Nodes ---
-@onready var category_button_container: VBoxContainer = $HSplitContainer/LeftPanel/VBoxContainer/ScrollContainer/CategoryList
-@onready var product_list: ProductList = $HSplitContainer/RightPanel/ProductList
-@onready var back_button: Button = $HSplitContainer/LeftPanel/VBoxContainer/BackButton
+@onready var category_button_container: VBoxContainer = $ListMargin/HSplitContainer/LeftPanel/VBoxContainer/ScrollContainer/CategoryList
+@onready var product_list: ProductList = $ListMargin/HSplitContainer/RightPanel/ProductList
+@onready var back_button: Button = $ListMargin/HSplitContainer/LeftPanel/VBoxContainer/BackButton
 
 # --- Internal State ---
 var _api_cache_dir: String = ""

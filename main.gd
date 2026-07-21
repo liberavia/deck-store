@@ -475,16 +475,16 @@ func _on_top_bar_button_focus_entered():
 func load_popular_products():
 	# Get the instance of the home view from our sections array
 	var home_view_node = _sections[0].instance # Index 0 is "Home"
-	if is_instance_valid(home_view_node) and home_view_node.has_node("ContentScrollContainer/VBoxContainer/PopularProductList"):
-		var popular_list = home_view_node.get_node("ContentScrollContainer/VBoxContainer/PopularProductList")
+	if is_instance_valid(home_view_node) and home_view_node.has_node("ContentScrollContainer/ListMargin/VBoxContainer/PopularProductList"):
+		var popular_list = home_view_node.get_node("ContentScrollContainer/ListMargin/VBoxContainer/PopularProductList")
 		_load_product_list("https://flathub.org/api/v2/collection/popular?page=1&per_page=10&locale=en", popular_list)
 	else:
 		printerr("ERROR: Could not find PopularProductList in HomeView instance.")
 
 func load_trending_products():
 	var home_view_node = _sections[0].instance
-	if is_instance_valid(home_view_node) and home_view_node.has_node("ContentScrollContainer/VBoxContainer/TrendingProductList"):
-		var trending_list = home_view_node.get_node("ContentScrollContainer/VBoxContainer/TrendingProductList")
+	if is_instance_valid(home_view_node) and home_view_node.has_node("ContentScrollContainer/ListMargin/VBoxContainer/TrendingProductList"):
+		var trending_list = home_view_node.get_node("ContentScrollContainer/ListMargin/VBoxContainer/TrendingProductList")
 		_load_product_list("https://flathub.org/api/v2/collection/trending?page=1&per_page=10&locale=en", trending_list)
 	else:
 		printerr("ERROR: Could not find TrendingProductList in HomeView instance.")
