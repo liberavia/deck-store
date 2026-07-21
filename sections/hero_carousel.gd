@@ -27,8 +27,14 @@ func _load_json():
 			if data is Dictionary and data.has("must_have_apps"):
 				apps = data["must_have_apps"]
 
+var _app_cards: Dictionary = {}
+
 func _fetch_apps_data():
 	for app_id in apps:
+		var card = _create_empty_card(app_id)
+		container.add_child(card)
+		_app_cards[app_id] = card
+		
 		var url = "https://flathub.org/api/v2/appstream/" + app_id + "?locale=en"
 		var http = HTTPRequest.new()
 		add_child(http)
@@ -43,17 +49,15 @@ func _on_request_completed(result, response_code, headers, body, http_node, app_
 		var json = JSON.new()
 		if json.parse(body.get_string_from_utf8()) == OK:
 			var app_data = json.get_data()
-			_create_card(app_id, app_data)
+			if _app_cards.has(app_id):
+				_populate_card(_app_cards[app_id], app_data)
 
-func _create_card(app_id: String, app_data: Dictionary):
-	var name = app_data.get("name", "Unknown")
-	var icon = app_data.get("icon", "")
-	var summary = app_data.get("summary", "")
-	
+func _create_empty_card(app_id: String) -> Button:
 	var card = Button.new()
 	card.custom_minimum_size = Vector2(400, 200)
 	card.focus_mode = Control.FOCUS_ALL
 	card.pivot_offset = Vector2(200, 100)
+	card.set_meta("app_id", app_id)
 	
 	var style_normal = StyleBoxFlat.new()
 	style_normal.bg_color = Color(0, 0, 0, 0.45)
@@ -89,14 +93,8 @@ func _create_card(app_id: String, app_data: Dictionary):
 		tw.tween_property(card, "scale", Vector2(1.0, 1.0), 0.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	)
 	
-	var screenshots = app_data.get("screenshots", [])
-	var bg_url = ""
-	if screenshots.size() > 0:
-		var sizes = screenshots[0].get("sizes", [])
-		if sizes.size() > 0:
-			bg_url = sizes[0].get("src", "")
-	
 	var bg_rect = TextureRect.new()
+	bg_rect.name = "BackgroundRect"
 	bg_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	bg_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -121,6 +119,7 @@ func _create_card(app_id: String, app_data: Dictionary):
 	margin.add_child(vbox)
 	
 	var icon_rect = TextureRect.new()
+	icon_rect.name = "IconRect"
 	icon_rect.custom_minimum_size = Vector2(80, 80)
 	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -129,7 +128,8 @@ func _create_card(app_id: String, app_data: Dictionary):
 	vbox.add_child(icon_rect)
 	
 	var title = Label.new()
-	title.text = name
+	title.name = "TitleLabel"
+	title.text = "Loading..."
 	title.add_theme_font_size_override("font_size", 22)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -137,7 +137,6 @@ func _create_card(app_id: String, app_data: Dictionary):
 	vbox.add_child(title)
 	
 	card.pressed.connect(func(): emit_signal("move_to_details_view", app_id, false))
-	card.set_meta("app_id", app_id)
 	
 	var status_indicator = TextureRect.new()
 	status_indicator.texture = load("res://assets/check_green.png")
@@ -157,11 +156,28 @@ func _create_card(app_id: String, app_data: Dictionary):
 		status_indicator.visible = false
 		
 	card.add_child(status_indicator)
-	container.add_child(card)
+	return card
+
+func _populate_card(card: Button, app_data: Dictionary):
+	var app_name = app_data.get("name", "Unknown")
+	var icon = app_data.get("icon", "")
+	var summary = app_data.get("summary", "")
 	
-	if icon != "":
+	var title = card.find_child("TitleLabel", true, false)
+	if title: title.text = app_name
+	
+	var icon_rect = card.find_child("IconRect", true, false)
+	if icon_rect and icon != "":
 		emit_signal("image_load_requested", icon, icon_rect)
-	if bg_url != "":
+		
+	var bg_rect = card.find_child("BackgroundRect", true, false)
+	var screenshots = app_data.get("screenshots", [])
+	var bg_url = ""
+	if screenshots.size() > 0:
+		var sizes = screenshots[0].get("sizes", [])
+		if sizes.size() > 0:
+			bg_url = sizes[0].get("src", "")
+	if bg_rect and bg_url != "":
 		emit_signal("image_load_requested", bg_url, bg_rect)
 
 func update_installed_status(installed_ids: Dictionary):
