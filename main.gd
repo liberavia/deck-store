@@ -911,32 +911,28 @@ func _on_joy_connection_changed(device_id: int, connected: bool):
 	print("-----------------------------------------")
 
 func _ensure_user_remote_exists():
-	var spawn_cmd = "/usr/bin/flatpak-spawn"
-	if not FileAccess.file_exists(spawn_cmd):
-		return
-
 	# Prüfe ob flathub als user-remote existiert
-	var check_cmd = "flatpak remotes --user --columns=name"
-	var check_args = ["--host", "sh", "-c", "LC_ALL=C " + check_cmd]
-	var check_output = []
-	var exit_code = OS.execute(spawn_cmd, check_args, check_output)
+	var check_cmd = "LC_ALL=C flatpak remotes --user --columns=name"
+	var output = []
+	var exit_code = OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args(check_cmd), output)
+	var out_str = output[0] if output.size() > 0 else ""
 	
 	var flathub_exists = false
-	if exit_code == 0 and check_output.size() > 0:
-		for line in check_output[0].split("\n"):
+	if exit_code == 0 and out_str.length() > 0:
+		for line in out_str.split("\n"):
 			if line.strip_edges() == "flathub":
 				flathub_exists = true
 				break
 	
 	if not flathub_exists:
 		print("INFO: Flathub user-remote missing. Attempting to add it...")
-		var add_cmd = "flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
-		var add_args = ["--host", "sh", "-c", "LC_ALL=C " + add_cmd]
-		var add_exit = OS.execute(spawn_cmd, add_args, [])
-		if add_exit == 0:
+		var add_cmd = "LC_ALL=C flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
+		var output_add = []
+		var exit_code_add = OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args(add_cmd), output_add)
+		if exit_code_add == 0:
 			print("INFO: Successfully added flathub user-remote.")
 		else:
-			printerr("ERROR: Failed to add flathub user-remote. Exit code: ", add_exit)
+			printerr("ERROR: Failed to add flathub user-remote. Exit code: ", exit_code_add)
 	else:
 		print("INFO: Flathub user-remote already exists.")
 
@@ -958,22 +954,18 @@ func _fetch_installed_apps():
 
 
 func _execute_flatpak_in_thread():
-	var spawn_cmd = "/usr/bin/flatpak-spawn"
 	# Use sh -c to set LC_ALL=C for consistent output format (dots for decimals)
 	# and fetch application ID, name, size and installation scope.
 	var host_command = "LC_ALL=C flatpak list --app --columns=application,name,size,installation"
-	var spawn_args = ["--host", "sh", "-c", host_command]
 	
+	var run_cmd = SystemUtils.get_host_sh_cmd()
+	var spawn_args = SystemUtils.get_host_sh_args(host_command)
 	var output_array = []
 
-	print("INFO: Thread: Execute '%s %s' ..." % [spawn_cmd, " ".join(spawn_args)])
+	print("INFO: Thread: Execute '%s %s' ..." % [run_cmd, " ".join(spawn_args)])
 
-	if not FileAccess.file_exists(spawn_cmd):
-		printerr("ERROR: Command '%s' was not found. Cannot execute host command." % spawn_cmd)
-		Callable(self, "_process_flatpak_result").call_deferred("", -1)
-		return
+	var exit_code = OS.execute(run_cmd, spawn_args, output_array)
 
-	var exit_code = OS.execute(spawn_cmd, spawn_args, output_array)
 
 	var output_string = ""
 	if output_array.size() > 0:

@@ -81,17 +81,17 @@ install_ssm() {
     ds_log "Installing bundle..."
 
     # Explicitly remove existing version to force update/reinstall
-    if flatpak-spawn --host flatpak info "${FLATPAK_APP_ID}" &> /dev/null; then
+    if $DS_FLATPAK_CMD info "${FLATPAK_APP_ID}" &> /dev/null; then
          ds_log "Removing existing version to ensure clean install..."
-         flatpak-spawn --host flatpak uninstall --user --assumeyes "${FLATPAK_APP_ID}" >> "$OUT_FILE" 2>&1
+         $DS_FLATPAK_CMD uninstall --user --assumeyes "${FLATPAK_APP_ID}" >> "$OUT_FILE" 2>&1
     fi
 
-    flatpak-spawn --host flatpak install --user -y "$temp_bundle_path" >> "$OUT_FILE" 2>&1
+    $DS_FLATPAK_CMD install --user -y "$temp_bundle_path" >> "$OUT_FILE" 2>&1
     
     rm "$temp_bundle_path"
 
     ds_send_progress 90 "Verifying installation..."
-    if flatpak-spawn --host flatpak info "${FLATPAK_APP_ID}" &> /dev/null; then
+    if $DS_FLATPAK_CMD info "${FLATPAK_APP_ID}" &> /dev/null; then
         ds_log "SUCCESS: Steam Shortcut Manager Flatpak (${FLATPAK_APP_ID}) installed successfully."
         set_installed_version "$latest_version"
         ds_send_progress 100 "Installation Complete"
@@ -111,9 +111,9 @@ remove_ssm() {
     ds_check_dependencies
     
     ds_send_progress 20 "Checking installation..."
-    if flatpak-spawn --host flatpak info "$FLATPAK_APP_ID" &> /dev/null; then
+    if $DS_FLATPAK_CMD info "$FLATPAK_APP_ID" &> /dev/null; then
         ds_send_progress 50 "Uninstalling..."
-        flatpak-spawn --host flatpak uninstall --user --assumeyes "$FLATPAK_APP_ID"
+        $DS_FLATPAK_CMD uninstall --user --assumeyes "$FLATPAK_APP_ID"
         ds_log "SUCCESS: Steam Shortcut Manager Flatpak ($FLATPAK_APP_ID) uninstalled."
         if [ -f "$VERSION_FILE" ]; then
             rm "$VERSION_FILE"
@@ -135,7 +135,7 @@ check_ssm() {
         version=$(cat "$VERSION_FILE")
     fi
 
-    if flatpak-spawn --host flatpak info "$FLATPAK_APP_ID" &> /dev/null && [ "$version" != "0.0.0" ]; then
+    if $DS_FLATPAK_CMD info "$FLATPAK_APP_ID" &> /dev/null && [ "$version" != "0.0.0" ]; then
         ds_log "INSTALLED: Steam Shortcut Manager Flatpak ($FLATPAK_APP_ID) is installed. Version: $version"
         exit 0
     else

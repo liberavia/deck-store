@@ -124,22 +124,19 @@ func _start_update_check():
 	_update_check_thread.start(_execute_update_check_in_thread)
 
 func _execute_update_check_in_thread():
-	var spawn_cmd = "/usr/bin/flatpak-spawn"
-	if not FileAccess.file_exists(spawn_cmd):
-		call_deferred("_process_update_check_result", "")
-		return
+	var run_cmd = SystemUtils.get_host_sh_cmd()
 
 	# 1. AppStream
 	var host_cmd_metadata = "flatpak update --appstream"
-	var args_metadata = ["--host", "sh", "-c", host_cmd_metadata]
-	OS.execute(spawn_cmd, args_metadata, [], false)
+	var args_metadata = SystemUtils.get_host_sh_args(host_cmd_metadata)
+	OS.execute(run_cmd, args_metadata, [], false)
 
 	# 2. Remotes
 	var remotes_info = [] 
 	# Alle Remotes prüfen (system und user), um Flathub auch auf Bazzite/SteamOS zu finden
 	var cmd_remotes = "LC_ALL=C flatpak remotes --columns=name"
 	var output_remotes = []
-	OS.execute(spawn_cmd, ["--host", "sh", "-c", cmd_remotes], output_remotes)
+	OS.execute(run_cmd, SystemUtils.get_host_sh_args(cmd_remotes), output_remotes)
 	if output_remotes.size() > 0:
 		for line in output_remotes[0].strip_edges().split("\n"):
 			line = line.strip_edges()
@@ -154,7 +151,7 @@ func _execute_update_check_in_thread():
 		# Falls eine App im System-Scope installiert ist, würde sie hier nicht auftauchen.
 		var host_cmd_list = "LC_ALL=C flatpak remote-ls --user %s --updates --app --columns=application,name,version,download-size" % [remote_name]
 		var output_updates = []
-		var exit_code = OS.execute(spawn_cmd, ["--host", "sh", "-c", host_cmd_list], output_updates, true) 
+		var exit_code = OS.execute(run_cmd, SystemUtils.get_host_sh_args(host_cmd_list), output_updates, true) 
 		
 		if exit_code == 0 and output_updates.size() > 0:
 			accumulated_output += output_updates[0] + "\n"
