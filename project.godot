@@ -22,6 +22,7 @@ boot_splash/show_image=false
 config/icon="res://icon.svg"
 
 [autoload]
+AppBlacklist="*res://scripts/AppBlacklist.gd"
 
 DownloadManager="*res://scripts/DownloadManager.gd"
 SteamIntegration="*res://scripts/SteamIntegration.gd"

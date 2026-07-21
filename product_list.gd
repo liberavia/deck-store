@@ -208,10 +208,15 @@ func set_products(product_data: Array):
 		return
 
 	for product in product_data:
+		var product_app_id = product.get("app_id")
+		
+		# Skip blacklisted apps
+		if AppBlacklist.is_blacklisted(product_app_id):
+			continue
+			
 		var product_box_instance = product_box_scene.instantiate()
 		product_box_instance.focus_mode = Control.FOCUS_ALL
 
-		var product_app_id = product.get("app_id")
 		if product_box_instance.has_method("set_app_id"):
 			product_box_instance.set_app_id(product_app_id)
 		

@@ -223,6 +223,11 @@ func _update_ui(status_data: Dictionary):
 		if app_scope == "system":
 			button_text = TEXT_SYSTEM; button_disabled = true; button_stylebox = stylebox_busy
 
+	if button_text == TEXT_INSTALL and AppBlacklist.is_blacklisted(app_id):
+		button_text = "Blacklisted"
+		button_disabled = true
+		button_stylebox = stylebox_busy
+
 	self.text = button_text
 	self.disabled = button_disabled
 	self.visible = show_button

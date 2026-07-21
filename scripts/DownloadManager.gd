@@ -113,6 +113,12 @@ func _add_task(op_type: String, app_id: String, app_data: Dictionary = {}) -> St
 	var random_num = randi() # Zusätzliche Zufälligkeit
 	var operation_id = "%s-%s-%s" % [timestamp_sec, timestamp_usec, random_num]
 	
+	if (op_type == "install" or op_type == "update") and AppBlacklist.is_blacklisted(app_id):
+		printerr("DownloadManager ERROR: Refusing to %s blacklisted app: %s" % [op_type, app_id])
+		emit_signal("task_finished", operation_id, "error", op_type)
+		return ""
+
+	
 	var initial_status_data = {
 		"status": "queued", "app_id": app_id, "operation_id": operation_id,
 		"progress": 0, "speed": null, "eta": null, "error": null,
