@@ -1,6 +1,6 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="12" y="18" width="40" height="28" rx="8" fill="#333333" stroke="white" stroke-width="4"/>
-  <rect x="24" y="24" width="4" height="16" rx="2" fill="white"/>
-  <rect x="32" y="24" width="4" height="16" rx="2" fill="white"/>
-  <rect x="40" y="24" width="4" height="16" rx="2" fill="white"/>
+  <!-- Pill shape -->
+  <rect x="20" y="16" width="24" height="32" rx="12" fill="#2d2d2d" stroke="#888" stroke-width="3"/>
+  <!-- Three radiating lines \|/ -->
+  <path d="M 26,26 L 30,34 M 32,24 L 32,36 M 38,26 L 34,34" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
 </svg>

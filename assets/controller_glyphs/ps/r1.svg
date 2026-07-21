@@ -1,9 +1,14 @@
-<svg width="60" height="30" viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg">
-  <rect x="2" y="2" width="56" height="26" rx="10" fill="#444" stroke="white" stroke-width="2"/>
-  <g transform="translate(16, 7)">
-    <!-- R (Balanced) -->
-    <path d="M0,16 L0,0 L7,0 C11,0 12,2 12,4 C12,6 11,8 7,8 L0,8 M7,8 L12,16" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    <!-- 1 -->
-    <path d="M22,2 L22,16 M19,4 L22,2" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
+<svg width="60" height="40" viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4a4a4a"/>
+      <stop offset="100%" stop-color="#1f1f1f"/>
+    </linearGradient>
+  </defs>
+  <path d="M 6,16 C 6,6 15,4 30,4 C 45,4 54,6 54,16 L 54,30 C 54,34 50,36 46,36 L 14,36 C 10,36 6,34 6,30 Z" fill="url(#bg)" stroke="#999" stroke-width="2"/>
+  <path d="M 8,16 C 8,8 16,6 30,6 C 44,6 52,8 52,16" fill="none" stroke="#ddd" stroke-width="1.5" opacity="0.6"/>
+  <!-- R -->
+  <path d="M 23 32 V 22 H 26 A 2.5 2.5 0 0 1 26 27 H 23 M 25 27 L 28 32" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 1 -->
+  <path d="M 33 24 L 35 22 V 32" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
