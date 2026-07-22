@@ -121,7 +121,7 @@ func set_action_pulsing(btn_name: String, pulsing: bool):
 						action_label.modulate.a = 1.0
 
 func _start_pulse(node: Control):
-	var t = create_tween().set_loops()
+	var t = create_tween().bind_node(node).set_loops()
 	t.tween_property(node, "modulate:a", 0.4, 1.0).set_trans(Tween.TRANS_SINE)
 	t.tween_property(node, "modulate:a", 1.0, 1.0).set_trans(Tween.TRANS_SINE)
 	node.set_meta("pulse_tween", t)

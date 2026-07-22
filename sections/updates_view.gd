@@ -114,8 +114,12 @@ func _on_sort_pressed():
 		audio_player.play()
 
 func _start_update_check():
-	if _update_check_thread != null and _update_check_thread.is_alive():
-		return
+	if _update_check_thread != null:
+		if _update_check_thread.is_alive():
+			return
+		elif _update_check_thread.is_started():
+			_update_check_thread.wait_to_finish()
+		_update_check_thread = null
 
 	if is_instance_valid(loading_overlay_instance):
 		loading_overlay_instance.show_overlay()
@@ -431,13 +435,13 @@ func _find_item_by_id(app_id: String) -> Control:
 			return child
 	return null
 
-func _on_task_updated(operation_id: String, status_data: Dictionary):
+func _on_task_updated(_operation_id: String, status_data: Dictionary):
 	if not is_updating: return
-	var app_id = status_data.get("app_id")
+	var app_id = status_data.get("app_id", "")
+	var status = status_data.get("status", "")
 	if not app_id in selected_app_ids: return
 	
 	var item = _find_item_by_id(app_id)
-	var status = status_data.get("status")
 	var progress = status_data.get("progress")
 	if progress == null: progress = 0.0
 	else: progress = float(progress)
@@ -483,7 +487,7 @@ func _on_task_updated(operation_id: String, status_data: Dictionary):
 				"installing": msg = "Installing..."
 			item.set_progress(progress, msg)
 
-func _on_task_finished(operation_id: String, final_status: String, operation_type: String):
+func _on_task_finished(_operation_id: String, _final_status: String, _operation_type: String):
 	# Fallback if task_updated didn't catch final state or for cleanup
 	# We mostly handled it in _on_task_updated via status checks
 	# But let's check if we are completely idle now

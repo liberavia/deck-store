@@ -44,6 +44,12 @@ func queue_install(app_id: String, app_data: Dictionary = {}) -> String:
 	return _add_task("install", app_id, app_data)
 
 func queue_update(app_id: String, app_data: Dictionary = {}) -> String:
+	# Fetch the installation scope before adding to queue
+	if not app_data.has("installation"):
+		var main_app = get_node_or_null("/root/App")
+		if main_app and main_app.has_method("get_app_scope"):
+			app_data["installation"] = main_app.get_app_scope(app_id)
+
 	return _add_task("update", app_id, app_data)
 
 func queue_uninstall(app_id: String, app_data: Dictionary = {}) -> String:
@@ -60,6 +66,12 @@ func queue_uninstall(app_id: String, app_data: Dictionary = {}) -> String:
 			else: printerr("DownloadManager ERROR: SteamIntegration node missing 'remove_from_steam' method!")
 		else: printerr("DownloadManager: SteamIntegration Autoload node not found or invalid.")
 	else: printerr("DownloadManager: SteamIntegration Autoload setting not found.")
+
+	# Fetch the installation scope before adding to queue
+	if not app_data.has("installation"):
+		var main_app = get_node_or_null("/root/App")
+		if main_app and main_app.has_method("get_app_scope"):
+			app_data["installation"] = main_app.get_app_scope(app_id)
 
 	return _add_task("uninstall", app_id, app_data)
 

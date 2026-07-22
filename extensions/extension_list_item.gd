@@ -194,7 +194,7 @@ func _on_extension_progress_updated(extension_id: String, percent: int, message:
 		progress_bar.value = percent
 		progress_label.text = message
 
-func _on_operation_started(extension_id: String, operation: String):
+func _on_operation_started(extension_id: String, _operation: String):
 	if extension_id == _extension_id:
 		_operation_in_progress = true
 		update_status(ExtensionsManager.get_extension_status(_extension_id))

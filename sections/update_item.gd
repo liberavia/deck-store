@@ -59,7 +59,7 @@ func set_progress(value, message: String = ""):
 
 func _start_pulse():
 	if pulse_tween and pulse_tween.is_valid(): return
-	pulse_tween = create_tween().set_loops()
+	pulse_tween = create_tween().bind_node(progress_bar).set_loops()
 	pulse_tween.tween_property(progress_bar, "modulate:a", 0.3, 0.6).set_trans(Tween.TRANS_SINE)
 	pulse_tween.tween_property(progress_bar, "modulate:a", 1.0, 0.6).set_trans(Tween.TRANS_SINE)
 
@@ -103,7 +103,7 @@ func _load_icon():
 	if err != OK:
 		http.queue_free()
 
-func _on_metadata_received(result, response_code, headers, body, http_request):
+func _on_metadata_received(_result, response_code, _headers, body, http_request):
 	if response_code == 200:
 		var json = JSON.parse_string(body.get_string_from_utf8())
 		if json and json is Dictionary:

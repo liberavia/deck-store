@@ -14,6 +14,8 @@ var _extensions_status: Dictionary = {}
 var _extensions_update_available: Dictionary = {}
 
 var _check_thread: Thread = null
+var _version_thread: Thread = null
+var _operation_thread: Thread = null
 var _check_queue: Array[Dictionary] = []
 var _is_checking: bool = false
 var _update_check_queue: Array[Dictionary] = []
@@ -193,10 +195,15 @@ func _execute_operation(extension_id: String, operation: String):
 	if _progress_timer.is_stopped():
 		_progress_timer.start()
 	
-	var operation_thread = Thread.new()
+	if _operation_thread != null:
+		if _operation_thread.is_started():
+			_operation_thread.wait_to_finish()
+		_operation_thread = null
+	
+	_operation_thread = Thread.new()
 	var callable_func = func():
 		_execute_operation_script_in_thread(extension_data, operation)
-	operation_thread.start(callable_func)
+	_operation_thread.start(callable_func)
 
 
 func _execute_operation_script_in_thread(extension_data: Dictionary, operation: String):
@@ -214,7 +221,7 @@ func _execute_operation_script_in_thread(extension_data: Dictionary, operation: 
 	if FileAccess.file_exists(log_file_path):
 		DirAccess.remove_absolute(log_file_path)
 
-	var exit_code = OS.execute("sh", [script_path, operation, log_file_path], [], true, true)
+	var exit_code = OS.execute("sh", [script_path, operation, log_file_path], [], true, false)
 	
 	if FileAccess.file_exists(log_file_path):
 		var file = FileAccess.open(log_file_path, FileAccess.READ)
@@ -328,8 +335,9 @@ func check_all_extensions_status():
 	_start_next_check()
 
 func _start_next_check():
-	if _check_thread != null and _check_thread.is_started():
-		_check_thread.wait_to_finish()
+	if _check_thread != null:
+		if _check_thread.is_started():
+			_check_thread.wait_to_finish()
 		_check_thread = null
 
 	if _check_queue.is_empty():
@@ -358,7 +366,7 @@ func _execute_check_script_in_thread(extension_data: Dictionary):
 	if FileAccess.file_exists(log_file_path):
 		DirAccess.remove_absolute(log_file_path)
 		
-	var exit_code = OS.execute("sh", [script_path, "check", log_file_path], [], true, true)
+	var exit_code = OS.execute("sh", [script_path, "check", log_file_path], [], true, false)
 	
 	if FileAccess.file_exists(log_file_path):
 		DirAccess.remove_absolute(log_file_path)
@@ -408,7 +416,7 @@ func _start_next_update_check():
 	
 	_is_checking_updates = true
 	var extension_to_check = _update_check_queue.pop_front()
-	var ext_id = extension_to_check.get("id", "unknown")
+	var _ext_id = extension_to_check.get("id", "unknown")
 	
 	var repository_url = extension_to_check.get("repository_url", "")
 	
@@ -419,15 +427,14 @@ func _start_next_update_check():
 	var http_request = HTTPRequest.new()
 	add_child(http_request)
 	http_request.request_completed.connect(func(result, response_code, headers, body):
-		_on_github_release_request_completed(extension_to_check, result, response_code, headers, body)
+		_on_github_release_request_completed(extension_to_check, result, response_code, headers, body, http_request)
 	)
 	
 	var api_url = repository_url.replace("https://github.com/", "https://api.github.com/repos/") + "/releases/latest"
 	var headers = ["User-Agent: GodotDeckStore/1.0", "Accept: application/vnd.github.v3+json"]
 	http_request.request(api_url, headers)
 
-func _on_github_release_request_completed(extension_data: Dictionary, result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray):
-	# Request cleanup handled via queue_free in a safer way
+func _on_github_release_request_completed(extension_data: Dictionary, result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, http_request: HTTPRequest):
 	
 	var extension_id = extension_data.get("id", "")
 	
@@ -454,8 +461,23 @@ func _on_github_release_request_completed(extension_data: Dictionary, result: in
 	var script_path = _get_executable_script_path(internal_path, script_name)
 	var log_file_path = ProjectSettings.globalize_path(TMP_LOG_FILE)
 	
-	var exit_code = OS.execute("sh", [script_path, "version", log_file_path], [], true, true)
+	if _version_thread != null:
+		if _version_thread.is_started():
+			_version_thread.wait_to_finish()
+		_version_thread = null
 	
+	_version_thread = Thread.new()
+	var callable_func = func():
+		var exit_code = OS.execute("sh", [script_path, "version", log_file_path], [], true, false)
+		call_deferred("_process_version_check_result", extension_id, latest_version, log_file_path, exit_code)
+	
+	_version_thread.start(callable_func)
+
+func _process_version_check_result(extension_id: String, latest_version: String, log_file_path: String, exit_code: int):
+	if _version_thread != null and _version_thread.is_started():
+		_version_thread.wait_to_finish()
+		_version_thread = null
+		
 	var current_version = "0.0.0"
 	if exit_code == 0:
 		if FileAccess.file_exists(log_file_path):
@@ -473,7 +495,9 @@ func _on_github_release_request_completed(extension_data: Dictionary, result: in
 	else:
 		_extensions_update_available.erase(extension_id)
 	
+	print("DEBUG ExtensionManager: Calling _start_next_update_check() from _process_version_check_result")
 	_start_next_update_check()
+	print("DEBUG ExtensionManager: _process_version_check_result finished execution.")
 
 
 func _compare_versions(version1: String, version2: String) -> int:

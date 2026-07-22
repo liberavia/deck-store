@@ -60,9 +60,9 @@ func _ready():
 	if not app_id.is_empty(): _update_ui(DownloadManager.get_task_status(app_id))
 	print("DEBUG UI: ActionButton _ready finished for ", app_id)
 
-func set_app_info(id: String, name: String, url):
+func set_app_info(id: String, p_name: String, url):
 	app_id = id
-	app_name = name # Speichern!
+	app_name = p_name # Speichern!
 	icon_url = str(url) if url != null else ""   # Sicherstellen, dass es ein String ist!
 
 	# Initialen Status basierend auf Installation und DownloadManager setzen

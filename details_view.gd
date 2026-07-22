@@ -658,7 +658,7 @@ func _on_task_updated_for_progress(operation_id: String, status_data: Dictionary
 
 func _start_pulse():
 	if pulse_tween and pulse_tween.is_valid(): return
-	pulse_tween = create_tween().set_loops()
+	pulse_tween = create_tween().bind_node(progress_bar).set_loops()
 	pulse_tween.tween_property(progress_bar, "modulate:a", 0.3, 0.6).set_trans(Tween.TRANS_SINE)
 	pulse_tween.tween_property(progress_bar, "modulate:a", 1.0, 0.6).set_trans(Tween.TRANS_SINE)
 
@@ -668,7 +668,7 @@ func _stop_pulse():
 	if is_instance_valid(progress_bar):
 		progress_bar.modulate.a = 1.0
 			
-func _on_task_finished_for_progress(operation_id: String, final_status: String):
+func _on_task_finished_for_progress(operation_id: String, final_status: String, op_type: String = ""):
 	if is_instance_valid(action_button) and operation_id == action_button.current_operation_id:
 		_stop_pulse()
 		if progress_info: progress_info.visible = false

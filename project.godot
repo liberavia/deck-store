@@ -22,9 +22,9 @@ boot_splash/show_image=false
 config/icon="res://icon.svg"
 
 [autoload]
+
 OnlineStatusManager="*res://scripts/OnlineStatusManager.gd"
 AppBlacklist="*res://scripts/AppBlacklist.gd"
-
 DownloadManager="*res://scripts/DownloadManager.gd"
 SteamIntegration="*res://scripts/SteamIntegration.gd"
 GlobalBackgroundShader="*res://global_background_shader.tscn"
@@ -184,7 +184,8 @@ section_previous={
 }
 open_app_menu={
 "deadzone": 0.5,
-"events": [Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":4,"pressure":0.0,"pressed":false,"script":null)]
+"events": [Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":4,"pressure":0.0,"pressed":false,"script":null)
+]
 }
 open_settings={
 "deadzone": 0.5,

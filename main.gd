@@ -11,7 +11,7 @@ extends Control
 
 @onready var section_view_container: Control = $CanvasLayer/VBoxContainer/SectionViewContainer
 
-@onready var queue_indicator: HBoxContainer = $CanvasLayer/QueueIndicator
+
 @onready var toast_container: VBoxContainer = VBoxContainer.new()
 
 @onready var home_button: Button = $CanvasLayer/VBoxContainer/TopButtonBar/ButtonHome
@@ -1032,8 +1032,12 @@ func _ensure_user_remote_exists():
 # =============================================================================
 
 func _fetch_installed_apps():
-	if _flatpak_thread != null and _flatpak_thread.is_alive():
-		return
+	if _flatpak_thread != null:
+		if _flatpak_thread.is_alive():
+			return
+		elif _flatpak_thread.is_started():
+			_flatpak_thread.wait_to_finish()
+		_flatpak_thread = null
 
 	print("INFO: Start Thread for fetching installed flatpaks...")
 	_flatpak_thread = Thread.new()
