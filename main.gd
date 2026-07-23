@@ -305,7 +305,7 @@ func _update_footer_prompts():
 	
 	if is_instance_valid(_downloads_flyout_instance) and _downloads_flyout_instance.visible:
 		actions = [
-			{"button": "A", "label": "Select"},
+			{"button": "A", "label": "App Details"},
 			{"button": "B", "label": "Back"}
 		]
 		footer_bar.set_actions(actions)

@@ -42,10 +42,13 @@ func close_flyout():
 	var tween = create_tween().set_parallel(true)
 	tween.tween_property(flyout_panel, "position:x", get_viewport().get_visible_rect().size.x, 0.2).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	tween.tween_property(color_rect, "modulate:a", 0.0, 0.2)
-	tween.chain().tween_callback(hide)
+	tween.chain().tween_callback(_on_flyout_hidden)
 	
 	if is_instance_valid(_previous_focus_owner):
 		_previous_focus_owner.grab_focus()
+
+func _on_flyout_hidden():
+	hide()
 	emit_signal("closed")
 
 func _update_queue():
