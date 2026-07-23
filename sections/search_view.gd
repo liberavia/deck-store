@@ -129,6 +129,15 @@ func _setup_connections():
 		product_list.image_load_requested.connect(func(url, rect): emit_signal("image_load_requested", url, rect))
 		product_list.focus_exited_up.connect(func(): emit_signal("focus_exited_up_from_lists"))
 		product_list.load_new_page.connect(func(url, list): emit_signal("load_new_page_requested", url, list))
+		product_list.products_loaded.connect(_on_products_loaded)
+
+func _on_products_loaded():
+	if is_instance_valid(product_list) and is_visible_in_tree():
+		await get_tree().create_timer(0.05).timeout
+		if product_list.has_method("has_products") and product_list.has_products():
+			product_list.focus_first_product()
+		elif is_instance_valid(search_input):
+			search_input.grab_focus()
 
 	if Engine.has_singleton("Steam") and Steam.has_signal("floating_gamepad_text_input_dismissed"):
 		Steam.floating_gamepad_text_input_dismissed.connect(_on_floating_keyboard_dismissed)
