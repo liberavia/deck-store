@@ -33,6 +33,14 @@ func _process(_delta):
 	if is_steam_initialized and Engine.has_singleton("Steam"):
 		Steam.run_callbacks()
 
+func open_url(url: String):
+	if is_steam_initialized and Engine.has_singleton("Steam") and Steam.has_method("activateGameOverlayToWebPage"):
+		print("SteamIntegration: Opening URL in Steam Overlay: ", url)
+		Steam.activateGameOverlayToWebPage(url)
+	else:
+		print("SteamIntegration: Steam Overlay not available, using OS.shell_open for: ", url)
+		OS.shell_open(url)
+
 # Führt den steam_shortcut_manager in einem separaten Thread aus
 func _execute_shortcut_manager_in_thread(args: Array):
 	print("DEBUG SteamIntegration _execute_shortcut_manager_in_thread mit args: ", args)

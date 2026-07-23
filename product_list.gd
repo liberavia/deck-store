@@ -60,8 +60,9 @@ var current_category = ""
 var current_url = ""
 
 # --- Cooldown Variables ---
-const NAV_COOLDOWN_MS = 250
-var last_nav_time = { "ui_up": 0, "ui_down": 0, "ui_left": 0, "ui_right": 0 }
+const NAV_COOLDOWN_MS_PAGING = 150
+const NAV_COOLDOWN_MS_CARDS = 200
+var last_nav_time = { "ui_up": 0, "ui_down": 0, "ui_left": 0, "ui_right": 0, "ui_page_up": 0, "ui_page_down": 0 }
 
 func _ready():
 	origin_position = Vector2(0, 0)
@@ -402,15 +403,21 @@ func _input(event: InputEvent):
 	# Pagination Shortcuts - only for multi-line wrap lists
 	if display_mode == DisplayMode.MULTI_LINE_WRAP:
 		if event.is_action_pressed("ui_page_up"):
-			if current_page > 1:
-				_on_prev_button_pressed()
-				get_viewport().set_input_as_handled()
-				return
+			var current_time = Time.get_ticks_msec()
+			if current_time - last_nav_time.get("ui_page_up", 0) > NAV_COOLDOWN_MS_PAGING:
+				if current_page > 1:
+					_on_prev_button_pressed()
+				last_nav_time["ui_page_up"] = current_time
+			get_viewport().set_input_as_handled()
+			return
 		elif event.is_action_pressed("ui_page_down"):
-			if current_page < total_pages:
-				_on_next_button_pressed()
-				get_viewport().set_input_as_handled()
-				return
+			var current_time = Time.get_ticks_msec()
+			if current_time - last_nav_time.get("ui_page_down", 0) > NAV_COOLDOWN_MS_PAGING:
+				if current_page < total_pages:
+					_on_next_button_pressed()
+				last_nav_time["ui_page_down"] = current_time
+			get_viewport().set_input_as_handled()
+			return
 
 	var action_string = ""
 	if event.is_action_pressed("ui_up"): action_string = "ui_up"
@@ -420,7 +427,7 @@ func _input(event: InputEvent):
 
 	if action_string != "":
 		var current_time = Time.get_ticks_msec()
-		if current_time - last_nav_time.get(action_string, 0) > NAV_COOLDOWN_MS:
+		if current_time - last_nav_time.get(action_string, 0) > NAV_COOLDOWN_MS_CARDS:
 			if _handle_navigation(action_string):
 				last_nav_time[action_string] = current_time
 				get_viewport().set_input_as_handled()

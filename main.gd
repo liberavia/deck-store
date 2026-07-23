@@ -348,7 +348,7 @@ func _update_footer_prompts():
 			var pagination_prompts = _get_pagination_prompts(focus_owner)
 			actions.append_array(pagination_prompts)
 	
-	actions.append({"button": "View", "label": "App Menu"})
+	actions.append({"button": "View", "label": "Menu"})
 	actions.append({"button": "Menu", "label": "Settings"})
 	
 	var dm = get_node_or_null("/root/DownloadManager")

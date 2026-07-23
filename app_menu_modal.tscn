@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://cfvrm87qjtcom"]
 
-[ext_resource type="Script" path="res://app_menu_modal.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://bafdb0jl6u0vx" path="res://app_menu_modal.gd" id="1_script"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
 bg_color = Color(0.12, 0.12, 0.15, 0.95)
@@ -8,17 +8,17 @@ border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.63, 0.13, 0.94, 1.0)
+border_color = Color(0.63, 0.13, 0.94, 1)
 corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[node name="AppMenuModal" type="CanvasLayer"]
+[node name="AppMenuModal" type="CanvasLayer" unique_id=885612675]
 layer = 10
 script = ExtResource("1_script")
 
-[node name="ColorRect" type="ColorRect" parent="."]
+[node name="ColorRect" type="ColorRect" parent="." unique_id=1238063212]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -26,41 +26,41 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.6)
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=787255444]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="PanelContainer" type="PanelContainer" parent="CenterContainer"]
+[node name="PanelContainer" type="PanelContainer" parent="CenterContainer" unique_id=1294985919]
 custom_minimum_size = Vector2(600, 500)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
 
-[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/PanelContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/PanelContainer" unique_id=873908664]
 layout_mode = 2
 theme_override_constants/margin_left = 40
 theme_override_constants/margin_top = 40
 theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 40
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer" unique_id=335288326]
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="Title" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="Title" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1572641087]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "AppMenu"
+text = "Menu"
 horizontal_alignment = 1
 
-[node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1498101800]
 layout_mode = 2
 size_flags_vertical = 3
 follow_focus = true
 
-[node name="AppMenuMargin" type="MarginContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer"]
+[node name="AppMenuMargin" type="MarginContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer" unique_id=530314138]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -69,19 +69,18 @@ theme_override_constants/margin_top = 15
 theme_override_constants/margin_right = 25
 theme_override_constants/margin_bottom = 15
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/AppMenuMargin"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/AppMenuMargin" unique_id=449249912]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 15
 
-[node name="Placeholder" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/AppMenuMargin/VBoxContainer"]
+[node name="Placeholder" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/AppMenuMargin/VBoxContainer" unique_id=1385870647]
 layout_mode = 2
-text = "AppMenu options will be added here based on TODO_SETTINGS.md."
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="CloseButton" type="Button" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="CloseButton" type="Button" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=208902910]
 custom_minimum_size = Vector2(200, 45)
 layout_mode = 2
 size_flags_horizontal = 4

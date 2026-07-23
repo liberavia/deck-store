@@ -13,6 +13,7 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @onready var app_desc: RichTextLabel = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/DetailsDescriptionScroller/AppDescription
 @onready var screenshot_container: HBoxContainer = $MarginContainer/Panel/DetailsContents/ScreenshotClipContainer/ScrollContainer/ContainerScreenshots
 @onready var app_developer: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerDeveloper/Developer
+@onready var website_button: Button = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerWebsite/WebsiteButton
 @onready var app_current_version: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerVersion/CurrentVersion
 @onready var app_release_date: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate/ReleaseDate
 @onready var action_button: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ActionButton
@@ -32,6 +33,7 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 var current_app_id: String = ""
 var is_currently_installed: bool = false
 var current_app_name: String = ""
+var current_website_url: String = ""
 var current_icon_url: String = ""
 var is_known_to_be_in_steam: bool = true
 var steam_check_pending: bool = false
@@ -108,6 +110,10 @@ func _ready():
 
 	if is_instance_valid(action_button):
 		action_button.mouse_entered.connect(func(): action_button.grab_focus())
+		
+	if is_instance_valid(website_button):
+		website_button.pressed.connect(_on_website_button_pressed)
+		website_button.mouse_entered.connect(func(): website_button.grab_focus())
 		
 	if is_instance_valid(add_to_steam_button):
 		add_to_steam_button.mouse_entered.connect(func(): add_to_steam_button.grab_focus())
@@ -441,6 +447,21 @@ func _display_details(product: Dictionary):
 	current_app_name = product.get("name") if product.get("name") != null else "N/A"
 	app_developer.text = product.get("developer_name") if product.get("developer_name") != null else "N/A"
 	
+	# Extract Website URL
+	var urls_dict = product.get("urls", {})
+	if typeof(urls_dict) == TYPE_DICTIONARY:
+		current_website_url = urls_dict.get("homepage", "")
+		if current_website_url.is_empty():
+			current_website_url = urls_dict.get("bugtracker", "")
+	
+	if is_instance_valid(website_button):
+		if not current_website_url.is_empty():
+			website_button.visible = true
+			website_button.get_parent().visible = true
+		else:
+			website_button.visible = false
+			website_button.get_parent().visible = false
+	
 	var safe_icon_url = icon_url if icon_url != null else ""
 
 	if is_instance_valid(action_button) and action_button.has_method("set_app_info"):
@@ -513,6 +534,14 @@ func _clear_rating_ui():
 	if is_instance_valid(show_reviews_button):
 		show_reviews_button.visible = false
 		show_reviews_button.disabled = true
+
+func _on_website_button_pressed():
+	if not current_website_url.is_empty():
+		var steam_integration = get_node_or_null("/root/SteamIntegration")
+		if steam_integration and steam_integration.has_method("open_url"):
+			steam_integration.open_url(current_website_url)
+		else:
+			OS.shell_open(current_website_url)
 
 func _open_screenshot_zoom_popup(start_index: int):
 	if not screenshot_zoom_popup_scene:
