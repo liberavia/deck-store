@@ -1263,7 +1263,19 @@ func _on_download_task_updated(operation_id: String, status_data: Dictionary):
 func _on_download_task_finished(operation_id: String, final_status: String, op_type: String):
 	_update_footer_prompts()
 	var success = (final_status == "completed")
-	var msg = operation_id + (" finished successfully" if success else " failed")
+	var msg = operation_id
+	var app_name = operation_id
+	
+	var dm = get_node_or_null("/root/DownloadManager")
+	if dm and dm.running_tasks.has(operation_id):
+		app_name = dm.running_tasks[operation_id].status_data.get("name", operation_id)
+		
+	var type_str = "processed"
+	if op_type == "install": type_str = "installed"
+	elif op_type == "uninstall": type_str = "uninstalled"
+	elif op_type == "update": type_str = "updated"
+	
+	msg = "%s %s %s" % [app_name, "was successfully" if success else "failed to be", type_str]
 	_show_toast(msg, success)
 
 func _show_toast(message: String, success: bool = true):

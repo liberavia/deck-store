@@ -79,12 +79,48 @@ func _update_queue():
 			task_btn = Button.new()
 			task_btn.name = safe_op_id
 			
-			task_btn.custom_minimum_size = Vector2(0, 60)
+			task_btn.custom_minimum_size = Vector2(0, 70)
+			
+			var style_normal = StyleBoxFlat.new()
+			style_normal.bg_color = Color(0.1, 0.1, 0.1, 0.8)
+			style_normal.set_corner_radius_all(8)
+			style_normal.content_margin_left = 10
+			style_normal.content_margin_top = 10
+			style_normal.content_margin_right = 10
+			style_normal.content_margin_bottom = 10
+			
+			var style_focus = style_normal.duplicate()
+			style_focus.border_color = Color.PURPLE
+			style_focus.border_width_left = 2
+			style_focus.border_width_top = 2
+			style_focus.border_width_right = 2
+			style_focus.border_width_bottom = 2
+			
+			task_btn.add_theme_stylebox_override("normal", style_normal)
+			task_btn.add_theme_stylebox_override("focus", style_focus)
+			task_btn.add_theme_stylebox_override("hover", style_focus)
+			task_btn.add_theme_stylebox_override("pressed", style_focus)
+			
+			var main_hbox = HBoxContainer.new()
+			main_hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+			main_hbox.set_offsets_preset(Control.PRESET_FULL_RECT)
+			main_hbox.add_theme_constant_override("separation", 10)
+			main_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			
+			var icon_rect = TextureRect.new()
+			icon_rect.name = "IconRect"
+			icon_rect.custom_minimum_size = Vector2(50, 50)
+			icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			main_hbox.add_child(icon_rect)
 			
 			var vbox = VBoxContainer.new()
-			vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-			vbox.set_offsets_preset(Control.PRESET_FULL_RECT)
+			vbox.name = "VBoxContainer"
+			vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 			vbox.add_theme_constant_override("separation", 2)
+			vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			
 			var name_lbl = Label.new()
 			name_lbl.name = "NameLabel"
@@ -94,11 +130,14 @@ func _update_queue():
 			vbox.add_child(name_lbl)
 			
 			var status_hbox = HBoxContainer.new()
+			status_hbox.name = "StatusHBox"
+			status_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			var pbar = ProgressBar.new()
 			pbar.name = "ProgressBar"
 			pbar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			pbar.custom_minimum_size = Vector2(0, 15)
 			pbar.show_percentage = false
+			pbar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			status_hbox.add_child(pbar)
 			
 			var status_lbl = Label.new()
@@ -108,14 +147,23 @@ func _update_queue():
 			status_hbox.add_child(status_lbl)
 			
 			vbox.add_child(status_hbox)
-			task_btn.add_child(vbox)
+			main_hbox.add_child(vbox)
+			task_btn.add_child(main_hbox)
 			
 			task_btn.pressed.connect(_on_task_selected.bind(actual_app_id))
 			queue_container.add_child(task_btn)
 			
-		var vbox = task_btn.get_child(0)
+			var app_data = task.get("app_data", {})
+			var icon_url = app_data.get("icon", task.get("status_data", {}).get("icon_url", ""))
+			if icon_url != "":
+				var main_app = get_node_or_null("/root/App")
+				if main_app and main_app.has_method("_on_product_list_image_load_requested"):
+					main_app._on_product_list_image_load_requested(icon_url, icon_rect)
+			
+		var main_hbox = task_btn.get_child(0)
+		var vbox = main_hbox.get_node("VBoxContainer")
 		var name_lbl = vbox.get_node("NameLabel") as Label
-		var status_hbox = vbox.get_child(1)
+		var status_hbox = vbox.get_node("StatusHBox")
 		var pbar = status_hbox.get_node("ProgressBar") as ProgressBar
 		var status_lbl = status_hbox.get_node("StatusLabel") as Label
 		

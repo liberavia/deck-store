@@ -16,6 +16,53 @@ func _ready():
 	_load_json()
 	_fetch_apps_data()
 
+func _process(_delta):
+	if not ProjectSettings.has_setting("autoload/DownloadManager"): return
+	var dm = get_node_or_null("/root/DownloadManager")
+	if not dm: return
+	
+	for card in container.get_children():
+		if not card.has_meta("app_id"): continue
+		var app_id = card.get_meta("app_id")
+		var install_overlay = card.get_node_or_null("InstallOverlay")
+		if not install_overlay: continue
+		
+		var status_indicator = card.get_node_or_null("StatusIndicator")
+		var loading_spinner = card.get_node_or_null("LoadingSpinner")
+		if is_instance_valid(loading_spinner) and loading_spinner.visible:
+			loading_spinner.rotation += _delta * 5.0
+			
+		var task_status = dm.get_task_status(app_id)
+		
+		if task_status.is_empty() or task_status.get("status") == "completed" or task_status.get("status") == "failed" or task_status.get("status") == "cancelled":
+			install_overlay.visible = false
+			if loading_spinner: loading_spinner.visible = false
+			if status_indicator:
+				var main_app = get_node_or_null("/root/App")
+				if main_app and main_app.has_method("is_app_installed"):
+					status_indicator.visible = main_app.is_app_installed(app_id)
+			continue
+			
+		install_overlay.visible = true
+		if status_indicator: status_indicator.visible = false
+		if loading_spinner: loading_spinner.visible = true
+		
+		var lbl = install_overlay.get_node_or_null("VBoxContainer/StatusLabel")
+		var pb = install_overlay.get_node_or_null("VBoxContainer/ProgressBar")
+		
+		var prog = task_status.get("progress", 0)
+		if typeof(prog) != TYPE_FLOAT and typeof(prog) != TYPE_INT:
+			prog = 0
+		if pb: pb.value = prog
+		
+		if lbl:
+			var status_text = task_status.get("status", "Installing")
+			if typeof(status_text) != TYPE_STRING:
+				status_text = "Installing"
+			if status_text == "pending":
+				status_text = "In Queue..."
+			lbl.text = status_text.capitalize() + "\n" + str(prog) + "%"
+
 func _load_json():
 	var file_path = "res://must_haves.json"
 	if FileAccess.file_exists(file_path):
@@ -138,7 +185,38 @@ func _create_empty_card(app_id: String) -> Button:
 	
 	card.pressed.connect(func(): emit_signal("move_to_details_view", app_id, false))
 	
+	var install_overlay = ColorRect.new()
+	install_overlay.name = "InstallOverlay"
+	install_overlay.color = Color(0, 0, 0, 0.7)
+	install_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	install_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	install_overlay.visible = false
+	card.add_child(install_overlay)
+	
+	var overlay_vbox = VBoxContainer.new()
+	overlay_vbox.name = "VBoxContainer"
+	overlay_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	overlay_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	install_overlay.add_child(overlay_vbox)
+	
+	var status_label_overlay = Label.new()
+	status_label_overlay.name = "StatusLabel"
+	status_label_overlay.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_label_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	status_label_overlay.add_theme_font_size_override("font_size", 16)
+	overlay_vbox.add_child(status_label_overlay)
+	
+	var progress_bar = ProgressBar.new()
+	progress_bar.name = "ProgressBar"
+	progress_bar.custom_minimum_size = Vector2(200, 20)
+	progress_bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	progress_bar.show_percentage = false
+	progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay_vbox.add_child(progress_bar)
+	
 	var status_indicator = TextureRect.new()
+	status_indicator.name = "StatusIndicator"
 	status_indicator.texture = load("res://assets/check_green.png")
 	status_indicator.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	status_indicator.layout_mode = 1 # 1 = LAYOUT_MODE_ANCHORS
@@ -147,15 +225,23 @@ func _create_empty_card(app_id: String) -> Button:
 	status_indicator.offset_right = -10.0
 	status_indicator.offset_top = 10.0
 	status_indicator.offset_bottom = 35.0
-	status_indicator.name = "StatusIndicator"
-	
-	var main_app_node = get_node_or_null("/root/App")
-	if main_app_node and main_app_node.has_method("is_app_installed"):
-		status_indicator.visible = main_app_node.is_app_installed(app_id)
-	else:
-		status_indicator.visible = false
-		
+	status_indicator.visible = false
 	card.add_child(status_indicator)
+	
+	var loading_spinner = TextureRect.new()
+	loading_spinner.name = "LoadingSpinner"
+	loading_spinner.texture = load("res://assets/spinner.svg")
+	loading_spinner.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	loading_spinner.layout_mode = 1
+	loading_spinner.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	loading_spinner.offset_left = -35.0
+	loading_spinner.offset_right = -10.0
+	loading_spinner.offset_top = 10.0
+	loading_spinner.offset_bottom = 35.0
+	loading_spinner.pivot_offset = Vector2(12.5, 12.5)
+	loading_spinner.visible = false
+	card.add_child(loading_spinner)
+	
 	return card
 
 func _populate_card(card: Button, app_data: Dictionary):
