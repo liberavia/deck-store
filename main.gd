@@ -187,13 +187,13 @@ func _ready():
 		_on_online_status_changed(online_mgr.is_online)
 	
 	$CanvasLayer.add_child(toast_container)
-	toast_container.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	toast_container.anchor_left = 1.0
-	toast_container.anchor_right = 1.0
-	toast_container.offset_left = -320
-	toast_container.offset_right = -20
-	toast_container.offset_top = 20
-	toast_container.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	toast_container.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	toast_container.anchor_left = 0.0
+	toast_container.anchor_right = 0.0
+	toast_container.offset_left = 20
+	toast_container.offset_right = 320
+	toast_container.offset_top = 60
+	toast_container.grow_horizontal = Control.GROW_DIRECTION_END
 	toast_container.add_theme_constant_override("separation", 10)
 	
 	if ProjectSettings.has_setting("autoload/DownloadManager"):
