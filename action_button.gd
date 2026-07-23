@@ -150,13 +150,14 @@ func _on_pressed():
 
 			print("ActionButton: Choosing INSTALL path based on text '", self.text, "'")
 			self.disabled = true; self.text = TEXT_WAITING; add_theme_stylebox_override("normal", stylebox_busy)
-			var app_data_for_task = {"name": app_name, "icon_url": icon_url}
+			var app_data_for_task = {"name": app_name, "icon": icon_url, "icon_url": icon_url}
 			current_operation_id = DownloadManager.queue_install(app_id, app_data_for_task)
 
 		TEXT_UNINSTALL: 
 			print("ActionButton: Choosing UNINSTALL path based on text '", self.text, "'")
 			self.disabled = true; self.text = TEXT_WAITING; add_theme_stylebox_override("normal", stylebox_busy)
-			current_operation_id = DownloadManager.queue_uninstall(app_id)
+			var app_data_for_task = {"name": app_name, "icon": icon_url, "icon_url": icon_url}
+			current_operation_id = DownloadManager.queue_uninstall(app_id, app_data_for_task)
 
 		TEXT_CANCEL:
 			if not current_operation_id.is_empty():

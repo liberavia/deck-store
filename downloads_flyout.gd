@@ -82,7 +82,7 @@ func _update_queue():
 			task_btn = Button.new()
 			task_btn.name = safe_op_id
 			
-			task_btn.custom_minimum_size = Vector2(0, 70)
+			task_btn.custom_minimum_size = Vector2(0, 90)
 			
 			var style_normal = StyleBoxFlat.new()
 			style_normal.bg_color = Color(0.1, 0.1, 0.1, 0.8)
@@ -106,8 +106,11 @@ func _update_queue():
 			
 			var main_hbox = HBoxContainer.new()
 			main_hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-			main_hbox.set_offsets_preset(Control.PRESET_FULL_RECT)
-			main_hbox.add_theme_constant_override("separation", 10)
+			main_hbox.offset_left = 10
+			main_hbox.offset_top = 10
+			main_hbox.offset_right = -10
+			main_hbox.offset_bottom = -10
+			main_hbox.add_theme_constant_override("separation", 15)
 			main_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			
 			var icon_rect = TextureRect.new()
@@ -162,7 +165,7 @@ func _update_queue():
 			queue_container.add_child(task_btn)
 			
 			var app_data = task.get("app_data", {})
-			var icon_url = app_data.get("icon", task.get("status_data", {}).get("icon_url", ""))
+			var icon_url = app_data.get("icon", app_data.get("icon_url", task.get("status_data", {}).get("icon_url", "")))
 			if icon_url != "":
 				var main_app = get_node_or_null("/root/App")
 				if main_app and main_app.has_method("_on_product_list_image_load_requested"):
