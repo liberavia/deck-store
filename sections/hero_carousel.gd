@@ -128,7 +128,7 @@ func _create_empty_card(app_id: String) -> Button:
 	
 	card.focus_entered.connect(func():
 		var tw = create_tween()
-		tw.tween_property(card, "scale", Vector2(1.05, 1.05), 0.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tw.tween_property(card, "scale", Vector2(1.025, 1.025), 0.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		if is_instance_valid(_focus_sound_player) and SettingsManager.get_setting("play_ui_sounds", true):
 			_focus_sound_player.play()
 		if card.get_index() == 0 and is_instance_valid(scroll):
