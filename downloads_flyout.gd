@@ -129,24 +129,29 @@ func _update_queue():
 			name_lbl.text = "Loading..."
 			vbox.add_child(name_lbl)
 			
-			var status_hbox = HBoxContainer.new()
-			status_hbox.name = "StatusHBox"
-			status_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var status_vbox = VBoxContainer.new()
+			status_vbox.name = "StatusVBox"
+			status_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			var pbar = ProgressBar.new()
 			pbar.name = "ProgressBar"
 			pbar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			pbar.custom_minimum_size = Vector2(0, 15)
 			pbar.show_percentage = false
 			pbar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			status_hbox.add_child(pbar)
+			
+			var pb_style = StyleBoxFlat.new()
+			pb_style.bg_color = Color(0.627, 0.125, 0.941, 1.0)
+			pbar.add_theme_stylebox_override("fill", pb_style)
+			
+			status_vbox.add_child(pbar)
 			
 			var status_lbl = Label.new()
 			status_lbl.name = "StatusLabel"
 			status_lbl.add_theme_font_size_override("font_size", 14)
 			status_lbl.text = "0% - Pending"
-			status_hbox.add_child(status_lbl)
+			status_vbox.add_child(status_lbl)
 			
-			vbox.add_child(status_hbox)
+			vbox.add_child(status_vbox)
 			main_hbox.add_child(vbox)
 			task_btn.add_child(main_hbox)
 			
@@ -163,9 +168,9 @@ func _update_queue():
 		var main_hbox = task_btn.get_child(0)
 		var vbox = main_hbox.get_node("VBoxContainer")
 		var name_lbl = vbox.get_node("NameLabel") as Label
-		var status_hbox = vbox.get_node("StatusHBox")
-		var pbar = status_hbox.get_node("ProgressBar") as ProgressBar
-		var status_lbl = status_hbox.get_node("StatusLabel") as Label
+		var status_vbox = vbox.get_node("StatusVBox")
+		var pbar = status_vbox.get_node("ProgressBar") as ProgressBar
+		var status_lbl = status_vbox.get_node("StatusLabel") as Label
 		
 		var app_data = task.get("app_data")
 		if typeof(app_data) != TYPE_DICTIONARY:

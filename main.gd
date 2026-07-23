@@ -355,9 +355,9 @@ func _update_footer_prompts():
 	var has_downloads = false
 	if dm and dm.running_tasks.size() > 0:
 		has_downloads = true
-		actions.append({"button": "Y", "label": str(dm.running_tasks.size()) + " Downloads"})
+		actions.append({"button": "Y", "label": str(dm.running_tasks.size()) + " Tasks"})
 	else:
-		actions.append({"button": "Y", "label": "Downloads"})
+		actions.append({"button": "Y", "label": "Tasks"})
 	
 	footer_bar.set_actions(actions)
 	
@@ -424,10 +424,7 @@ func _get_pagination_prompts(focus_owner: Control) -> Array:
 		current_node = current_node.get_parent()
 	
 	if is_instance_valid(pl) and pl.total_pages > 1:
-		if pl.current_page > 1:
-			prompts.append({"button": "L2", "label": "Prev Page"})
-		if pl.current_page < pl.total_pages:
-			prompts.append({"button": "R2", "label": "Next Page"})
+		prompts.append({"button": "L2 / R2", "label": "Switch Page"})
 			
 	return prompts
 

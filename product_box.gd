@@ -55,6 +55,12 @@ func _ready():
 				DownloadManager.task_finished.connect(_on_task_finished)
 	if loading_spinner:
 		loading_spinner.pivot_offset = loading_spinner.size / 2.0
+		
+	if is_instance_valid(progress_bar):
+		var pb_style = StyleBoxFlat.new()
+		pb_style.bg_color = Color(0.627, 0.125, 0.941, 1.0)
+		progress_bar.add_theme_stylebox_override("fill", pb_style)
+		
 	_update_install_status()
 
 func _process(delta):

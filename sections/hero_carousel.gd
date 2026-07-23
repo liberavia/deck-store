@@ -213,6 +213,11 @@ func _create_empty_card(app_id: String) -> Button:
 	progress_bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	progress_bar.show_percentage = false
 	progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	var pb_style = StyleBoxFlat.new()
+	pb_style.bg_color = Color(0.627, 0.125, 0.941, 1.0)
+	progress_bar.add_theme_stylebox_override("fill", pb_style)
+	
 	overlay_vbox.add_child(progress_bar)
 	
 	var status_indicator = TextureRect.new()
