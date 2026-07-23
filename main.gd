@@ -423,7 +423,7 @@ func _get_pagination_prompts(focus_owner: Control) -> Array:
 			break
 		current_node = current_node.get_parent()
 	
-	if is_instance_valid(pl) and pl.total_pages > 1:
+	if is_instance_valid(pl) and pl.total_pages > 1 and pl.display_mode == pl.DisplayMode.MULTI_LINE_WRAP:
 		prompts.append({"button": "L2 / R2", "label": "Switch Page"})
 			
 	return prompts

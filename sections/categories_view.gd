@@ -95,7 +95,10 @@ func _on_products_loaded():
 	if is_instance_valid(product_list) and is_visible_in_tree():
 		# Wait for layout to stabilize (fixes scroll/focus issues)
 		await get_tree().create_timer(0.05).timeout
-		product_list.focus_first_product()
+		if product_list.has_method("has_products") and not product_list.has_products():
+			focus_default_element()
+		else:
+			product_list.focus_first_product()
 
 # --- Data Fetching ---
 

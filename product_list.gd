@@ -89,6 +89,23 @@ func _ready():
 	else:
 		printerr("TitleLabel not found in ProductList!")
 		
+	if is_instance_valid(no_results_label):
+		no_results_label.focus_mode = Control.FOCUS_ALL
+		var style = StyleBoxFlat.new()
+		style.bg_color = Color(0, 0, 0, 0.35)
+		style.set_border_width_all(3)
+		style.border_color = Color(0.627, 0.125, 0.941, 1)
+		style.content_margin_left = 20
+		style.content_margin_right = 20
+		style.content_margin_top = 10
+		style.content_margin_bottom = 10
+		no_results_label.add_theme_stylebox_override("normal", style)
+		
+		var focus_style = style.duplicate()
+		focus_style.border_color = Color(0.627, 0.125, 0.941, 1)
+		focus_style.bg_color = Color(0.627, 0.125, 0.941, 0.4)
+		no_results_label.add_theme_stylebox_override("focus", focus_style)
+		
 	if display_mode == DisplayMode.MULTI_LINE_WRAP:
 		multi_line_scroll.visible = true
 		single_line_scroll.visible = false
@@ -189,11 +206,16 @@ func set_products(product_data: Array):
 	var target_scroll = multi_line_scroll if display_mode == DisplayMode.MULTI_LINE_WRAP else single_line_scroll
 	if is_instance_valid(target_scroll): target_scroll.visible = has_products
 	
+	var focus_owner = get_viewport().gui_get_focus_owner()
+	var focus_was_inside = is_instance_valid(focus_owner) and is_ancestor_of(focus_owner)
+
 	if not has_products:
 		# Hide pagination if no results
 		if pagination_bar: pagination_bar.visible = false
 		if pagination_bar_bottom: pagination_bar_bottom.visible = false
 		print("--- ProductList set_products (Empty) END ---")
+		if focus_was_inside:
+			emit_signal("focus_exited_up")
 		call_deferred("emit_signal", "products_loaded")
 		return
 
@@ -261,6 +283,11 @@ func show_loading():
 func hide_loading():
 	if is_instance_valid(loading_overlay):
 		loading_overlay.hide_overlay()
+
+func has_products() -> bool:
+	if is_instance_valid(_active_content_container):
+		return _active_content_container.get_child_count() > 0
+	return false
 
 func get_base_url(full_url: String) -> String:
 	var parts = full_url.split("?", false, 1)
@@ -574,6 +601,9 @@ func _focus_product_at_index(target_node: Control):
 						scroll_container.scroll_horizontal = node_x + node_w - viewport_w + margin
 				
 func _get_first_focusable_product() -> Control:
+	if is_instance_valid(no_results_label) and no_results_label.visible and no_results_label.focus_mode != Control.FOCUS_NONE:
+		return no_results_label
+		
 	if not is_instance_valid(_active_content_container): return null
 	for child in _active_content_container.get_children():
 		if child is Control and not child.is_queued_for_deletion() and child.focus_mode != Control.FOCUS_NONE:
