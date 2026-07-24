@@ -95,3 +95,21 @@ BTN_ADD_TO_STEAM,Add to Steam,Zu Steam hinzufügen
 LBL_REVIEWS_FOR,Reviews for:,Reviews für:
 ERR_LOADING_REVIEWS,Error loading reviews.,Fehler beim Laden der Reviews.
 LBL_NO_REVIEWS,No reviews available.,Keine Reviews verfügbar.
+LBL_APP_DETAILS,App Details,App Details
+LBL_BACK,Back,Zurück
+LBL_ZOOM_SCREENSHOT,Zoom,Zoom
+LBL_SWITCH_SCREENSHOT,Switch Image,Bild wechseln
+LBL_SELECT,Select,Auswählen
+LBL_SWITCH_TAB,Switch Tab,Tab wechseln
+LBL_GO_HOME,Go Home,Startseite
+LBL_BACK_TO_TOP,Top,Nach oben
+LBL_MENU,Menu,Menü
+LBL_SETTINGS_SHORT,Settings,Optionen
+LBL_TASKS,Tasks,Aufgaben
+LBL_SELECT_APP,Select App,Auswählen
+LBL_UNSELECT_APP,Unselect App,Abwählen
+LBL_SELECT_UNSELECT,Select/Unselect,Wählen/Abwählen
+LBL_OPEN,Open,Öffnen
+LBL_START_TYPING,Start Typing,Eingabe
+LBL_MANAGE_EXTENSION,Manage,Verwalten
+LBL_SWITCH_PAGE,Switch Page,Seite wechseln

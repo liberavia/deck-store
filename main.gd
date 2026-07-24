@@ -327,59 +327,59 @@ func _update_footer_prompts():
 	
 	if is_instance_valid(_downloads_flyout_instance) and _downloads_flyout_instance.visible:
 		actions = [
-			{"button": "A", "label": "App Details"},
-			{"button": "B", "label": "Back"}
+			{"button": "A", "label": tr("LBL_APP_DETAILS")},
+			{"button": "B", "label": tr("LBL_BACK")}
 		]
 		footer_bar.set_actions(actions)
 		return
 		
 	if is_instance_valid(details_view) and details_view.visible:
-		actions = [{"button": "B", "label": "Back"}]
+		actions = [{"button": "B", "label": tr("LBL_BACK")}]
 		if is_instance_valid(focus_owner) and details_view.is_ancestor_of(focus_owner):
 			if focus_owner == details_view.action_button:
 				actions.append({"button": "A", "label": focus_owner.text})
 			elif focus_owner == details_view.add_to_steam_button:
-				actions.append({"button": "A", "label": "Add to Steam"})
+				actions.append({"button": "A", "label": tr("BTN_ADD_TO_STEAM")})
 			elif details_view.screenshot_container.is_ancestor_of(focus_owner):
-				actions.append({"button": "A", "label": "Zoom Screenshot"})
+				actions.append({"button": "A", "label": tr("LBL_ZOOM_SCREENSHOT")})
 				if details_view.screenshot_container.get_child_count() > 1:
-					actions.append({"button": "L2 / R2", "label": "Switch Screenshot"})
+					actions.append({"button": "L2 / R2", "label": tr("LBL_SWITCH_SCREENSHOT")})
 			elif focus_owner == details_view.show_reviews_button:
-				actions.append({"button": "A", "label": "Show Reviews"})
+				actions.append({"button": "A", "label": tr("BTN_SHOW_REVIEWS")})
 			else:
-				actions.append({"button": "A", "label": "Select"})
+				actions.append({"button": "A", "label": tr("LBL_SELECT")})
 		else:
-			actions.append({"button": "A", "label": "Select"})
+			actions.append({"button": "A", "label": tr("LBL_SELECT")})
 	elif is_instance_valid(focus_owner):
 		if top_button_bar.is_ancestor_of(focus_owner):
 			actions = [
-				{"button": "A", "label": "Select"},
-				{"button": "L1 / R1", "label": "Switch Tab"}
+				{"button": "A", "label": tr("LBL_SELECT")},
+				{"button": "L1 / R1", "label": tr("LBL_SWITCH_TAB")}
 			]
 			if _current_section_index != 0:
-				actions.append({"button": "B", "label": "Go Home"})
+				actions.append({"button": "B", "label": tr("LBL_GO_HOME")})
 		else:
 			# Get section-specific custom actions for A button
 			var custom_a = _get_custom_a_action(focus_owner)
 			actions.append(custom_a)
 			
-			actions.append({"button": "B", "label": "Back to Top"})
-			actions.append({"button": "L1 / R1", "label": "Switch Tab"})
+			actions.append({"button": "B", "label": tr("LBL_BACK_TO_TOP")})
+			actions.append({"button": "L1 / R1", "label": tr("LBL_SWITCH_TAB")})
 			
 			# Add pagination prompts if applicable
 			var pagination_prompts = _get_pagination_prompts(focus_owner)
 			actions.append_array(pagination_prompts)
 	
-	actions.append({"button": "View", "label": "Menu"})
-	actions.append({"button": "Menu", "label": "Settings"})
+	actions.append({"button": "View", "label": tr("LBL_MENU")})
+	actions.append({"button": "Menu", "label": tr("LBL_SETTINGS_SHORT")})
 	
 	var dm = get_node_or_null("/root/DownloadManager")
 	var has_downloads = false
 	if dm and dm.running_tasks.size() > 0:
 		has_downloads = true
-		actions.append({"button": "Y", "label": str(dm.running_tasks.size()) + " Tasks"})
+		actions.append({"button": "Y", "label": str(dm.running_tasks.size()) + " " + tr("LBL_TASKS")})
 	else:
-		actions.append({"button": "Y", "label": "Tasks"})
+		actions.append({"button": "Y", "label": tr("LBL_TASKS")})
 	
 	footer_bar.set_actions(actions)
 	
@@ -400,20 +400,20 @@ func _get_custom_a_action(focus_owner: Control) -> Dictionary:
 	var is_extension_item = focus_owner.name.contains("ExtensionItem") or (focus_owner.get_parent() and focus_owner.get_parent().name.contains("ExtensionItem"))
 
 	if is_product_box or is_installed_item:
-		return {"button": "A", "label": "App Details"}
+		return {"button": "A", "label": tr("LBL_APP_DETAILS")}
 	
 	if is_update_item:
 		if "is_selected" in focus_owner:
-			return {"button": "A", "label": "Unselect App" if focus_owner.is_selected else "Select App"}
-		return {"button": "A", "label": "Select/Unselect"}
+			return {"button": "A", "label": tr("LBL_UNSELECT_APP") if focus_owner.is_selected else tr("LBL_SELECT_APP")}
+		return {"button": "A", "label": tr("LBL_SELECT_UNSELECT")}
 
-	var action = {"button": "A", "label": "Open"}
+	var action = {"button": "A", "label": tr("LBL_OPEN")}
 	match section_name:
 		"Home", "Categories", "Search":
 			if focus_owner is LineEdit:
-				action["label"] = "Start Typing"
+				action["label"] = tr("LBL_START_TYPING")
 			elif focus_owner is Button and "SearchButton" in focus_owner.name:
-				action["label"] = "Start Search"
+				action["label"] = tr("BTN_SEARCH")
 			elif focus_owner is Button and not focus_owner.text.is_empty():
 				action["label"] = focus_owner.text
 		
@@ -423,7 +423,7 @@ func _get_custom_a_action(focus_owner: Control) -> Dictionary:
 		
 		"Extensions":
 			if is_extension_item:
-				action["label"] = "Manage Extension"
+				action["label"] = tr("LBL_MANAGE_EXTENSION")
 			elif focus_owner is Button and not focus_owner.text.is_empty():
 				action["label"] = focus_owner.text
 		
@@ -446,7 +446,7 @@ func _get_pagination_prompts(focus_owner: Control) -> Array:
 		current_node = current_node.get_parent()
 	
 	if is_instance_valid(pl) and pl.total_pages > 1 and pl.display_mode == pl.DisplayMode.MULTI_LINE_WRAP:
-		prompts.append({"button": "L2 / R2", "label": "Switch Page"})
+		prompts.append({"button": "L2 / R2", "label": tr("LBL_SWITCH_PAGE")})
 			
 	return prompts
 
