@@ -1,0 +1,32 @@
+id,en,de
+TAB_HOME,Home,Startseite
+TAB_DISCOVER,Discover,Entdecken
+TAB_SEARCH,Search,Suche
+TAB_INSTALLED,Installed,Installiert
+TAB_UPDATES,Updates,Updates
+TAB_SETTINGS,Settings,Einstellungen
+BTN_ADD_TO_STEAM,Add to Steam,Zu Steam hinzu.
+BTN_ADDING,Adding...,Füge hinzu...
+BTN_START_FAILED,Start Failed!,Fehler beim Start!
+BTN_INTEGRATION_ERROR,Integration Error!,Fehler!
+BTN_UNINSTALL,Uninstall,Deinstallieren
+BTN_UNINSTALLING,Uninstalling...,Deinstalliere...
+BTN_INSTALL,Install,Installieren
+BTN_INSTALLING,Installing...,Installiere...
+BTN_CANCEL,Cancel,Abbrechen
+BTN_CANCELLING,Cancelling...,Breche ab...
+BTN_UPDATE,Update,Aktualisieren
+BTN_SELECT_ALL,Select All,Alle ausw.
+BTN_DESELECT_ALL,Deselect All,Keine ausw.
+BTN_REFRESH,Refresh List,Aktualisieren
+BTN_CONFIRM,OK,OK
+BTN_CLOSE,Close,Schließen
+LBL_SEARCH_PLACEHOLDER,Search for Flatpaks...,Suche nach Flatpaks...
+LBL_NO_RESULTS,No results found,Keine Ergebnisse
+MSG_STEAM_RESTART,Please restart Steam to apply changes.,Bitte Steam neustarten für Änderungen.
+SETTINGS_TITLE,Settings,Einstellungen
+SETTINGS_LANGUAGE,Language,Sprache
+SETTINGS_UI_SOUNDS,Play UI Sounds,UI-Töne abspielen
+SETTINGS_AUTO_REFRESH,Auto Refresh Installed Apps,Auto-Refresh installierter Apps
+SETTINGS_AUTO_ADD_STEAM,Add installed Apps automatically to Steam,Neue Apps sofort zu Steam hinzufügen
+SETTINGS_STEAM_WARNING,Show Steam Restart Warning,Steam-Neustart Hinweis anzeigen

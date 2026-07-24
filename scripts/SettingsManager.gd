@@ -12,7 +12,8 @@ var settings = {
 	"auto_refresh_installed": true,
 	"auto_add_to_steam": true,
 	"show_steam_restart_warning": true,
-	"install_scope": "user"
+	"install_scope": "user",
+	"language": "auto"
 }
 
 func _ready():
@@ -26,6 +27,33 @@ func _ready():
 		
 	_settings_filepath = base_path.path_join(SETTINGS_FILE_NAME)
 	load_settings()
+	_apply_language()
+
+func _apply_language():
+	var lang = settings.get("language", "auto")
+	if lang == "auto":
+		# Try Steam first
+		var steam_lang = ""
+		if ProjectSettings.has_setting("autoload/SteamIntegration"):
+			var steam_int = get_node_or_null("/root/SteamIntegration")
+			if is_instance_valid(steam_int) and steam_int.is_steam_initialized:
+				if Engine.has_singleton("Steam") and Steam.has_method("getSteamUILanguage"):
+					steam_lang = Steam.getSteamUILanguage()
+		
+		var mapped_lang = "en"
+		if steam_lang == "german":
+			mapped_lang = "de"
+		elif steam_lang == "english":
+			mapped_lang = "en"
+		else:
+			# Fallback to OS
+			var os_lang = OS.get_locale().left(2)
+			if os_lang == "de":
+				mapped_lang = "de"
+		
+		TranslationServer.set_locale(mapped_lang)
+	else:
+		TranslationServer.set_locale(lang)
 
 func load_settings():
 	if FileAccess.file_exists(_settings_filepath):
@@ -63,9 +91,11 @@ func get_setting(key: String, default_value = null):
 	return default_value
 
 func set_setting(key: String, value):
-	if settings.has(key) and settings[key] == value:
-		return # No change
-		
-	settings[key] = value
-	save_settings()
-	emit_signal("settings_changed", key, value)
+	if settings.has(key):
+		settings[key] = value
+		save_settings()
+		emit_signal("settings_changed", key, value)
+		if key == "language":
+			_apply_language()
+	else:
+		printerr("SettingsManager: Unknown setting key ", key)

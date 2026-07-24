@@ -21,6 +21,10 @@ boot_splash/bg_color=Color(0, 0, 0, 1)
 boot_splash/show_image=false
 config/icon="res://icon.svg"
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://locale/translations.de.translation", "res://locale/translations.en.translation")
+
 [autoload]
 
 OnlineStatusManager="*res://scripts/OnlineStatusManager.gd"
