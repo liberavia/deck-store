@@ -44,6 +44,12 @@ func queue_install(app_id: String, app_data: Dictionary = {}) -> String:
 	return _add_task("install", app_id, app_data)
 
 func queue_update(app_id: String, app_data: Dictionary = {}) -> String:
+	# Fetch the installation scope before adding to queue
+	if not app_data.has("installation"):
+		var main_app = get_node_or_null("/root/App")
+		if main_app and main_app.has_method("get_app_scope"):
+			app_data["installation"] = main_app.get_app_scope(app_id)
+
 	return _add_task("update", app_id, app_data)
 
 func queue_uninstall(app_id: String, app_data: Dictionary = {}) -> String:
@@ -60,6 +66,12 @@ func queue_uninstall(app_id: String, app_data: Dictionary = {}) -> String:
 			else: printerr("DownloadManager ERROR: SteamIntegration node missing 'remove_from_steam' method!")
 		else: printerr("DownloadManager: SteamIntegration Autoload node not found or invalid.")
 	else: printerr("DownloadManager: SteamIntegration Autoload setting not found.")
+
+	# Fetch the installation scope before adding to queue
+	if not app_data.has("installation"):
+		var main_app = get_node_or_null("/root/App")
+		if main_app and main_app.has_method("get_app_scope"):
+			app_data["installation"] = main_app.get_app_scope(app_id)
 
 	return _add_task("uninstall", app_id, app_data)
 
@@ -112,6 +124,12 @@ func _add_task(op_type: String, app_id: String, app_data: Dictionary = {}) -> St
 	var timestamp_usec = Time.get_ticks_usec() # Für höhere Eindeutigkeit
 	var random_num = randi() # Zusätzliche Zufälligkeit
 	var operation_id = "%s-%s-%s" % [timestamp_sec, timestamp_usec, random_num]
+	
+	if (op_type == "install" or op_type == "update") and AppBlacklist.is_blacklisted(app_id):
+		printerr("DownloadManager ERROR: Refusing to %s blacklisted app: %s" % [op_type, app_id])
+		emit_signal("task_finished", operation_id, "error", op_type)
+		return ""
+
 	
 	var initial_status_data = {
 		"status": "queued", "app_id": app_id, "operation_id": operation_id,
@@ -494,6 +512,8 @@ func _finish_task(op_id: String, exit_code: int, cancelled: bool = false, error_
 						printerr("DownloadManager ERROR: Cannot add to Steam: App name is missing or same as app_id for ", app_id)
 					elif global_icon_path_abs.is_empty(): # Prüfen, ob ein gültiger Icon-Pfad vorhanden ist
 						printerr("DownloadManager ERROR: Cannot add to Steam: Icon path is missing for ", app_id)
+					elif not SettingsManager.get_setting("auto_add_to_steam", true):
+						print("INFO DownloadManager: Skipping automatic 'Add to Steam' (Setting disabled) for ", app_id)
 					elif steam_integration_node.has_method("add_to_steam"):
 						# Definiere exe_path und launch_params für Flatpak
 						var flatpak_exe = DEFAULT_FLATPAK_EXE_PATH

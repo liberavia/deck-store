@@ -3,11 +3,16 @@ extends Control
 @export var product_box: PackedScene = preload("res://product_box.tscn")
 @export var product_list_scene: PackedScene = preload("res://product_list.tscn")
 @export var settings_modal_scene: PackedScene = preload("res://settings_modal.tscn")
+@export var app_menu_modal_scene: PackedScene = preload("res://app_menu_modal.tscn")
+@export var downloads_flyout_scene: PackedScene = preload("res://downloads_flyout.tscn")
 
 @onready var details_view: Control = $DetailsView
 @onready var main_view: VBoxContainer = $CanvasLayer/VBoxContainer
 
 @onready var section_view_container: Control = $CanvasLayer/VBoxContainer/SectionViewContainer
+
+
+@onready var toast_container: VBoxContainer = VBoxContainer.new()
 
 @onready var home_button: Button = $CanvasLayer/VBoxContainer/TopButtonBar/ButtonHome
 @onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/TopButtonBar
@@ -27,6 +32,8 @@ var _flatpak_thread: Thread = null
 var _last_focused_product_box: Control = null
 var _current_home_view_instance: Control = null
 var _settings_modal_instance: CanvasLayer = null
+var _app_menu_modal_instance: CanvasLayer = null
+var _downloads_flyout_instance: CanvasLayer = null
 var _sections: Array[Dictionary] = [
 	{"name": "Home", "scene_path": "res://sections/home_view.tscn", "button_node_name": "ButtonHome", "instance": null},
 	{"name": "Categories", "scene_path": "res://sections/categories_view.tscn", "button_node_name": "ButtonCategories", "instance": null},
@@ -161,8 +168,48 @@ func _ready():
 	_settings_modal_instance = settings_modal_scene.instantiate()
 	add_child(_settings_modal_instance)
 	
+	if app_menu_modal_scene:
+		_app_menu_modal_instance = app_menu_modal_scene.instantiate()
+		add_child(_app_menu_modal_instance)
+		
+	if downloads_flyout_scene:
+		_downloads_flyout_instance = downloads_flyout_scene.instantiate()
+		_downloads_flyout_instance.opened.connect(_update_footer_prompts)
+		_downloads_flyout_instance.closed.connect(_update_footer_prompts)
+		add_child(_downloads_flyout_instance)
+	
 	SettingsManager.settings_changed.connect(_on_settings_changed)
 	_apply_ui_sounds_setting(SettingsManager.get_setting("play_ui_sounds", true))
+	
+	if Engine.has_singleton("OnlineStatusManager"):
+		var online_mgr = get_node("/root/OnlineStatusManager")
+		online_mgr.online_status_changed.connect(_on_online_status_changed)
+		_on_online_status_changed(online_mgr.is_online)
+	
+	$CanvasLayer.add_child(toast_container)
+	toast_container.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	toast_container.anchor_left = 0.0
+	toast_container.anchor_right = 0.0
+	toast_container.offset_left = 20
+	toast_container.offset_right = 320
+	toast_container.offset_top = 60
+	toast_container.grow_horizontal = Control.GROW_DIRECTION_END
+	toast_container.add_theme_constant_override("separation", 10)
+	
+	if ProjectSettings.has_setting("autoload/DownloadManager"):
+		var dm = get_node_or_null("/root/DownloadManager")
+		if dm:
+			if dm.has_signal("task_updated"): dm.task_updated.connect(_on_download_task_updated)
+			if dm.has_signal("task_finished"): dm.task_finished.connect(_on_download_task_finished)
+			
+			var footer = get_node_or_null("CanvasLayer/FooterBar")
+			if is_instance_valid(footer) and footer.has_method("set_context_actions"):
+				footer.call_deferred("update_context_actions")
+				
+	if ProjectSettings.has_setting("autoload/SteamIntegration"):
+		var steam_int = get_node_or_null("/root/SteamIntegration")
+		if steam_int and steam_int.has_signal("shortcut_action_completed"):
+			steam_int.shortcut_action_completed.connect(_on_shortcut_action_completed)
 	
 	_switch_to_section(0)
 	
@@ -186,9 +233,31 @@ func _ready():
 	await get_tree().process_frame
 	_suppress_focus_sound = false
 
+func _on_shortcut_action_completed(action: String, app_id: String, success: bool):
+	if action == "add" and success:
+		if SettingsManager.get_setting("show_steam_restart_warning", true):
+			await get_tree().create_timer(1.0).timeout
+			if not SettingsManager.get_setting("show_steam_restart_warning", true): return
+			var popup_scene = load("res://sections/steam_restart_popup.tscn")
+			if popup_scene:
+				var popup = popup_scene.instantiate()
+				var prev_focus = get_viewport().gui_get_focus_owner()
+				get_tree().root.add_child(popup)
+				popup.popup_closed.connect(func():
+					if is_instance_valid(prev_focus):
+						prev_focus.grab_focus()
+					else:
+						home_button.grab_focus()
+				)
+
 func _on_settings_changed(key: String, value):
 	if key == "play_ui_sounds":
 		_apply_ui_sounds_setting(value)
+
+func _on_online_status_changed(is_online: bool):
+	var indicator = top_button_bar.get_node_or_null("OfflineIndicator")
+	if is_instance_valid(indicator):
+		indicator.visible = not is_online
 
 func _apply_ui_sounds_setting(play: bool):
 	var vol = 0.0 if play else -80.0
@@ -256,6 +325,14 @@ func _update_footer_prompts():
 	var actions = []
 	var focus_owner = get_viewport().gui_get_focus_owner()
 	
+	if is_instance_valid(_downloads_flyout_instance) and _downloads_flyout_instance.visible:
+		actions = [
+			{"button": "A", "label": "App Details"},
+			{"button": "B", "label": "Back"}
+		]
+		footer_bar.set_actions(actions)
+		return
+		
 	if is_instance_valid(details_view) and details_view.visible:
 		actions = [{"button": "B", "label": "Back"}]
 		if is_instance_valid(focus_owner) and details_view.is_ancestor_of(focus_owner):
@@ -293,9 +370,21 @@ func _update_footer_prompts():
 			var pagination_prompts = _get_pagination_prompts(focus_owner)
 			actions.append_array(pagination_prompts)
 	
+	actions.append({"button": "View", "label": "Menu"})
 	actions.append({"button": "Menu", "label": "Settings"})
 	
+	var dm = get_node_or_null("/root/DownloadManager")
+	var has_downloads = false
+	if dm and dm.running_tasks.size() > 0:
+		has_downloads = true
+		actions.append({"button": "Y", "label": str(dm.running_tasks.size()) + " Tasks"})
+	else:
+		actions.append({"button": "Y", "label": "Tasks"})
+	
 	footer_bar.set_actions(actions)
+	
+	if footer_bar.has_method("set_action_pulsing"):
+		footer_bar.set_action_pulsing("Y", has_downloads)
 
 func _get_custom_a_action(focus_owner: Control) -> Dictionary:
 	var section_name = _sections[_current_section_index].name
@@ -356,11 +445,8 @@ func _get_pagination_prompts(focus_owner: Control) -> Array:
 			break
 		current_node = current_node.get_parent()
 	
-	if is_instance_valid(pl) and pl.total_pages > 1:
-		if pl.current_page > 1:
-			prompts.append({"button": "L2", "label": "Prev Page"})
-		if pl.current_page < pl.total_pages:
-			prompts.append({"button": "R2", "label": "Next Page"})
+	if is_instance_valid(pl) and pl.total_pages > 1 and pl.display_mode == pl.DisplayMode.MULTI_LINE_WRAP:
+		prompts.append({"button": "L2 / R2", "label": "Switch Page"})
 			
 	return prompts
 
@@ -387,8 +473,31 @@ func _unhandled_input(event: InputEvent):
 		get_viewport().set_input_as_handled()
 		return
 
-	# Block global section switching if details view is open
+	if event.is_action_pressed("open_app_menu"):
+		if is_instance_valid(_app_menu_modal_instance):
+			if _app_menu_modal_instance.visible:
+				_app_menu_modal_instance.close_modal()
+			else:
+				_app_menu_modal_instance.open_modal()
+		get_viewport().set_input_as_handled()
+		return
+
+	if event.is_action_pressed("open_downloads"):
+		if is_instance_valid(_downloads_flyout_instance):
+			if _downloads_flyout_instance.visible:
+				_downloads_flyout_instance.close_flyout()
+			else:
+				_downloads_flyout_instance.open_flyout()
+		get_viewport().set_input_as_handled()
+		return
+
+	# Block global section switching if details view or flyout is open
 	if is_instance_valid(details_view) and details_view.visible:
+		if event.is_action_pressed("section_next") or event.is_action_pressed("section_previous"):
+			get_viewport().set_input_as_handled()
+			return
+			
+	if is_instance_valid(_downloads_flyout_instance) and _downloads_flyout_instance.visible:
 		if event.is_action_pressed("section_next") or event.is_action_pressed("section_previous"):
 			get_viewport().set_input_as_handled()
 			return
@@ -450,16 +559,16 @@ func _on_top_bar_button_focus_entered():
 func load_popular_products():
 	# Get the instance of the home view from our sections array
 	var home_view_node = _sections[0].instance # Index 0 is "Home"
-	if is_instance_valid(home_view_node) and home_view_node.has_node("ContentScrollContainer/VBoxContainer/PopularProductList"):
-		var popular_list = home_view_node.get_node("ContentScrollContainer/VBoxContainer/PopularProductList")
+	if is_instance_valid(home_view_node) and home_view_node.has_node("ContentScrollContainer/ListMargin/VBoxContainer/PopularProductList"):
+		var popular_list = home_view_node.get_node("ContentScrollContainer/ListMargin/VBoxContainer/PopularProductList")
 		_load_product_list("https://flathub.org/api/v2/collection/popular?page=1&per_page=10&locale=en", popular_list)
 	else:
 		printerr("ERROR: Could not find PopularProductList in HomeView instance.")
 
 func load_trending_products():
 	var home_view_node = _sections[0].instance
-	if is_instance_valid(home_view_node) and home_view_node.has_node("ContentScrollContainer/VBoxContainer/TrendingProductList"):
-		var trending_list = home_view_node.get_node("ContentScrollContainer/VBoxContainer/TrendingProductList")
+	if is_instance_valid(home_view_node) and home_view_node.has_node("ContentScrollContainer/ListMargin/VBoxContainer/TrendingProductList"):
+		var trending_list = home_view_node.get_node("ContentScrollContainer/ListMargin/VBoxContainer/TrendingProductList")
 		_load_product_list("https://flathub.org/api/v2/collection/trending?page=1&per_page=10&locale=en", trending_list)
 	else:
 		printerr("ERROR: Could not find TrendingProductList in HomeView instance.")
@@ -942,8 +1051,12 @@ func _ensure_user_remote_exists():
 # =============================================================================
 
 func _fetch_installed_apps():
-	if _flatpak_thread != null and _flatpak_thread.is_alive():
-		return
+	if _flatpak_thread != null:
+		if _flatpak_thread.is_alive():
+			return
+		elif _flatpak_thread.is_started():
+			_flatpak_thread.wait_to_finish()
+		_flatpak_thread = null
 
 	print("INFO: Start Thread for fetching installed flatpaks...")
 	_flatpak_thread = Thread.new()
@@ -1035,20 +1148,12 @@ func _process_flatpak_result(output: String, exit_code: int):
 	_flatpak_thread = null
 
 func _update_all_lists_install_status():
-	print("INFO Main: Updating install status in current section...")
-	if _current_section_index >= 0 and _current_section_index < _sections.size():
-		var current_section_node = _sections[_current_section_index].instance
+	print("INFO Main: Updating install status in all sections...")
+	for section in _sections:
+		var current_section_node = section.instance
 		if is_instance_valid(current_section_node) and current_section_node.has_method("update_internal_list_install_status"):
-			# The current section's script (e.g., home_view.gd, categories_view.gd)
-			# must implement update_internal_list_install_status(installed_ids_dict)
 			current_section_node.update_internal_list_install_status(_installed_flatpak_ids)
 			print("INFO Main: Called update_internal_list_install_status on: ", current_section_node.name)
-		elif is_instance_valid(current_section_node):
-			print("DEBUG Main: Current section '", current_section_node.name, "' does not have 'update_internal_list_install_status' method.")
-		else:
-			print("DEBUG Main: Current section instance is invalid.")
-	else:
-		print("DEBUG Main: No valid current section index to update install status for.")
 
 # Switches to the section at the given index with a carousel animation
 func _switch_to_section(target_index: int):
@@ -1101,7 +1206,7 @@ func _switch_to_section(target_index: int):
 	tween.set_ease(Tween.EASE_OUT)
 
 	# Animate the new section into view
-	tween.tween_property(new_section_instance, "position:x", 0, transition_time_section_change)
+	tween.tween_property(new_section_instance, "position:x", 0.0, transition_time_section_change)
 
 	# Animate the old section out of view
 	if is_instance_valid(old_section_instance):
@@ -1170,3 +1275,49 @@ func _update_top_bar_button_focus():
 func refresh_installed_apps_list():
 	print("INFO Main: Refreshing installed apps list due to recent install/uninstall.")
 	_fetch_installed_apps()
+
+func _on_download_task_updated(operation_id: String, status_data: Dictionary):
+	_update_footer_prompts()
+
+func _on_download_task_finished(operation_id: String, final_status: String, op_type: String):
+	_update_footer_prompts()
+	var success = (final_status == "completed")
+	var msg = operation_id
+	var app_name = operation_id
+	
+	var dm = get_node_or_null("/root/DownloadManager")
+	if dm and dm.running_tasks.has(operation_id):
+		app_name = dm.running_tasks[operation_id].status_data.get("name", operation_id)
+		
+	var type_str = "processed"
+	if op_type == "install": type_str = "installed"
+	elif op_type == "uninstall": type_str = "uninstalled"
+	elif op_type == "update": type_str = "updated"
+	
+	msg = "%s %s %s" % [app_name, "was successfully" if success else "failed to be", type_str]
+	_show_toast(msg, success)
+
+func _show_toast(message: String, success: bool = true):
+	var panel = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.2, 0.6, 0.2, 0.9) if success else Color(0.8, 0.2, 0.2, 0.9)
+	style.set_corner_radius_all(8)
+	style.content_margin_left = 15
+	style.content_margin_right = 15
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
+	panel.add_theme_stylebox_override("panel", style)
+	
+	var lbl = Label.new()
+	lbl.text = message
+	lbl.add_theme_font_size_override("font_size", 16)
+	panel.add_child(lbl)
+	
+	toast_container.add_child(panel)
+	
+	panel.modulate.a = 0
+	var tween = create_tween()
+	tween.tween_property(panel, "modulate:a", 1.0, 0.3)
+	tween.tween_interval(3.0)
+	tween.tween_property(panel, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(panel.queue_free)

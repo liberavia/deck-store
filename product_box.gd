@@ -3,6 +3,10 @@ extends Control
 
 @onready var panel: Panel = $Panel
 @onready var status_indicator: Control = $Panel/StatusIndicator
+@onready var install_overlay: ColorRect = $Panel/InstallOverlay
+@onready var status_label: Label = $Panel/InstallOverlay/VBoxContainer/StatusLabel
+@onready var progress_bar: ProgressBar = $Panel/InstallOverlay/VBoxContainer/ProgressBar
+@onready var loading_spinner: TextureRect = $Panel/LoadingSpinner
 
 signal move_to_details_view(app_id: String, installed: bool)
 
@@ -41,14 +45,113 @@ func _ready():
 	_focus_sound_player = get_node_or_null("/root/App/FocusSoundPlayer")
 	if not _focus_sound_player:
 		printerr("FocusSoundPlayer not found at /root/App/FocusSoundPlayer!")
+		
+	if ProjectSettings.has_setting("autoload/DownloadManager"):
+		var DownloadManager = get_node_or_null("/root/DownloadManager")
+		if DownloadManager:
+			if DownloadManager.has_signal("task_updated"):
+				DownloadManager.task_updated.connect(_on_task_updated)
+			if DownloadManager.has_signal("task_finished"):
+				DownloadManager.task_finished.connect(_on_task_finished)
+	if loading_spinner:
+		loading_spinner.pivot_offset = loading_spinner.size / 2.0
+		
+	if is_instance_valid(progress_bar):
+		var pb_style = StyleBoxFlat.new()
+		pb_style.bg_color = Color(0.627, 0.125, 0.941, 1.0)
+		progress_bar.add_theme_stylebox_override("fill", pb_style)
+		
+	_update_install_status()
 
-func set_app_id(assinged_id: String):
-	app_id = assinged_id
+func _process(delta):
+	if is_instance_valid(loading_spinner) and loading_spinner.visible:
+		loading_spinner.rotation += delta * 5.0
+		
+	if is_instance_valid(install_overlay) and install_overlay.visible:
+		var dm = get_node_or_null("/root/DownloadManager")
+		if dm and current_operation_id != "" and dm.running_tasks.has(current_operation_id):
+			var status_data = dm.running_tasks[current_operation_id].get("status_data", {})
+			if status_data:
+				var prog = status_data.get("progress", 0)
+				if typeof(prog) != TYPE_FLOAT and typeof(prog) != TYPE_INT:
+					prog = 0
+				if is_instance_valid(progress_bar):
+					progress_bar.value = prog
+				if is_instance_valid(status_label):
+					var status_text = status_data.get("status", "Installing")
+					if typeof(status_text) != TYPE_STRING:
+						status_text = "Installing"
+					if status_text == "pending":
+						status_text = "In Queue..."
+					status_label.text = status_text.capitalize() + "\n" + str(prog) + "%"
+
+func set_app_id(assigned_id: String):
+	app_id = assigned_id
+	_update_install_status()
 		
 func set_installed_status(installed_status: bool):
 	is_installed = installed_status
-	if is_instance_valid(status_indicator):
+	if is_instance_valid(status_indicator) and not (is_instance_valid(install_overlay) and install_overlay.visible):
 		status_indicator.visible = is_installed
+	_update_install_status()
+
+var current_operation_id: String = ""
+
+func _update_install_status():
+	if app_id.is_empty(): return
+	if not is_inside_tree(): return
+	if ProjectSettings.has_setting("autoload/DownloadManager"):
+		var DownloadManager = get_node_or_null("/root/DownloadManager")
+		if DownloadManager:
+			var task_status = DownloadManager.get_task_status(app_id)
+			if not task_status.is_empty() and task_status.get("status") not in ["completed", "error"]:
+				var op_id = task_status.get("operation_id", "")
+				if typeof(op_id) == TYPE_STRING:
+					current_operation_id = op_id
+				else:
+					current_operation_id = ""
+				_show_installing(task_status)
+			else:
+				current_operation_id = ""
+				_hide_installing()
+
+func _on_task_updated(operation_id: String, task_data: Dictionary):
+	if task_data.get("app_id") == app_id:
+		current_operation_id = operation_id
+		_show_installing(task_data)
+
+func _on_task_finished(operation_id: String, final_status: String, op_type: String):
+	if operation_id == current_operation_id:
+		current_operation_id = ""
+		_hide_installing()
+
+func _show_installing(task_data: Dictionary):
+	if is_instance_valid(install_overlay):
+		install_overlay.visible = true
+		if is_instance_valid(loading_spinner):
+			loading_spinner.visible = true
+		if is_instance_valid(status_indicator):
+			status_indicator.visible = false
+		var progress = task_data.get("progress", 0)
+		if typeof(progress) != TYPE_FLOAT and typeof(progress) != TYPE_INT:
+			progress = 0
+		if is_instance_valid(progress_bar):
+			progress_bar.value = progress
+		if is_instance_valid(status_label):
+			var status_text = task_data.get("status", "Installing")
+			if typeof(status_text) != TYPE_STRING:
+				status_text = "Installing"
+			if status_text == "pending":
+				status_text = "In Queue..."
+			status_label.text = status_text.capitalize() + "\n" + str(progress) + "%"
+
+func _hide_installing():
+	if is_instance_valid(install_overlay):
+		install_overlay.visible = false
+		if is_instance_valid(loading_spinner):
+			loading_spinner.visible = false
+		if is_instance_valid(status_indicator):
+			status_indicator.visible = is_installed
 
 func _unhandled_input(event: InputEvent):
 	if not has_focus():

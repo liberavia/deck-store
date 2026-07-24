@@ -1,6 +1,7 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="32" cy="32" r="30" fill="#333333" stroke="white" stroke-width="4"/>
-  <rect x="20" y="22" width="24" height="4" rx="2" fill="white"/>
-  <rect x="20" y="30" width="24" height="4" rx="2" fill="white"/>
-  <rect x="20" y="38" width="24" height="4" rx="2" fill="white"/>
+  <circle cx="32" cy="32" r="28" fill="#2d2d2d" stroke="#888" stroke-width="3"/>
+  <!-- Hamburger -->
+  <rect x="22" y="24" width="20" height="3" rx="1.5" fill="white"/>
+  <rect x="22" y="30.5" width="20" height="3" rx="1.5" fill="white"/>
+  <rect x="22" y="37" width="20" height="3" rx="1.5" fill="white"/>
 </svg>

@@ -167,8 +167,28 @@ func update_internal_list_install_status(installed_apps: Dictionary):
 	if installed_apps.hash() != current_installed_apps_data.hash():
 		_update_last_updated_label()
 		
+	var focus_owner = get_viewport().gui_get_focus_owner()
+	var focus_was_inside = is_instance_valid(focus_owner) and app_list_container.is_ancestor_of(focus_owner)
+	var focused_app_id = ""
+	if focus_was_inside and "app_id" in focus_owner:
+		focused_app_id = focus_owner.app_id
+		
 	current_installed_apps_data = installed_apps
 	_populate_list(installed_apps)
+	
+	if focus_was_inside:
+		var restored = false
+		if not focused_app_id.is_empty():
+			for child in app_list_container.get_children():
+				if "app_id" in child and child.app_id == focused_app_id:
+					child.grab_focus()
+					restored = true
+					break
+		if not restored:
+			if app_list_container.get_child_count() > 0:
+				app_list_container.get_child(0).grab_focus()
+			elif is_instance_valid(refresh_button):
+				refresh_button.grab_focus()
 
 func _populate_list(installed_apps: Dictionary):
 	# Clear existing

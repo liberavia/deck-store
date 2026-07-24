@@ -30,12 +30,13 @@ func _simulate_action():
 		"A": actions = ["ui_accept"]
 		"B": actions = ["go_back", "ui_cancel"]
 		"X": actions = ["ui_select"]
-		"Y": actions = ["ui_secondary"]
+		"Y": actions = ["ui_secondary", "open_downloads"]
 		"L1": actions = ["section_previous", "previous_tab"]
 		"R1": actions = ["section_next", "next_tab"]
 		"L2": actions = ["ui_page_up", "previous_tab"]
 		"R2": actions = ["ui_page_down", "next_tab"]
 		"Menu": actions = ["open_settings"]
+		"View": actions = ["open_app_menu"]
 	
 	for action in actions:
 		var a = InputEventAction.new()
@@ -73,7 +74,7 @@ func _get_button_name_from_index(index: int) -> String:
 		JOY_BUTTON_LEFT_SHOULDER: return "L1"
 		JOY_BUTTON_RIGHT_SHOULDER: return "R1"
 		JOY_BUTTON_START: return "Menu"
-		4: return "Menu" # Also map select/back to Menu just in case
+		4: return "View" # Select/Back button
 	return ""
 
 func apply_feedback(is_pressed: bool):

@@ -7,9 +7,9 @@ signal focus_exited_up_from_lists()
 signal load_new_page_requested(url: String, target_list: ProductList)
 
 # --- UI Nodes ---
-@onready var category_button_container: VBoxContainer = $HSplitContainer/LeftPanel/VBoxContainer/ScrollContainer/CategoryList
-@onready var product_list: ProductList = $HSplitContainer/RightPanel/ProductList
-@onready var back_button: Button = $HSplitContainer/LeftPanel/VBoxContainer/BackButton
+@onready var category_button_container: VBoxContainer = $ListMargin/HSplitContainer/LeftPanel/VBoxContainer/ScrollContainer/CategoryList
+@onready var product_list: ProductList = $ListMargin/HSplitContainer/RightPanel/ProductList
+@onready var back_button: Button = $ListMargin/HSplitContainer/LeftPanel/VBoxContainer/BackButton
 
 # --- Internal State ---
 var _api_cache_dir: String = ""
@@ -95,7 +95,10 @@ func _on_products_loaded():
 	if is_instance_valid(product_list) and is_visible_in_tree():
 		# Wait for layout to stabilize (fixes scroll/focus issues)
 		await get_tree().create_timer(0.05).timeout
-		product_list.focus_first_product()
+		if product_list.has_method("has_products") and not product_list.has_products():
+			focus_default_element()
+		else:
+			product_list.focus_first_product()
 
 # --- Data Fetching ---
 

@@ -129,6 +129,15 @@ func _setup_connections():
 		product_list.image_load_requested.connect(func(url, rect): emit_signal("image_load_requested", url, rect))
 		product_list.focus_exited_up.connect(func(): emit_signal("focus_exited_up_from_lists"))
 		product_list.load_new_page.connect(func(url, list): emit_signal("load_new_page_requested", url, list))
+		product_list.products_loaded.connect(_on_products_loaded)
+
+func _on_products_loaded():
+	if is_instance_valid(product_list) and is_visible_in_tree():
+		await get_tree().create_timer(0.05).timeout
+		if product_list.has_method("has_products") and product_list.has_products():
+			product_list.focus_first_product()
+		elif is_instance_valid(search_input):
+			search_input.grab_focus()
 
 	if Engine.has_singleton("Steam") and Steam.has_signal("floating_gamepad_text_input_dismissed"):
 		Steam.floating_gamepad_text_input_dismissed.connect(_on_floating_keyboard_dismissed)
@@ -185,7 +194,7 @@ func _show_virtual_keyboard():
 	if Engine.has_singleton("Steam") and get_node_or_null("/root/SteamIntegration") and get_node("/root/SteamIntegration").is_steam_initialized:
 		var rect = search_input.get_global_rect()
 		# EFloatingGamepadTextInputMode 0 = ModeSingleLine
-		Steam.showFloatingGamepadTextInput(0, int(rect.position.x), int(rect.position.y), int(rect.size.x), int(rect.size.y))
+		Steam.showFloatingGamepadTextInput(Steam.FLOATING_GAMEPAD_TEXT_INPUT_MODE_SINGLE_LINE, int(rect.position.x), int(rect.position.y), int(rect.size.x), int(rect.size.y))
 	else:
 		DisplayServer.virtual_keyboard_show(search_input.text)
 

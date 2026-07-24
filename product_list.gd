@@ -46,8 +46,8 @@ signal products_loaded
 
 # --- Internal Variables ---
 var _active_content_container: Container 
-var _product_box_min_width: float = 210.0 
-var _product_box_min_height: float = 350.0
+var _product_box_min_width: float = 160.0 
+var _product_box_min_height: float = 240.0
 var installed_ids: Dictionary = {}
 var origin_position := Vector2.ZERO
 var origin_size := Vector2.ZERO
@@ -60,8 +60,9 @@ var current_category = ""
 var current_url = ""
 
 # --- Cooldown Variables ---
-const NAV_COOLDOWN_MS = 250
-var last_nav_time = { "ui_up": 0, "ui_down": 0, "ui_left": 0, "ui_right": 0 }
+const NAV_COOLDOWN_MS_PAGING = 150
+const NAV_COOLDOWN_MS_CARDS = 200
+var last_nav_time = { "ui_up": 0, "ui_down": 0, "ui_left": 0, "ui_right": 0, "ui_page_up": 0, "ui_page_down": 0 }
 
 func _ready():
 	origin_position = Vector2(0, 0)
@@ -72,12 +73,12 @@ func _ready():
 		_product_box_min_width = temp_box.custom_minimum_size.x
 		_product_box_min_height = temp_box.custom_minimum_size.y
 		temp_box.queue_free()
-		if _product_box_min_width <= 0: _product_box_min_width = 210.0
-		if _product_box_min_height <= 0: _product_box_min_height = 350.0
+		if _product_box_min_width <= 0: _product_box_min_width = 160.0
+		if _product_box_min_height <= 0: _product_box_min_height = 240.0
 	else:
 		printerr("ProductList: product_box_scene is not assigned!")
-		_product_box_min_width = 210.0
-		_product_box_min_height = 350.0
+		_product_box_min_width = 160.0
+		_product_box_min_height = 240.0
 			
 	if title_label:
 		if not title.is_empty():
@@ -87,6 +88,23 @@ func _ready():
 			title_label.visible = false
 	else:
 		printerr("TitleLabel not found in ProductList!")
+		
+	if is_instance_valid(no_results_label):
+		no_results_label.focus_mode = Control.FOCUS_ALL
+		var style = StyleBoxFlat.new()
+		style.bg_color = Color(0, 0, 0, 0.35)
+		style.set_border_width_all(3)
+		style.border_color = Color(0.627, 0.125, 0.941, 1)
+		style.content_margin_left = 20
+		style.content_margin_right = 20
+		style.content_margin_top = 10
+		style.content_margin_bottom = 10
+		no_results_label.add_theme_stylebox_override("normal", style)
+		
+		var focus_style = style.duplicate()
+		focus_style.border_color = Color(0.627, 0.125, 0.941, 1)
+		focus_style.bg_color = Color(0.627, 0.125, 0.941, 0.4)
+		no_results_label.add_theme_stylebox_override("focus", focus_style)
 		
 	if display_mode == DisplayMode.MULTI_LINE_WRAP:
 		multi_line_scroll.visible = true
@@ -104,7 +122,7 @@ func _ready():
 		var temp_box = product_box_scene.instantiate()
 		_product_box_min_width = temp_box.custom_minimum_size.x
 		temp_box.queue_free()
-		if _product_box_min_width <= 0: _product_box_min_width = 210.0
+		if _product_box_min_width <= 0: _product_box_min_width = 160.0
 	else:
 		printerr("ProductList: product_box_scene ist nicht zugewiesen!")
 		
@@ -188,11 +206,16 @@ func set_products(product_data: Array):
 	var target_scroll = multi_line_scroll if display_mode == DisplayMode.MULTI_LINE_WRAP else single_line_scroll
 	if is_instance_valid(target_scroll): target_scroll.visible = has_products
 	
+	var focus_owner = get_viewport().gui_get_focus_owner()
+	var focus_was_inside = is_instance_valid(focus_owner) and is_ancestor_of(focus_owner)
+
 	if not has_products:
 		# Hide pagination if no results
 		if pagination_bar: pagination_bar.visible = false
 		if pagination_bar_bottom: pagination_bar_bottom.visible = false
 		print("--- ProductList set_products (Empty) END ---")
+		if focus_was_inside:
+			emit_signal("focus_exited_up")
 		call_deferred("emit_signal", "products_loaded")
 		return
 
@@ -208,10 +231,15 @@ func set_products(product_data: Array):
 		return
 
 	for product in product_data:
+		var product_app_id = product.get("app_id")
+		
+		# Skip blacklisted apps
+		if AppBlacklist.is_blacklisted(product_app_id):
+			continue
+			
 		var product_box_instance = product_box_scene.instantiate()
 		product_box_instance.focus_mode = Control.FOCUS_ALL
 
-		var product_app_id = product.get("app_id")
 		if product_box_instance.has_method("set_app_id"):
 			product_box_instance.set_app_id(product_app_id)
 		
@@ -223,6 +251,12 @@ func set_products(product_data: Array):
 			var product_logo_rect = product_box_instance.get_node_or_null("Panel/ProductLogo") as TextureRect
 			if product_logo_rect:
 				emit_signal("image_load_requested", image_url, product_logo_rect)
+		
+		product_box_instance.focus_entered.connect(func():
+			if product_box_instance.get_index() == 0 and display_mode == DisplayMode.SINGLE_LINE_SCROLL and is_instance_valid(single_line_scroll):
+				single_line_scroll.scroll_horizontal = 0
+		)
+				
 		product_box_instance.move_to_details_view.connect(_on_emit_move_to_details_view)
 		_active_content_container.add_child(product_box_instance)
 
@@ -249,6 +283,11 @@ func show_loading():
 func hide_loading():
 	if is_instance_valid(loading_overlay):
 		loading_overlay.hide_overlay()
+
+func has_products() -> bool:
+	if is_instance_valid(_active_content_container):
+		return _active_content_container.get_child_count() > 0
+	return false
 
 func get_base_url(full_url: String) -> String:
 	var parts = full_url.split("?", false, 1)
@@ -391,15 +430,21 @@ func _input(event: InputEvent):
 	# Pagination Shortcuts - only for multi-line wrap lists
 	if display_mode == DisplayMode.MULTI_LINE_WRAP:
 		if event.is_action_pressed("ui_page_up"):
-			if current_page > 1:
-				_on_prev_button_pressed()
-				get_viewport().set_input_as_handled()
-				return
+			var current_time = Time.get_ticks_msec()
+			if current_time - last_nav_time.get("ui_page_up", 0) > NAV_COOLDOWN_MS_PAGING:
+				if current_page > 1:
+					_on_prev_button_pressed()
+				last_nav_time["ui_page_up"] = current_time
+			get_viewport().set_input_as_handled()
+			return
 		elif event.is_action_pressed("ui_page_down"):
-			if current_page < total_pages:
-				_on_next_button_pressed()
-				get_viewport().set_input_as_handled()
-				return
+			var current_time = Time.get_ticks_msec()
+			if current_time - last_nav_time.get("ui_page_down", 0) > NAV_COOLDOWN_MS_PAGING:
+				if current_page < total_pages:
+					_on_next_button_pressed()
+				last_nav_time["ui_page_down"] = current_time
+			get_viewport().set_input_as_handled()
+			return
 
 	var action_string = ""
 	if event.is_action_pressed("ui_up"): action_string = "ui_up"
@@ -409,7 +454,7 @@ func _input(event: InputEvent):
 
 	if action_string != "":
 		var current_time = Time.get_ticks_msec()
-		if current_time - last_nav_time.get(action_string, 0) > NAV_COOLDOWN_MS:
+		if current_time - last_nav_time.get(action_string, 0) > NAV_COOLDOWN_MS_CARDS:
 			if _handle_navigation(action_string):
 				last_nav_time[action_string] = current_time
 				get_viewport().set_input_as_handled()
@@ -556,6 +601,9 @@ func _focus_product_at_index(target_node: Control):
 						scroll_container.scroll_horizontal = node_x + node_w - viewport_w + margin
 				
 func _get_first_focusable_product() -> Control:
+	if is_instance_valid(no_results_label) and no_results_label.visible and no_results_label.focus_mode != Control.FOCUS_NONE:
+		return no_results_label
+		
 	if not is_instance_valid(_active_content_container): return null
 	for child in _active_content_container.get_children():
 		if child is Control and not child.is_queued_for_deletion() and child.focus_mode != Control.FOCUS_NONE:

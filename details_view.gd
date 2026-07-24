@@ -13,10 +13,12 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @onready var app_desc: RichTextLabel = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDescription/DetailsDescriptionScroller/AppDescription
 @onready var screenshot_container: HBoxContainer = $MarginContainer/Panel/DetailsContents/ScreenshotClipContainer/ScrollContainer/ContainerScreenshots
 @onready var app_developer: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerDeveloper/Developer
+@onready var website_button: Button = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerWebsite/WebsiteButton
 @onready var app_current_version: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerVersion/CurrentVersion
 @onready var app_release_date: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate/ReleaseDate
 @onready var action_button: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/ActionButton
 @onready var add_to_steam_button: Button = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/AddToSteamButton
+@onready var app_installed_size: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerInstalledSize/InstalledSize
 @onready var progress_info: VBoxContainer = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo
 @onready var progress_bar: ProgressBar = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo/ProgressBar
 @onready var progress_label: Label = $MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer/MarginContainer/ProgressInfo/ProgressLabel
@@ -31,6 +33,7 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 var current_app_id: String = ""
 var is_currently_installed: bool = false
 var current_app_name: String = ""
+var current_website_url: String = ""
 var current_icon_url: String = ""
 var is_known_to_be_in_steam: bool = true
 var steam_check_pending: bool = false
@@ -107,6 +110,10 @@ func _ready():
 
 	if is_instance_valid(action_button):
 		action_button.mouse_entered.connect(func(): action_button.grab_focus())
+		
+	if is_instance_valid(website_button):
+		website_button.pressed.connect(_on_website_button_pressed)
+		website_button.mouse_entered.connect(func(): website_button.grab_focus())
 		
 	if is_instance_valid(add_to_steam_button):
 		add_to_steam_button.mouse_entered.connect(func(): add_to_steam_button.grab_focus())
@@ -205,6 +212,7 @@ func _on_shortcut_action_completed(action: String, app_id: String, success: bool
 	elif (action == "add" or action == "remove") and app_id == current_app_id:
 		print("DEBUG DetailsView: Add/Remove finished for ", app_id, " Re-triggering Steam check.")
 		steam_check_pending = false
+		await get_tree().create_timer(0.5).timeout
 		_trigger_steam_check_if_needed()
 
 # =============================================================================
@@ -221,6 +229,8 @@ func _get_api_cache_filepath(url: String) -> String:
 	
 # --- Load details: Check cache or start request ---
 func _load_details_data(app_id_to_load: String):
+	_fetch_summary(app_id_to_load)
+	
 	var detail_api_url = "https://flathub.org/api/v2/appstream/%s?locale=en" % app_id_to_load
 
 	# --- File Cache Check ---
@@ -239,10 +249,12 @@ func _load_details_data(app_id_to_load: String):
 				var api_data = cache_content.get("api_data")
 				var current_time = Time.get_ticks_msec()
 				var cache_age = current_time - timestamp
+				
+				var online_mgr = get_node_or_null("/root/OnlineStatusManager")
+				var is_online = online_mgr.is_online if online_mgr else true
 
-				if cache_age < CACHE_DURATION_MSEC and api_data != null:
+				if (not is_online or cache_age < CACHE_DURATION_MSEC) and api_data != null:
 					_display_details(api_data)
-					# hide_loading_indicator() # Optional
 					return
 				else:
 					DirAccess.remove_absolute(cache_filepath)
@@ -253,6 +265,11 @@ func _load_details_data(app_id_to_load: String):
 			if is_instance_valid(file): file.close()
 
 	# --- Cache MISS or expired: Start HTTP Request ---
+	if Engine.has_singleton("OnlineStatusManager") and not get_node("/root/OnlineStatusManager").is_online:
+		print("INFO DetailsView: App is offline. Using fallback info for ", current_app_id)
+		_show_fallback_product()
+		return
+		
 	var http_request = HTTPRequest.new()
 	add_child(http_request)
 	http_request.request_completed.connect(
@@ -261,8 +278,7 @@ func _load_details_data(app_id_to_load: String):
 	var error = http_request.request(detail_api_url)
 	if error != OK:
 		printerr("ERROR: Starting details request failed for '%s' (%s): %s" % [app_id_to_load, detail_api_url, error])
-		# hide_loading_indicator() # Optional
-		app_title.text = "Error: Request Failed"
+		_show_fallback_product()
 		if is_instance_valid(http_request): http_request.queue_free()
 
 # --- Handle request completion: Save to cache and display ---
@@ -279,24 +295,64 @@ func _on_product_details_request_completed(result, response_code, headers, body,
 			app_title.text = "Error: Invalid Data" 
 	elif response_code == 404:
 		print("INFO DetailsView: App not found on Flathub (404). Using fallback info for ", current_app_id)
-		# Fallback: Create a minimal product dictionary so the user can still uninstall
-		var fallback_product = {
-			"id": current_app_id,
-			"name": current_app_name if not current_app_name.is_empty() else current_app_id,
-			"description": "This application was not found on Flathub. Metadata is unavailable, but you can still manage the installation.",
-			"icon": "",
-			"developer_name": "Unknown",
-			"releases": []
-		}
-		_display_details(fallback_product)
+		_show_fallback_product()
 	else:
 		printerr("ERROR: HTTP Error %d (Result %d) requesting details from '%s'." % [response_code, result, url])
-		app_title.text = "Error: Download Failed" 
+		_show_fallback_product()
 
 	# --- Cleanup ---
 	# hide_loading_indicator() # Optional
 	if is_instance_valid(http_request):
 		http_request.queue_free()
+
+func _fetch_summary(app_id: String):
+	app_installed_size.text = "Loading..."
+	if Engine.has_singleton("OnlineStatusManager") and not get_node("/root/OnlineStatusManager").is_online:
+		app_installed_size.text = "Offline"
+		return
+
+	var summary_url = "https://flathub.org/api/v2/summary/%s" % app_id
+	var http_request = HTTPRequest.new()
+	add_child(http_request)
+	http_request.request_completed.connect(
+		_on_summary_request_completed.bind(http_request)
+	)
+	var error = http_request.request(summary_url)
+	if error != OK:
+		printerr("ERROR: Starting summary request failed for '%s' (%s): %s" % [app_id, summary_url, error])
+		app_installed_size.text = "Unknown"
+		if is_instance_valid(http_request): http_request.queue_free()
+
+func _on_summary_request_completed(result, response_code, headers, body, http_request: HTTPRequest):
+	if response_code == 200 and result == HTTPRequest.RESULT_SUCCESS:
+		var response_string = body.get_string_from_utf8()
+		var summary_json = JSON.parse_string(response_string)
+		if summary_json != null and summary_json is Dictionary:
+			var size_bytes = summary_json.get("installed_size", 0)
+			if size_bytes > 0:
+				app_installed_size.text = String.humanize_size(int(size_bytes))
+				if is_instance_valid(action_button):
+					action_button.app_size_bytes = int(size_bytes)
+			else:
+				app_installed_size.text = "Unknown"
+		else:
+			app_installed_size.text = "Unknown"
+	else:
+		app_installed_size.text = "Unknown"
+
+	if is_instance_valid(http_request):
+		http_request.queue_free()
+
+func _show_fallback_product():
+	var fallback_product = {
+		"id": current_app_id,
+		"name": current_app_name if not current_app_name.is_empty() else current_app_id,
+		"description": "Metadata is currently unavailable because the application is not listed on Flathub or you are offline. You can still manage the installation if it is installed locally.",
+		"icon": "",
+		"developer_name": "Unknown",
+		"releases": []
+	}
+	_display_details(fallback_product)
 
 
 # =============================================================================
@@ -383,8 +439,29 @@ func _display_details(product: Dictionary):
 		app_current_version.text = "N/A"
 		app_release_date.text = "N/A"
 		
+	var main_app_node = get_node_or_null("/root/App")
+	if main_app_node and main_app_node._installed_flatpak_ids.has(current_app_id):
+		app_installed_size.text = main_app_node._installed_flatpak_ids[current_app_id].get("size", "Unknown")
+	else:
+		app_installed_size.text = "N/A"
+		
 	current_app_name = product.get("name") if product.get("name") != null else "N/A"
 	app_developer.text = product.get("developer_name") if product.get("developer_name") != null else "N/A"
+	
+	# Extract Website URL
+	var urls_dict = product.get("urls", {})
+	if typeof(urls_dict) == TYPE_DICTIONARY:
+		current_website_url = urls_dict.get("homepage", "")
+		if current_website_url.is_empty():
+			current_website_url = urls_dict.get("bugtracker", "")
+	
+	if is_instance_valid(website_button):
+		if not current_website_url.is_empty():
+			website_button.visible = true
+			website_button.get_parent().visible = true
+		else:
+			website_button.visible = false
+			website_button.get_parent().visible = false
 	
 	var safe_icon_url = icon_url if icon_url != null else ""
 
@@ -458,6 +535,14 @@ func _clear_rating_ui():
 	if is_instance_valid(show_reviews_button):
 		show_reviews_button.visible = false
 		show_reviews_button.disabled = true
+
+func _on_website_button_pressed():
+	if not current_website_url.is_empty():
+		var steam_integration = get_node_or_null("/root/SteamIntegration")
+		if steam_integration and steam_integration.has_method("open_url"):
+			steam_integration.open_url(current_website_url)
+		else:
+			OS.shell_open(current_website_url)
 
 func _open_screenshot_zoom_popup(start_index: int):
 	if not screenshot_zoom_popup_scene:
@@ -603,7 +688,7 @@ func _on_task_updated_for_progress(operation_id: String, status_data: Dictionary
 
 func _start_pulse():
 	if pulse_tween and pulse_tween.is_valid(): return
-	pulse_tween = create_tween().set_loops()
+	pulse_tween = create_tween().bind_node(progress_bar).set_loops()
 	pulse_tween.tween_property(progress_bar, "modulate:a", 0.3, 0.6).set_trans(Tween.TRANS_SINE)
 	pulse_tween.tween_property(progress_bar, "modulate:a", 1.0, 0.6).set_trans(Tween.TRANS_SINE)
 
@@ -613,7 +698,7 @@ func _stop_pulse():
 	if is_instance_valid(progress_bar):
 		progress_bar.modulate.a = 1.0
 			
-func _on_task_finished_for_progress(operation_id: String, final_status: String):
+func _on_task_finished_for_progress(operation_id: String, final_status: String, op_type: String = ""):
 	if is_instance_valid(action_button) and operation_id == action_button.current_operation_id:
 		_stop_pulse()
 		if progress_info: progress_info.visible = false

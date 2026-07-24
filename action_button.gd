@@ -6,8 +6,9 @@ extends Button
 @export var normal_color := Color.from_string("#626262", Color.GRAY) # Standardfarbe, wenn nichts zutrifft
 
 @export var app_id: String = ""
-
+@export var is_initially_installed: bool = false
 var current_operation_id: String = ""
+var app_size_bytes: int = 0
 var _focus_sound_player: AudioStreamPlayer
 
 var stylebox_normal: StyleBoxFlat
@@ -59,9 +60,9 @@ func _ready():
 	if not app_id.is_empty(): _update_ui(DownloadManager.get_task_status(app_id))
 	print("DEBUG UI: ActionButton _ready finished for ", app_id)
 
-func set_app_info(id: String, name: String, url):
+func set_app_info(id: String, p_name: String, url):
 	app_id = id
-	app_name = name # Speichern!
+	app_name = p_name # Speichern!
 	icon_url = str(url) if url != null else ""   # Sicherstellen, dass es ein String ist!
 
 	# Initialen Status basierend auf Installation und DownloadManager setzen
@@ -134,15 +135,29 @@ func _on_pressed():
 
 	match self.text:
 		TEXT_INSTALL, TEXT_ERROR, TEXT_CANCELLED: 
+			var space_left: int = 0
+			var dir = DirAccess.open("user://")
+			if dir:
+				space_left = dir.get_space_left()
+				
+			if space_left > 0 and app_size_bytes > 0:
+				# Add 10% safety buffer
+				if space_left < (app_size_bytes * 1.1):
+					print("ActionButton: Not enough space! Need ", app_size_bytes, " but have ", space_left)
+					self.text = "Not enough space"
+					self.disabled = true
+					return
+
 			print("ActionButton: Choosing INSTALL path based on text '", self.text, "'")
 			self.disabled = true; self.text = TEXT_WAITING; add_theme_stylebox_override("normal", stylebox_busy)
-			var app_data_for_task = {"name": app_name, "icon_url": icon_url}
+			var app_data_for_task = {"name": app_name, "icon": icon_url, "icon_url": icon_url}
 			current_operation_id = DownloadManager.queue_install(app_id, app_data_for_task)
 
 		TEXT_UNINSTALL: 
 			print("ActionButton: Choosing UNINSTALL path based on text '", self.text, "'")
 			self.disabled = true; self.text = TEXT_WAITING; add_theme_stylebox_override("normal", stylebox_busy)
-			current_operation_id = DownloadManager.queue_uninstall(app_id)
+			var app_data_for_task = {"name": app_name, "icon": icon_url, "icon_url": icon_url}
+			current_operation_id = DownloadManager.queue_uninstall(app_id, app_data_for_task)
 
 		TEXT_CANCEL:
 			if not current_operation_id.is_empty():
@@ -222,6 +237,16 @@ func _update_ui(status_data: Dictionary):
 		# No task data, but check our internal app_scope for initial state
 		if app_scope == "system":
 			button_text = TEXT_SYSTEM; button_disabled = true; button_stylebox = stylebox_busy
+
+	if button_text == TEXT_INSTALL and AppBlacklist.is_blacklisted(app_id):
+		button_text = "Blacklisted"
+		button_disabled = true
+		button_stylebox = stylebox_busy
+		
+	if button_text == TEXT_INSTALL and Engine.has_singleton("OnlineStatusManager") and not get_node("/root/OnlineStatusManager").is_online:
+		button_text = "Offline"
+		button_disabled = true
+		button_stylebox = stylebox_busy
 
 	self.text = button_text
 	self.disabled = button_disabled

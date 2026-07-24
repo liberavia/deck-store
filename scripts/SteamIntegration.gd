@@ -12,6 +12,12 @@ func _ready():
 	_initialize_steam()
 
 func _initialize_steam():
+	# Skip Steam initialization if running inside the Godot Editor
+	# This prevents fatal IPC crashes when the Godot Flatpak sandbox blocks Steam API pipes.
+	if OS.has_feature("editor"):
+		print("SteamIntegration: Running in editor. Skipping Steam initialization to prevent sandbox crashes.")
+		return
+		
 	if Engine.has_singleton("Steam"):
 		var INIT: Dictionary = Steam.steamInitEx()
 		print("Steamworks Initialized: ", INIT)
@@ -26,6 +32,14 @@ func _initialize_steam():
 func _process(_delta):
 	if is_steam_initialized and Engine.has_singleton("Steam"):
 		Steam.run_callbacks()
+
+func open_url(url: String):
+	if is_steam_initialized and Engine.has_singleton("Steam") and Steam.has_method("activateGameOverlayToWebPage"):
+		print("SteamIntegration: Opening URL in Steam Overlay: ", url)
+		Steam.activateGameOverlayToWebPage(url)
+	else:
+		print("SteamIntegration: Steam Overlay not available, using OS.shell_open for: ", url)
+		OS.shell_open(url)
 
 # Führt den steam_shortcut_manager in einem separaten Thread aus
 func _execute_shortcut_manager_in_thread(args: Array):
@@ -53,7 +67,7 @@ func _execute_shortcut_manager_in_thread(args: Array):
 
 	var execute_output: PackedStringArray = [] # Array zum Sammeln der stdout-Ausgaben
 	# Führe den Befehl blockierend im Thread aus
-	var exit_code = OS.execute(command_to_run, final_args, execute_output, true, true) # true für blocking, true für read_stderr
+	var exit_code = OS.execute(command_to_run, final_args, execute_output, true, false) # true for read_stderr, false for open_console
 
 	print("SteamIntegration Thread: Helfer-Skript beendet. Exit Code: ", exit_code)
 	if exit_code != 0:
@@ -67,6 +81,8 @@ func _execute_shortcut_manager_in_thread(args: Array):
 # Verarbeitet das Ergebnis des Thread-Aufrufs im Hauptthread
 func _process_shortcut_manager_result(args: Array, exit_code: int, output_array: PackedStringArray):
 	print("SteamIntegration MainThread: Verarbeite Ergebnis für args: ", args, ", ExitCode: ", exit_code)
+	if _shortcut_thread != null and _shortcut_thread.is_started():
+		_shortcut_thread.wait_to_finish()
 	_shortcut_thread = null # Thread als beendet markieren
 
 	var action: String = ""
@@ -111,9 +127,13 @@ func _process_shortcut_manager_result(args: Array, exit_code: int, output_array:
 
 ## Fügt einen Shortcut zu Steam hinzu.
 func add_to_steam(appid_tag: String, name: String, exe_path: String, launch_params: String, icon_path_abs: String) -> bool:
-	if _shortcut_thread != null and _shortcut_thread.is_started() and _shortcut_thread.is_alive():
-		printerr("SteamIntegration WARN: Eine andere Shortcut-Operation läuft bereits.")
-		return false 
+	if _shortcut_thread != null:
+		if _shortcut_thread.is_alive():
+			printerr("SteamIntegration WARN: Eine andere Shortcut-Operation läuft bereits.")
+			return false 
+		elif _shortcut_thread.is_started():
+			_shortcut_thread.wait_to_finish()
+		_shortcut_thread = null
 
 	if appid_tag.is_empty() or name.is_empty() or exe_path.is_empty() or launch_params.is_empty():
 		printerr("SteamIntegration ERROR (add): appid_tag, name, exe_path und launch_params sind erforderlich.")
@@ -150,9 +170,13 @@ func add_to_steam(appid_tag: String, name: String, exe_path: String, launch_para
 ## Entfernt einen Shortcut aus Steam.
 func remove_from_steam(appid_tag: String) -> bool:
 	print("DEBUG SteamIntegration: Entferne Shortcut aus Steam mit appid_tag: ", appid_tag)
-	if _shortcut_thread != null and _shortcut_thread.is_started() and _shortcut_thread.is_alive():
-		printerr("SteamIntegration WARN: Eine andere Shortcut-Operation läuft bereits.")
-		return false
+	if _shortcut_thread != null:
+		if _shortcut_thread.is_alive():
+			printerr("SteamIntegration WARN: Eine andere Shortcut-Operation läuft bereits.")
+			return false
+		elif _shortcut_thread.is_started():
+			_shortcut_thread.wait_to_finish()
+		_shortcut_thread = null
 
 	if appid_tag.is_empty():
 		printerr("SteamIntegration ERROR (remove): appid_tag ist erforderlich.")
@@ -177,9 +201,13 @@ func remove_from_steam(appid_tag: String) -> bool:
 
 ## Überprüft asynchron, ob ein Shortcut in Steam existiert.
 func check_in_steam_async(appid_tag: String) -> bool:
-	if _shortcut_thread != null and _shortcut_thread.is_started() and _shortcut_thread.is_alive():
-		printerr("SteamIntegration WARN: Eine andere Shortcut-Operation läuft bereits.")
-		return false
+	if _shortcut_thread != null:
+		if _shortcut_thread.is_alive():
+			printerr("SteamIntegration WARN: Eine andere Shortcut-Operation läuft bereits.")
+			return false
+		elif _shortcut_thread.is_started():
+			_shortcut_thread.wait_to_finish()
+		_shortcut_thread = null
 
 	if appid_tag.is_empty():
 		printerr("SteamIntegration ERROR (check): appid_tag ist erforderlich.")

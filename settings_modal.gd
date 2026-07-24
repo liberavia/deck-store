@@ -26,6 +26,8 @@ func _populate_settings():
 		
 	_create_check_setting("Play UI Sounds", "play_ui_sounds")
 	_create_check_setting("Auto Refresh Installed Apps", "auto_refresh_installed")
+	_create_check_setting("Add installed Apps automatically to Steam", "auto_add_to_steam")
+	_create_check_setting("Show Steam Restart Warning", "show_steam_restart_warning")
 
 func _create_check_setting(label_text: String, setting_key: String):
 	var hbox = HBoxContainer.new()
@@ -70,6 +72,7 @@ func _create_option_setting(label_text: String, setting_key: String, options: Ar
 	settings_container.add_child(hbox)
 
 func open_modal():
+	_populate_settings()
 	_previous_focus_owner = get_viewport().gui_get_focus_owner()
 	show()
 	close_button.grab_focus()

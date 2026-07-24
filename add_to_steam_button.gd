@@ -23,6 +23,16 @@ func _ready():
 		
 	if ExtensionsManager:
 		ExtensionsManager.extension_status_updated.connect(_on_extension_status_updated)
+		
+	if ProjectSettings.has_setting("autoload/SteamIntegration"):
+		var steam_int = get_node_or_null("/root/SteamIntegration")
+		if steam_int and steam_int.has_signal("shortcut_action_completed"):
+			steam_int.shortcut_action_completed.connect(_on_shortcut_action_completed)
+
+func _on_shortcut_action_completed(action: String, p_app_id: String, success: bool):
+	if (action == "add" or action == "remove") and p_app_id == app_id:
+		disabled = false
+		text = "Add to Steam"
 
 
 func _on_focus_entered_sound():

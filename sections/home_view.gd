@@ -5,9 +5,10 @@ extends Control
 @export var product_box_scene: PackedScene
 
 # Node references - ADJUST THESE PATHS to your actual node structure within HomeView.tscn
-@onready var popular_product_list: ProductList = $ContentScrollContainer/VBoxContainer/PopularProductList # Example path, ADJUST
-@onready var trending_product_list: ProductList = $ContentScrollContainer/VBoxContainer/TrendingProductList # Example path, ADJUST
-@onready var content_scroll_container: ScrollContainer = $ContentScrollContainer # Example path, ADJUST
+@onready var hero_carousel = $ContentScrollContainer/ListMargin/VBoxContainer/HeroCarousel
+@onready var popular_product_list: ProductList = $ContentScrollContainer/ListMargin/VBoxContainer/PopularProductList
+@onready var trending_product_list: ProductList = $ContentScrollContainer/ListMargin/VBoxContainer/TrendingProductList
+@onready var content_scroll_container: ScrollContainer = $ContentScrollContainer
 
 # --- Signals to be emitted to main.gd ---
 signal move_to_details_view_requested(app_id: String, installed: bool)
@@ -21,6 +22,10 @@ func _ready():
 	if not product_box_scene:
 		printerr("HomeView ERROR: product_box_scene was not set by Main!")
 		# Optionally, load a default or handle the error
+	if is_instance_valid(hero_carousel):
+		hero_carousel.move_to_details_view.connect(_on_internal_move_to_details_view)
+		hero_carousel.image_load_requested.connect(_on_internal_image_load_requested)
+		hero_carousel.focus_entered_carousel.connect(_on_hero_carousel_focus_entered)
 	
 	if is_instance_valid(popular_product_list):
 		if product_box_scene and not popular_product_list.product_box_scene:
@@ -64,6 +69,8 @@ func load_trending_products_in_view():
 
 func update_internal_list_install_status(installed_ids: Dictionary):
 	print("INFO: Update installed state in home view lists...")
+	if is_instance_valid(hero_carousel):
+		hero_carousel.update_installed_status(installed_ids)
 	if is_instance_valid(popular_product_list):
 		popular_product_list.update_installed_status(installed_ids)
 	if is_instance_valid(trending_product_list):
@@ -77,7 +84,14 @@ func _on_internal_image_load_requested(url: String, texture_rect: TextureRect):
 	emit_signal("image_load_requested", url, texture_rect)
 
 func _on_internal_focus_exited_up():
+	if is_instance_valid(content_scroll_container):
+		content_scroll_container.scroll_vertical = 0
 	emit_signal("focus_exited_up_from_lists")
+
+func _on_hero_carousel_focus_entered():
+	# Ensure the scroll container goes all the way up so the heading is not cut off
+	if is_instance_valid(content_scroll_container):
+		content_scroll_container.scroll_vertical = 0
 
 func _on_internal_load_new_page(url: String, list_node: ProductList):
 	# This function now receives the actual ProductList node

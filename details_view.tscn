@@ -265,6 +265,21 @@ text = "Developer/Publisher:"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.159982, 0.375954, 0.699073, 1)
 
+[node name="ContainerWebsite" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails"]
+layout_mode = 2
+
+[node name="LabelWebsite" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerWebsite"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+text = "Project Website:"
+
+[node name="WebsiteButton" type="Button" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerWebsite"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.159982, 0.375954, 0.699073, 1)
+text = "Open in Browser"
+flat = true
+alignment = 0
+
 [node name="ContainerVersion" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails"]
 layout_mode = 2
 
@@ -285,6 +300,17 @@ layout_mode = 2
 text = "Last Release:"
 
 [node name="ReleaseDate" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate"]
+layout_mode = 2
+
+[node name="ContainerInstalledSize" type="HBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails"]
+layout_mode = 2
+
+[node name="LabelInstalledSize" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerInstalledSize"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+text = "Installed Size:"
+
+[node name="InstalledSize" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerInstalledSize"]
 layout_mode = 2
 
 [node name="RatingContainer" type="VBoxContainer" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails"]
