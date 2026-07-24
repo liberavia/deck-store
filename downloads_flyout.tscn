@@ -47,7 +47,7 @@ theme_override_constants/separation = 20
 [node name="Title" type="Label" parent="FlyoutPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "Downloads & Updates"
+text = "LBL_DOWNLOADS_UPDATES"
 horizontal_alignment = 1
 
 [node name="HSeparator" type="HSeparator" parent="FlyoutPanel/MarginContainer/VBoxContainer"]
@@ -56,7 +56,7 @@ layout_mode = 2
 [node name="NoTasksLabel" type="Label" parent="FlyoutPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
-text = "No active tasks."
+text = "LBL_NO_ACTIVE_TASKS"
 horizontal_alignment = 1
 
 [node name="ScrollContainer" type="ScrollContainer" parent="FlyoutPanel/MarginContainer/VBoxContainer"]

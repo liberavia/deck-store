@@ -25,7 +25,7 @@ func _populate_menu():
 		child.queue_free()
 		
 	var quit_btn = Button.new()
-	quit_btn.text = "Quit App"
+	quit_btn.text = tr("BTN_QUIT_APP")
 	quit_btn.custom_minimum_size = Vector2(0, 50)
 	quit_btn.add_theme_font_size_override("font_size", 24)
 	quit_btn.pressed.connect(func():

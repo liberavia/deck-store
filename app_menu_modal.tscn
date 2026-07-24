@@ -52,7 +52,7 @@ theme_override_constants/separation = 20
 [node name="Title" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1572641087]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "Menu"
+text = "LBL_MENU"
 horizontal_alignment = 1
 
 [node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1498101800]
@@ -84,4 +84,4 @@ autowrap_mode = 3
 custom_minimum_size = Vector2(200, 45)
 layout_mode = 2
 size_flags_horizontal = 4
-text = "Close"
+text = "BTN_CLOSE"

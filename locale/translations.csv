@@ -113,3 +113,11 @@ LBL_OPEN,Open,Öffnen
 LBL_START_TYPING,Start Typing,Eingabe
 LBL_MANAGE_EXTENSION,Manage,Verwalten
 LBL_SWITCH_PAGE,Switch Page,Seite wechseln
+BTN_QUIT_APP,Quit App,App beenden
+BTN_CLOSE,Close,Schließen
+LBL_PENDING,Pending,Ausstehend
+LBL_IN_QUEUE,In Queue,In Warteschlange
+LBL_DOWNLOADING_SHORT,Downloading,Wird heruntergeladen
+LBL_COMPLETED,Completed,Abgeschlossen
+LBL_DOWNLOADS_UPDATES,Downloads & Updates,Downloads & Updates
+LBL_NO_ACTIVE_TASKS,No active tasks.,Keine aktiven Aufgaben.
