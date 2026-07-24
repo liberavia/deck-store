@@ -1,136 +1,136 @@
-id,en,de
-TAB_HOME,Home,Startseite
-TAB_DISCOVER,Discover,Entdecken
-TAB_SEARCH,Search,Suche
-TAB_INSTALLED,Installed,Installiert
-TAB_UPDATES,Updates,Updates
-TAB_SETTINGS,Settings,Einstellungen
-BTN_ADD_TO_STEAM,Add to Steam,Zu Steam hinzu.
-BTN_ADDING,Adding...,Füge hinzu...
-BTN_START_FAILED,Start Failed!,Fehler beim Start!
-BTN_INTEGRATION_ERROR,Integration Error!,Fehler!
-BTN_UNINSTALL,Uninstall,Deinstallieren
-BTN_UNINSTALLING,Uninstalling...,Deinstalliere...
-BTN_INSTALL,Install,Installieren
-BTN_INSTALLING,Installing...,Installiere...
-BTN_CANCEL,Cancel,Abbrechen
-BTN_CANCELLING,Cancelling...,Breche ab...
-BTN_UPDATE,Update,Aktualisieren
-BTN_SELECT_ALL,Select All,Alle ausw.
-BTN_DESELECT_ALL,Deselect All,Keine ausw.
-BTN_REFRESH,Refresh List,Aktualisieren
-BTN_CONFIRM,OK,OK
-BTN_CLOSE,Close,Schließen
-LBL_SEARCH_PLACEHOLDER,Search for Flatpaks...,Suche nach Flatpaks...
-LBL_NO_RESULTS,No results found,Keine Ergebnisse
-MSG_STEAM_RESTART,Please restart Steam to apply changes.,Bitte Steam neustarten für Änderungen.
-SETTINGS_TITLE,Settings,Einstellungen
-SETTINGS_LANGUAGE,Language,Sprache
-SETTINGS_UI_SOUNDS,Play UI Sounds,UI-Töne abspielen
-SETTINGS_AUTO_REFRESH,Auto Refresh Installed Apps,Auto-Refresh installierter Apps
-SETTINGS_AUTO_ADD_STEAM,Add installed Apps automatically to Steam,Neue Apps sofort zu Steam hinzufügen
-SETTINGS_STEAM_WARNING,Show Steam Restart Warning,Steam-Neustart Hinweis anzeigen
-TAB_CATEGORIES,Categories,Kategorien
-TAB_EXTENSIONS,Extensions,Erweiterungen
-LBL_CATEGORIES,Categories,Kategorien
-BTN_BACK,< Back,< Zurück
-LBL_MISSING_DEPS,Dependencies Missing,Fehlende Abhängigkeiten
-LBL_STEAMOS_MUST_HAVES,SteamOS Must-Haves,SteamOS Must-Haves
-LBL_INSTALLED_APPS,Installed Applications,Installierte Anwendungen
-LBL_UPDATED,Updated:,Aktualisiert:
-LBL_SORT_BY,Sort by ,Sortieren nach 
-SORT_NAME_ASC,Name ▲,Name ▲
-SORT_NAME_DESC,Name ▼,Name ▼
-SORT_SIZE_ASC,Size ▲,Größe ▲
-SORT_SIZE_DESC,Size ▼,Größe ▼
-LBL_TOTAL_SIZE,Total Size: %s,Gesamtgröße: %s
-LBL_TOTAL_SIZE_CALCULATING,Total Size: calculating...,Gesamtgröße: berechne...
-LBL_STEAM_RESTART_REQ,Steam Restart Required,Steam-Neustart erforderlich
-LBL_STEAM_RESTART_MSG,"The game has been added to Steam. You need to restart Steam to see it in your Non-Steam Games library.","Das Spiel wurde zu Steam hinzugefügt. Du musst Steam neustarten, um es in der Bibliothek zu sehen."
-LBL_AVAILABLE_UPDATES,Available Updates,Verfügbare Updates
-BTN_UPDATE_SELECTED,Update Selected,Ausgewählte updaten
-LBL_NO_UPDATES,No updates available.,Keine Updates verfügbar.
-LBL_VERIFIED_APP,Verified App,Verifizierte App
-LBL_PREPARING,Preparing...,Vorbereitung...
-LBL_LOADING,Loading...,Laden...
-LBL_DEV_PUB,Developer/Publisher:,Entwickler/Herausgeber:
-LBL_PROJECT_WEB,Project Website:,Projekt-Webseite:
-BTN_OPEN_BROWSER,Open in Browser,Im Browser öffnen
-LBL_CURRENT_VER,Current Version:,Aktuelle Version:
-LBL_LAST_RELEASE,Last Release:,Letztes Release:
-LBL_INSTALLED_SIZE,Installed Size:,Installationsgröße:
-LBL_RATING,Rating:,Bewertung:
-BTN_SHOW_REVIEWS,Show Reviews,Reviews anzeigen
-TXT_NA,N/A,k.A.
-TXT_UNKNOWN,Unknown,Unbekannt
-TXT_OFFLINE,Offline,Offline
-ERR_NO_APP_ID,Error: No App ID,Fehler: Keine App ID
-ERR_INVALID_DATA,Error: Invalid Data,Fehler: Ungültige Daten
-LBL_DOWNLOADING_PERCENT,Downloading (%d%%),Herunterladen (%d%%)
-LBL_DOWNLOADING,Downloading...,Herunterladen...
-LBL_INSTALLING,Installing...,Installieren...
-LBL_STATUS,Status: %s,Status: %s
-LBL_NO_DESCRIPTION,No description available.,Keine Beschreibung verfügbar.
-LBL_NO_UPDATES,No updates available.,Keine Updates verfügbar.
-LBL_AVAILABLE_UPDATES,Available Updates,Verfügbare Updates
-BTN_SELECT_ALL,Select All,Alle auswählen
-BTN_DESELECT_ALL,Deselect All,Alle abwählen
-BTN_UPDATE_SELECTED,Update Selected,Ausgewählte aktualisieren
-LBL_UPDATED,Updated:,Aktualisiert:
-BTN_SEARCH,Search,Suchen
-TAB_SEARCH,Search,Suchen
-LBL_SEARCH_PLACEHOLDER,Search for apps...,Nach Apps suchen...
-LBL_NO_RESULTS,No results found.,Keine Ergebnisse gefunden.
-LBL_STEAMOS_MUST_HAVES,SteamOS Must-Haves,SteamOS Must-Haves
-BTN_INSTALL,Install,Installieren
-BTN_UNINSTALL,Remove,Deinstallieren
-BTN_CANCEL,Cancel,Abbrechen
-LBL_WAITING,Waiting...,Warten...
-LBL_REMOVING,Removing...,Entfernen...
-LBL_ERROR,Error,Fehler
-LBL_CANCELLED,Cancelled,Abgebrochen
-LBL_SYSTEM_INSTALLED,Installed (System),Installiert (System)
-LBL_BLACKLISTED,Blacklisted,Auf der schwarzen Liste
-BTN_ADD_TO_STEAM,Add to Steam,Zu Steam hinzufügen
-LBL_REVIEWS_FOR,Reviews for:,Reviews für:
-ERR_LOADING_REVIEWS,Error loading reviews.,Fehler beim Laden der Reviews.
-LBL_NO_REVIEWS,No reviews available.,Keine Reviews verfügbar.
-LBL_APP_DETAILS,App Details,App Details
-LBL_BACK,Back,Zurück
-LBL_ZOOM_SCREENSHOT,Zoom,Zoom
-LBL_SWITCH_SCREENSHOT,Switch Image,Bild wechseln
-LBL_SELECT,Select,Auswählen
-LBL_SWITCH_TAB,Switch Tab,Tab wechseln
-LBL_GO_HOME,Go Home,Startseite
-LBL_BACK_TO_TOP,Top,Nach oben
-LBL_MENU,Menu,Menü
-LBL_SETTINGS_SHORT,Settings,Optionen
-LBL_TASKS,Tasks,Aufgaben
-LBL_SELECT_APP,Select App,Auswählen
-LBL_UNSELECT_APP,Unselect App,Abwählen
-LBL_SELECT_UNSELECT,Select/Unselect,Wählen/Abwählen
-LBL_OPEN,Open,Öffnen
-LBL_START_TYPING,Start Typing,Eingabe
-LBL_MANAGE_EXTENSION,Manage,Verwalten
-LBL_SWITCH_PAGE,Switch Page,Seite wechseln
-BTN_QUIT_APP,Quit App,App beenden
-BTN_CLOSE,Close,Schließen
-LBL_PENDING,Pending,Ausstehend
-LBL_IN_QUEUE,In Queue,In Warteschlange
-LBL_DOWNLOADING_SHORT,Downloading,Wird heruntergeladen
-LBL_COMPLETED,Completed,Abgeschlossen
-LBL_DOWNLOADS_UPDATES,Downloads & Updates,Downloads & Updates
-LBL_NO_ACTIVE_TASKS,No active tasks.,Keine aktiven Aufgaben.
-MSG_SUCCESS_INSTALL,%s was successfully installed,%s wurde erfolgreich installiert
-MSG_SUCCESS_UNINSTALL,%s was successfully uninstalled,%s wurde erfolgreich entfernt
-MSG_SUCCESS_UPDATE,%s was successfully updated,%s wurde erfolgreich aktualisiert
-MSG_SUCCESS_PROCESS,%s was successfully processed,%s wurde erfolgreich verarbeitet
-MSG_FAIL_INSTALL,%s failed to be installed,%s konnte nicht installiert werden
-MSG_FAIL_UNINSTALL,%s failed to be uninstalled,%s konnte nicht entfernt werden
-MSG_FAIL_UPDATE,%s failed to be updated,%s konnte nicht aktualisiert werden
-MSG_FAIL_PROCESS,%s failed to be processed,%s konnte nicht verarbeitet werden
-LBL_QUEUED,Queued,Eingereiht
-LBL_PREPARING,Preparing...,Vorbereiten...
-LBL_DOWNLOADING,Downloading (%d%%),Wird heruntergeladen (%d%%)
-LBL_UPDATE_VERSION_FROM_TO,Update from version [b]%s[/b] to [b]%s[/b],Aktualisierung von Version [b]%s[/b] auf [b]%s[/b]
-LBL_REMOVING,Removing...,Wird entfernt...
+id,en,de,fr,es,it,pl,uk
+TAB_HOME,Home,Startseite,Accueil,Inicio,Home,Główna,Головна
+TAB_DISCOVER,Discover,Entdecken,Découvrir,Descubrir,Scopri,Odkrywaj,Відкрити
+TAB_SEARCH,Search,Suche,Recherche,Buscar,Cerca,Szukaj,Пошук
+TAB_INSTALLED,Installed,Installiert,Installé,Instalado,Installati,Zainstalowane,Встановлено
+TAB_UPDATES,Updates,Updates,Mises à jour,Actualizaciones,Aggiornamenti,Aktualizacje,Оновлення
+TAB_SETTINGS,Settings,Einstellungen,Paramètres,Ajustes,Impostazioni,Ustawienia,Налаштування
+BTN_ADD_TO_STEAM,Add to Steam,Zu Steam hinzu.,Ajouter à Steam,Añadir a Steam,Aggiungi a Steam,Dodaj do Steam,Додати до Steam
+BTN_ADDING,Adding...,Füge hinzu...,Ajout...,Añadiendo...,Aggiunta...,Dodawanie...,Додавання...
+BTN_START_FAILED,Start Failed!,Fehler beim Start!,Échec du démarrage !,¡Error de inicio!,Avvio fallito!,Błąd uruchamiania!,Помилка запуску!
+BTN_INTEGRATION_ERROR,Integration Error!,Fehler!,Erreur d'intégration !,¡Error de integración!,Errore di integrazione!,Błąd integracji!,Помилка інтеграції!
+BTN_UNINSTALL,Uninstall,Deinstallieren,Désinstaller,Desinstalar,Disinstalla,Odinstaluj,Видалити
+BTN_UNINSTALLING,Uninstalling...,Deinstalliere...,Désinstallation...,Desinstalando...,Disinstallazione...,Odinstalowywanie...,Видалення...
+BTN_INSTALL,Install,Installieren,Installer,Instalar,Installa,Zainstaluj,Встановити
+BTN_INSTALLING,Installing...,Installiere...,Installation...,Instalando...,Installazione...,Instalowanie...,Встановлення...
+BTN_CANCEL,Cancel,Abbrechen,Annuler,Cancelar,Annulla,Anuluj,Скасувати
+BTN_CANCELLING,Cancelling...,Breche ab...,Annulation...,Cancelando...,Annullamento...,Anulowanie...,Скасування...
+BTN_UPDATE,Update,Aktualisieren,Mettre à jour,Actualizar,Aggiorna,Aktualizuj,Оновити
+BTN_SELECT_ALL,Select All,Alle ausw.,Tout sélect.,Sel. todo,Seleziona tutto,Zazn. wszystko,Вибрати всі
+BTN_DESELECT_ALL,Deselect All,Keine ausw.,Désélect. tout,Desel. todo,Deseleziona tutto,Odz. wszystko,Скасувати вибір
+BTN_REFRESH,Refresh List,Aktualisieren,Actualiser,Actualizar,Aggiorna,Odśwież,Оновити
+BTN_CONFIRM,OK,OK,OK,Aceptar,OK,OK,ОК
+BTN_CLOSE,Close,Schließen,Fermer,Cerrar,Chiudi,Zamknij,Закрити
+LBL_SEARCH_PLACEHOLDER,Search for Flatpaks...,Suche nach Flatpaks...,Rechercher des Flatpaks...,Buscar Flatpaks...,Cerca Flatpak...,Szukaj Flatpaków...,Пошук Flatpak...
+LBL_NO_RESULTS,No results found,Keine Ergebnisse,Aucun résultat,Sin resultados,Nessun risultato,Brak wyników,Немає результатів
+MSG_STEAM_RESTART,Please restart Steam to apply changes.,Bitte Steam neustarten für Änderungen.,Veuillez redémarrer Steam pour appliquer les changements.,Reinicia Steam para aplicar los cambios.,Riavvia Steam per applicare le modifiche.,Zrestartuj Steam, aby zastosować zmiany.,Перезапустіть Steam, щоб застосувати зміни.
+SETTINGS_TITLE,Settings,Einstellungen,Paramètres,Ajustes,Impostazioni,Ustawienia,Налаштування
+SETTINGS_LANGUAGE,Language,Sprache,Langue,Idioma,Lingua,Język,Мова
+SETTINGS_UI_SOUNDS,Play UI Sounds,UI-Töne abspielen,Sons de l'interface,Sonidos de la interfaz,Suoni UI,Dźwięki UI,Звуки інтерфейсу
+SETTINGS_AUTO_REFRESH,Auto Refresh Installed Apps,Auto-Refresh installierter Apps,Actualisation auto des apps,Actualización automática,Aggiornamento automatico,Auto-odświeżanie aplikacji,Автооновлення додатків
+SETTINGS_AUTO_ADD_STEAM,Add installed Apps automatically to Steam,Neue Apps sofort zu Steam hinzufügen,Ajout auto à Steam,Añadir auto a Steam,Aggiungi auto a Steam,Auto-dodawanie do Steam,Авто-додавання до Steam
+SETTINGS_STEAM_WARNING,Show Steam Restart Warning,Steam-Neustart Hinweis anzeigen,Afficher l'avertissement de redémarrage Steam,Mostrar advertencia de reinicio,Mostra avviso riavvio Steam,Pokaż ostrzeżenie o restarcie,Показувати попередження про перезапуск
+TAB_CATEGORIES,Categories,Kategorien,Catégories,Categorías,Categorie,Kategorie,Категорії
+TAB_EXTENSIONS,Extensions,Erweiterungen,Extensions,Extensiones,Estensioni,Rozszerzenia,Розширення
+LBL_CATEGORIES,Categories,Kategorien,Catégories,Categorías,Categorie,Kategorie,Категорії
+BTN_BACK,< Back,< Zurück,< Retour,< Atrás,< Indietro,< Wstecz,< Назад
+LBL_MISSING_DEPS,Dependencies Missing,Fehlende Abhängigkeiten,Dépendances manquantes,Faltan dependencias,Dipendenze mancanti,Brak zależności,Відсутні залежності
+LBL_STEAMOS_MUST_HAVES,SteamOS Must-Haves,SteamOS Must-Haves,Incontournables SteamOS,Imprescindibles SteamOS,Essenziali SteamOS,Niezbędne na SteamOS,Необхідне для SteamOS
+LBL_INSTALLED_APPS,Installed Applications,Installierte Anwendungen,Applications installées,Aplicaciones instaladas,Applicazioni installate,Zainstalowane aplikacje,Встановлені програми
+LBL_UPDATED,Updated:,Aktualisiert:,Mis à jour :,Actualizado:,Aggiornato:,Zaktualizowano:,Оновлено:
+LBL_SORT_BY,Sort by ,Sortieren nach ,Trier par ,Ordenar por ,Ordina per ,Sortuj według ,Сортувати за 
+SORT_NAME_ASC,Name ▲,Name ▲,Nom ▲,Nombre ▲,Nome ▲,Nazwa ▲,Назва ▲
+SORT_NAME_DESC,Name ▼,Name ▼,Nom ▼,Nombre ▼,Nome ▼,Nazwa ▼,Назва ▼
+SORT_SIZE_ASC,Size ▲,Größe ▲,Taille ▲,Tamaño ▲,Dimensione ▲,Rozmiar ▲,Розмір ▲
+SORT_SIZE_DESC,Size ▼,Größe ▼,Taille ▼,Tamaño ▼,Dimensione ▼,Rozmiar ▼,Розмір ▼
+LBL_TOTAL_SIZE,Total Size: %s,Gesamtgröße: %s,Taille totale : %s,Tamaño total: %s,Dimensione totale: %s,Rozmiar całkowity: %s,Загальний розмір: %s
+LBL_TOTAL_SIZE_CALCULATING,Total Size: calculating...,Gesamtgröße: berechne...,Taille : calcul en cours...,Tamaño: calculando...,Dimensione: calcolo...,Rozmiar: obliczanie...,Розмір: обчислення...
+LBL_STEAM_RESTART_REQ,Steam Restart Required,Steam-Neustart erforderlich,Redémarrage de Steam requis,Reinicio de Steam requerido,Riavvio Steam richiesto,Wymagany restart Steam,Потрібен перезапуск Steam
+LBL_STEAM_RESTART_MSG,"The game has been added to Steam. You need to restart Steam to see it in your Non-Steam Games library.","Das Spiel wurde zu Steam hinzugefügt. Du musst Steam neustarten, um es in der Bibliothek zu sehen.","Le jeu a été ajouté à Steam. Vous devez redémarrer Steam pour le voir dans votre bibliothèque.","El juego se ha añadido a Steam. Debes reiniciar Steam para verlo en tu biblioteca.","Il gioco è stato aggiunto a Steam. Devi riavviare Steam per vederlo nella libreria.","Gra została dodana do Steam. Zrestartuj Steam, aby zobaczyć ją w bibliotece.","Гру додано до Steam. Перезапустіть Steam, щоб побачити її в бібліотеці."
+LBL_AVAILABLE_UPDATES,Available Updates,Verfügbare Updates,Mises à jour dispo,Actualizaciones dispo.,Aggiornamenti disp.,Dostępne aktualizacje,Доступні оновлення
+BTN_UPDATE_SELECTED,Update Selected,Ausgewählte updaten,Mettre à jour la sélection,Actualizar selección,Aggiorna selezionati,Aktualizuj wybrane,Оновити вибране
+LBL_NO_UPDATES,No updates available.,Keine Updates verfügbar.,Aucune mise à jour.,No hay actualizaciones.,Nessun aggiornamento.,Brak aktualizacji.,Немає оновлень.
+LBL_VERIFIED_APP,Verified App,Verifizierte App,App vérifiée,App verificada,App verificata,Zweryfikowana aplikacja,Перевірений додаток
+LBL_PREPARING,Preparing...,Vorbereitung...,Préparation...,Preparando...,Preparazione...,Przygotowywanie...,Підготовка...
+LBL_LOADING,Loading...,Laden...,Chargement...,Cargando...,Caricamento...,Ładowanie...,Завантаження...
+LBL_DEV_PUB,Developer/Publisher:,Entwickler/Herausgeber:,Développeur/Éditeur :,Desarrollador/Editor:,Sviluppatore/Editore:,Twórca/Wydawca:,Розробник/Видавець:
+LBL_PROJECT_WEB,Project Website:,Projekt-Webseite:,Site Web du projet :,Sitio web del proyecto:,Sito del progetto:,Strona projektu:,Веб-сайт проекту:
+BTN_OPEN_BROWSER,Open in Browser,Im Browser öffnen,Ouvrir le navigateur,Abrir en navegador,Apri nel browser,Otwórz w przeglądarce,Відкрити у браузері
+LBL_CURRENT_VER,Current Version:,Aktuelle Version:,Version actuelle :,Versión actual:,Versione attuale:,Obecna wersja:,Поточна версія:
+LBL_LAST_RELEASE,Last Release:,Letztes Release:,Dernière sortie :,Último lanzamiento:,Ultima release:,Ostatnie wydanie:,Останній реліз:
+LBL_INSTALLED_SIZE,Installed Size:,Installationsgröße:,Taille installée :,Tamaño instalado:,Dimensione installata:,Rozmiar po instalacji:,Встановлений розмір:
+LBL_RATING,Rating:,Bewertung:,Évaluation :,Valoración:,Valutazione:,Ocena:,Рейтинг:
+BTN_SHOW_REVIEWS,Show Reviews,Reviews anzeigen,Afficher les avis,Mostrar reseñas,Mostra recensioni,Pokaż recenzje,Показати відгуки
+TXT_NA,N/A,k.A.,N/D,N/D,N/D,Brak,Н/Д
+TXT_UNKNOWN,Unknown,Unbekannt,Inconnu,Desconocido,Sconosciuto,Nieznany,Невідомо
+TXT_OFFLINE,Offline,Offline,Hors ligne,Desconectado,Offline,Offline,Офлайн
+ERR_NO_APP_ID,Error: No App ID,Fehler: Keine App ID,Erreur : Pas d'App ID,Error: Sin App ID,Errore: Nessun App ID,Błąd: Brak App ID,Помилка: Немає App ID
+ERR_INVALID_DATA,Error: Invalid Data,Fehler: Ungültige Daten,Erreur : Données invalides,Error: Datos inválidos,Errore: Dati non validi,Błąd: Nieprawidłowe dane,Помилка: Недійсні дані
+LBL_DOWNLOADING_PERCENT,Downloading (%d%%),Herunterladen (%d%%),Téléchargement (%d%%),Descargando (%d%%),Download in corso (%d%%),Pobieranie (%d%%),Завантаження (%d%%)
+LBL_DOWNLOADING,Downloading...,Herunterladen...,Téléchargement...,Descargando...,Download...,Pobieranie...,Завантаження...
+LBL_INSTALLING,Installing...,Installieren...,Installation...,Instalando...,Installazione...,Instalowanie...,Встановлення...
+LBL_STATUS,Status: %s,Status: %s,Statut : %s,Estado: %s,Stato: %s,Status: %s,Статус: %s
+LBL_NO_DESCRIPTION,No description available.,Keine Beschreibung verfügbar.,Aucune description disponible.,Sin descripción disponible.,Nessuna descrizione disponibile.,Brak opisu.,Опис відсутній.
+LBL_NO_UPDATES,No updates available.,Keine Updates verfügbar.,Aucune mise à jour.,No hay actualizaciones.,Nessun aggiornamento.,Brak aktualizacji.,Немає оновлень.
+LBL_AVAILABLE_UPDATES,Available Updates,Verfügbare Updates,Mises à jour dispo,Actualizaciones dispo.,Aggiornamenti disp.,Dostępne aktualizacje,Доступні оновлення
+BTN_SELECT_ALL,Select All,Alle auswählen,Tout sélectionner,Seleccionar todo,Seleziona tutto,Zaznacz wszystko,Вибрати всі
+BTN_DESELECT_ALL,Deselect All,Alle abwählen,Tout désélectionner,Deseleccionar todo,Deseleziona tutto,Odznacz wszystko,Скасувати вибір
+BTN_UPDATE_SELECTED,Update Selected,Ausgewählte aktualisieren,Mettre à jour la sélection,Actualizar selección,Aggiorna selezionati,Aktualizuj wybrane,Оновити вибране
+LBL_UPDATED,Updated:,Aktualisiert:,Mis à jour :,Actualizado:,Aggiornato:,Zaktualizowano:,Оновлено:
+BTN_SEARCH,Search,Suchen,Rechercher,Buscar,Cerca,Szukaj,Пошук
+TAB_SEARCH,Search,Suchen,Recherche,Buscar,Cerca,Szukaj,Пошук
+LBL_SEARCH_PLACEHOLDER,Search for apps...,Nach Apps suchen...,Rechercher des apps...,Buscar aplicaciones...,Cerca app...,Szukaj aplikacji...,Пошук додатків...
+LBL_NO_RESULTS,No results found.,Keine Ergebnisse gefunden.,Aucun résultat.,Sin resultados.,Nessun risultato.,Brak wyników.,Немає результатів.
+LBL_STEAMOS_MUST_HAVES,SteamOS Must-Haves,SteamOS Must-Haves,Incontournables SteamOS,Imprescindibles SteamOS,Essenziali SteamOS,Niezbędne na SteamOS,Необхідне для SteamOS
+BTN_INSTALL,Install,Installieren,Installer,Instalar,Installa,Zainstaluj,Встановити
+BTN_UNINSTALL,Remove,Deinstallieren,Supprimer,Eliminar,Rimuovi,Usuń,Видалити
+BTN_CANCEL,Cancel,Abbrechen,Annuler,Cancelar,Annulla,Anuluj,Скасувати
+LBL_WAITING,Waiting...,Warten...,En attente...,Esperando...,In attesa...,Czekaj...,Очікування...
+LBL_REMOVING,Removing...,Entfernen...,Suppression...,Eliminando...,Rimozione...,Usuwanie...,Видалення...
+LBL_ERROR,Error,Fehler,Erreur,Error,Errore,Błąd,Помилка
+LBL_CANCELLED,Cancelled,Abgebrochen,Annulé,Cancelado,Annullato,Anulowano,Скасовано
+LBL_SYSTEM_INSTALLED,Installed (System),Installiert (System),Installé (Système),Instalado (Sistema),Installato (Sistema),Zainstalowane (System),Встановлено (Система)
+LBL_BLACKLISTED,Blacklisted,Auf der schwarzen Liste,Liste noire,Lista negra,Blacklist,Na czarnej liście,У чорному списку
+BTN_ADD_TO_STEAM,Add to Steam,Zu Steam hinzufügen,Ajouter à Steam,Añadir a Steam,Aggiungi a Steam,Dodaj do Steam,Додати до Steam
+LBL_REVIEWS_FOR,Reviews for:,Reviews für:,Avis pour :,Reseñas de:,Recensioni per:,Recenzje dla:,Відгуки для:
+ERR_LOADING_REVIEWS,Error loading reviews.,Fehler beim Laden der Reviews.,Erreur chargement avis.,Error al cargar reseñas.,Errore caricamento recensioni.,Błąd ładowania recenzji.,Помилка завантаження відгуків.
+LBL_NO_REVIEWS,No reviews available.,Keine Reviews verfügbar.,Aucun avis dispo.,Sin reseñas.,Nessuna recensione.,Brak recenzji.,Відгуків немає.
+LBL_APP_DETAILS,App Details,App Details,Détails de l'app,Detalles app,Dettagli App,Szczegóły,Деталі
+LBL_BACK,Back,Zurück,Retour,Atrás,Indietro,Wstecz,Назад
+LBL_ZOOM_SCREENSHOT,Zoom,Zoom,Zoom,Zoom,Zoom,Powiększ,Збільшити
+LBL_SWITCH_SCREENSHOT,Switch Image,Bild wechseln,Changer d'image,Cambiar imagen,Cambia immagine,Zmień obraz,Змінити зображення
+LBL_SELECT,Select,Auswählen,Sélectionner,Seleccionar,Seleziona,Wybierz,Вибрати
+LBL_SWITCH_TAB,Switch Tab,Tab wechseln,Changer d'onglet,Cambiar pestaña,Cambia scheda,Zmień kartę,Змінити вкладку
+LBL_GO_HOME,Go Home,Startseite,Accueil,Inicio,Home,Główna,Головна
+LBL_BACK_TO_TOP,Top,Nach oben,Haut,Arriba,In cima,Na górę,Вгору
+LBL_MENU,Menu,Menü,Menu,Menú,Menu,Menu,Меню
+LBL_SETTINGS_SHORT,Settings,Optionen,Paramètres,Ajustes,Opzioni,Opcje,Опції
+LBL_TASKS,Tasks,Aufgaben,Tâches,Tareas,Attività,Zadania,Завдання
+LBL_SELECT_APP,Select App,Auswählen,Sélectionner,Seleccionar,Seleziona,Wybierz,Вибрати
+LBL_UNSELECT_APP,Unselect App,Abwählen,Désélectionner,Deseleccionar,Deseleziona,Odznacz,Скасувати
+LBL_SELECT_UNSELECT,Select/Unselect,Wählen/Abwählen,Sélect./Désélect.,Sel./Desel.,Sel./Desel.,Zazn./Odz.,Вибрати/Скасувати
+LBL_OPEN,Open,Öffnen,Ouvrir,Abrir,Apri,Otwórz,Відкрити
+LBL_START_TYPING,Start Typing,Eingabe,Taper...,Escribir...,Scrivi...,Wpisz...,Введення
+LBL_MANAGE_EXTENSION,Manage,Verwalten,Gérer,Gestionar,Gestisci,Zarządzaj,Керувати
+LBL_SWITCH_PAGE,Switch Page,Seite wechseln,Changer de page,Cambiar página,Cambia pagina,Zmień stronę,Змінити сторінку
+BTN_QUIT_APP,Quit App,App beenden,Quitter,Salir,Esci,Wyjdź,Вийти
+BTN_CLOSE,Close,Schließen,Fermer,Cerrar,Chiudi,Zamknij,Закрити
+LBL_PENDING,Pending,Ausstehend,En attente,Pendiente,In attesa,Oczekujące,Очікування
+LBL_IN_QUEUE,In Queue,In Warteschlange,Dans la file,En cola,In coda,W kolejce,В черзі
+LBL_DOWNLOADING_SHORT,Downloading,Wird heruntergeladen,Téléchargement,Descargando,Download,Pobieranie,Завантаження
+LBL_COMPLETED,Completed,Abgeschlossen,Terminé,Completado,Completato,Ukończono,Завершено
+LBL_DOWNLOADS_UPDATES,Downloads & Updates,Downloads & Updates,Téléchargements & MAJ,Descargas y act.,Download e aggiornamenti,Pobieranie i aktualizacje,Завантаження та оновлення
+LBL_NO_ACTIVE_TASKS,No active tasks.,Keine aktiven Aufgaben.,Aucune tâche active.,Sin tareas activas.,Nessuna attività attiva.,Brak aktywnych zadań.,Немає активних завдань.
+MSG_SUCCESS_INSTALL,%s was successfully installed,%s wurde erfolgreich installiert,%s a été installé avec succès,%s se instaló correctamente,%s installato con successo,%s zainstalowano pomyślnie,%s успішно встановлено
+MSG_SUCCESS_UNINSTALL,%s was successfully uninstalled,%s wurde erfolgreich entfernt,%s a été désinstallé avec succès,%s se desinstaló correctamente,%s disinstallato con successo,%s odinstalowano pomyślnie,%s успішно видалено
+MSG_SUCCESS_UPDATE,%s was successfully updated,%s wurde erfolgreich aktualisiert,%s a été mis à jour avec succès,%s se actualizó correctamente,%s aggiornato con successo,%s zaktualizowano pomyślnie,%s успішно оновлено
+MSG_SUCCESS_PROCESS,%s was successfully processed,%s wurde erfolgreich verarbeitet,%s a été traité avec succès,%s se procesó correctamente,%s elaborato con successo,%s przetworzono pomyślnie,%s успішно оброблено
+MSG_FAIL_INSTALL,%s failed to be installed,%s konnte nicht installiert werden,L'installation de %s a échoué,Error al instalar %s,Installazione di %s fallita,Nie udało się zainstalować %s,Помилка встановлення %s
+MSG_FAIL_UNINSTALL,%s failed to be uninstalled,%s konnte nicht entfernt werden,La désinstallation de %s a échoué,Error al desinstalar %s,Disinstallazione di %s fallita,Nie udało się odinstalować %s,Помилка видалення %s
+MSG_FAIL_UPDATE,%s failed to be updated,%s konnte nicht aktualisiert werden,La mise à jour de %s a échoué,Error al actualizar %s,Aggiornamento di %s fallito,Nie udało się zaktualizować %s,Помилка оновлення %s
+MSG_FAIL_PROCESS,%s failed to be processed,%s konnte nicht verarbeitet werden,Le traitement de %s a échoué,Error al procesar %s,Elaborazione di %s fallita,Nie udało się przetworzyć %s,Помилка обробки %s
+LBL_QUEUED,Queued,Eingereiht,En file,En cola,In coda,W kolejce,У черзі
+LBL_PREPARING,Preparing...,Vorbereiten...,Préparation...,Preparando...,Preparazione...,Przygotowywanie...,Підготовка...
+LBL_DOWNLOADING,Downloading (%d%%),Wird heruntergeladen (%d%%),Téléchargement (%d%%),Descargando (%d%%),Download in corso (%d%%),Pobieranie (%d%%),Завантаження (%d%%)
+LBL_UPDATE_VERSION_FROM_TO,Update from version [b]%s[/b] to [b]%s[/b],Aktualisierung von Version [b]%s[/b] auf [b]%s[/b],Mise à jour de la version [b]%s[/b] vers [b]%s[/b],Actualización de la versión [b]%s[/b] a [b]%s[/b],Aggiornamento dalla versione [b]%s[/b] alla [b]%s[/b],Aktualizacja z wersji [b]%s[/b] do [b]%s[/b],Оновлення з версії [b]%s[/b] до [b]%s[/b]
+LBL_REMOVING,Removing...,Wird entfernt...,Suppression...,Eliminando...,Rimozione...,Usuwanie...,Видалення...

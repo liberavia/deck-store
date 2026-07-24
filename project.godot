@@ -23,7 +23,7 @@ config/icon="res://icon.svg"
 
 [internationalization]
 
-locale/translations=PackedStringArray("res://locale/translations.de.translation", "res://locale/translations.en.translation")
+locale/translations=PackedStringArray("res://locale/translations.de.translation", "res://locale/translations.en.translation", "res://locale/translations.fr.translation", "res://locale/translations.es.translation", "res://locale/translations.it.translation", "res://locale/translations.pl.translation", "res://locale/translations.uk.translation")
 
 [autoload]
 

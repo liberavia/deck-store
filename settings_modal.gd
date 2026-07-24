@@ -24,7 +24,7 @@ func _populate_settings():
 	for child in settings_container.get_children():
 		child.queue_free()
 		
-	_create_option_setting(tr("SETTINGS_LANGUAGE"), "language", ["auto", "en", "de"], ["Auto", "English", "Deutsch"])
+	_create_option_setting(tr("SETTINGS_LANGUAGE"), "language", ["auto", "en", "de", "fr", "es", "it", "pl", "uk"], ["Auto", "English", "Deutsch", "Français", "Español", "Italiano", "Polski", "Українська"])
 	_create_check_setting(tr("SETTINGS_UI_SOUNDS"), "play_ui_sounds")
 	_create_check_setting(tr("SETTINGS_AUTO_REFRESH"), "auto_refresh_installed")
 	_create_check_setting(tr("SETTINGS_AUTO_ADD_STEAM"), "auto_add_to_steam")

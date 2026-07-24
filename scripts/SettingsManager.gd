@@ -41,15 +41,19 @@ func _apply_language():
 					steam_lang = Steam.getSteamUILanguage()
 		
 		var mapped_lang = "en"
-		if steam_lang == "german":
-			mapped_lang = "de"
-		elif steam_lang == "english":
-			mapped_lang = "en"
-		else:
-			# Fallback to OS
-			var os_lang = OS.get_locale().left(2)
-			if os_lang == "de":
-				mapped_lang = "de"
+		match steam_lang:
+			"german": mapped_lang = "de"
+			"french": mapped_lang = "fr"
+			"spanish": mapped_lang = "es"
+			"italian": mapped_lang = "it"
+			"polish": mapped_lang = "pl"
+			"ukrainian": mapped_lang = "uk"
+			"english": mapped_lang = "en"
+			_:
+				# Fallback to OS
+				var os_lang = OS.get_locale().left(2)
+				if os_lang in ["de", "fr", "es", "it", "pl", "uk"]:
+					mapped_lang = os_lang
 		
 		TranslationServer.set_locale(mapped_lang)
 	else:
