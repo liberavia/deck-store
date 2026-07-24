@@ -56,12 +56,12 @@ alignment = 1
 [node name="TitleLabel" type="Label" parent="DependencyPopup/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
-text = "Steam Restart Required"
+text = "LBL_STEAM_RESTART_REQ"
 horizontal_alignment = 1
 
 [node name="MessageLabel" type="Label" parent="DependencyPopup/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "The game has been added to Steam. You need to restart Steam to see it in your Non-Steam Games library."
+text = "LBL_STEAM_RESTART_MSG"
 autowrap_mode = 2
 horizontal_alignment = 1
 
@@ -70,7 +70,7 @@ layout_mode = 2
 
 [node name="DontShowCheckButton" type="CheckButton" parent="DependencyPopup/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "Show Steam Restart Warning"
+text = "SETTINGS_STEAM_WARNING"
 alignment = 1
 
 [node name="HSeparator2" type="HSeparator" parent="DependencyPopup/MarginContainer/VBoxContainer"]
@@ -84,4 +84,4 @@ alignment = 1
 [node name="ConfirmButton" type="Button" parent="DependencyPopup/MarginContainer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(120, 40)
 layout_mode = 2
-text = "OK"
+text = "BTN_CONFIRM"

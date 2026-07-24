@@ -122,7 +122,7 @@ func _update_last_updated_label():
 	if is_instance_valid(last_updated_label):
 		var time_dict = Time.get_time_dict_from_system()
 		last_updated_time_str = "%02d:%02d" % [time_dict.hour, time_dict.minute]
-		last_updated_label.text = "Updated: " + last_updated_time_str
+		last_updated_label.text = tr("LBL_UPDATED") + " " + last_updated_time_str
 
 func _on_sort_option_selected(_index):
 	if audio_player and stream_select:
@@ -245,7 +245,7 @@ func _populate_list(installed_apps: Dictionary):
 			item.image_load_requested.connect(func(url, rect): emit_signal("image_load_requested", url, rect))
 		
 	# Update Total Size Label
-	total_size_label.text = "Total Size: %s" % _format_size(total_bytes)
+	total_size_label.text = tr("LBL_TOTAL_SIZE") % _format_size(total_bytes)
 
 func _on_item_pressed(app_id: String):
 	var app_name = ""

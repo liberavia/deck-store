@@ -171,7 +171,7 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 25
 theme_override_styles/normal = SubResource("StyleBoxFlat_8dtdw")
 theme_override_styles/focus = SubResource("StyleBoxFlat_mufgs")
-text = "Add to Steam"
+text = "BTN_ADD_TO_STEAM"
 script = ExtResource("3_8dtdw")
 
 [node name="ActionButton" type="Button" parent="MarginContainer/Panel/DetailsContents/DetailsNavbar/HBoxContainer"]
@@ -259,7 +259,7 @@ layout_mode = 2
 [node name="LabelDeveloper" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerDeveloper"]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
-text = "Developer/Publisher:"
+text = "LBL_DEV_PUB"
 
 [node name="Developer" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerDeveloper"]
 layout_mode = 2
@@ -271,12 +271,12 @@ layout_mode = 2
 [node name="LabelWebsite" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerWebsite"]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
-text = "Project Website:"
+text = "LBL_PROJECT_WEB"
 
 [node name="WebsiteButton" type="Button" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerWebsite"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.159982, 0.375954, 0.699073, 1)
-text = "Open in Browser"
+text = "BTN_OPEN_BROWSER"
 flat = true
 alignment = 0
 
@@ -286,7 +286,7 @@ layout_mode = 2
 [node name="LabelCurrentVersion" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerVersion"]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
-text = "Current Version:"
+text = "LBL_CURRENT_VER"
 
 [node name="CurrentVersion" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerVersion"]
 layout_mode = 2
@@ -297,7 +297,7 @@ layout_mode = 2
 [node name="LabelReleaseDate" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate"]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
-text = "Last Release:"
+text = "LBL_LAST_RELEASE"
 
 [node name="ReleaseDate" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerReleaseDate"]
 layout_mode = 2
@@ -308,7 +308,7 @@ layout_mode = 2
 [node name="LabelInstalledSize" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerInstalledSize"]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
-text = "Installed Size:"
+text = "LBL_INSTALLED_SIZE"
 
 [node name="InstalledSize" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/ContainerInstalledSize"]
 layout_mode = 2
@@ -324,7 +324,7 @@ layout_mode = 2
 [node name="LabelAvgRating" type="Label" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars"]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
-text = "Rating:"
+text = "LBL_RATING"
 
 [node name="RatingStarsDisplayNode" parent="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars" instance=ExtResource("5_283hg")]
 layout_mode = 2
@@ -347,7 +347,7 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("StyleBoxFlat_fogxl")
 theme_override_styles/focus = SubResource("StyleBoxFlat_3hj5f")
-text = "Show Reviews"
+text = "BTN_SHOW_REVIEWS"
 script = ExtResource("6_mufgs")
 
 [connection signal="pressed" from="MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/ShowReviews" to="." method="_on_show_reviews_pressed"]

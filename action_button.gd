@@ -22,16 +22,16 @@ var app_name: String = ""
 var icon_url: String = ""
 var app_scope: String = ""
 
-const TEXT_INSTALL = "Install"
-const TEXT_UNINSTALL = "Remove"
-const TEXT_CANCEL = "Cancel"
-const TEXT_WAITING = "Waiting..."
-const TEXT_DOWNLOADING = "Downloading"
-const TEXT_INSTALLING = "Installing..."
-const TEXT_REMOVING = "Removing..."
-const TEXT_ERROR = "Error"
-const TEXT_CANCELLED = "Cancelled"
-const TEXT_SYSTEM = "Installed (System)"
+const TEXT_INSTALL = "BTN_INSTALL"
+const TEXT_UNINSTALL = "BTN_UNINSTALL"
+const TEXT_CANCEL = "BTN_CANCEL"
+const TEXT_WAITING = "LBL_WAITING"
+const TEXT_DOWNLOADING = "LBL_DOWNLOADING"
+const TEXT_INSTALLING = "LBL_INSTALLING"
+const TEXT_REMOVING = "LBL_REMOVING"
+const TEXT_ERROR = "LBL_ERROR"
+const TEXT_CANCELLED = "LBL_CANCELLED"
+const TEXT_SYSTEM = "LBL_SYSTEM_INSTALLED"
 
 
 func _ready():
@@ -133,7 +133,14 @@ func _on_pressed():
 	if _pressed_sound_player and SettingsManager.get_setting("play_ui_sounds", true):
 		_pressed_sound_player.play()
 
-	match self.text:
+	var current_key = ""
+	if self.text == tr(TEXT_INSTALL): current_key = TEXT_INSTALL
+	elif self.text == tr(TEXT_UNINSTALL): current_key = TEXT_UNINSTALL
+	elif self.text == tr(TEXT_CANCEL): current_key = TEXT_CANCEL
+	elif self.text == tr(TEXT_ERROR): current_key = TEXT_ERROR
+	elif self.text == tr(TEXT_CANCELLED): current_key = TEXT_CANCELLED
+
+	match current_key:
 		TEXT_INSTALL, TEXT_ERROR, TEXT_CANCELLED: 
 			var space_left: int = 0
 			var dir = DirAccess.open("user://")
@@ -149,13 +156,13 @@ func _on_pressed():
 					return
 
 			print("ActionButton: Choosing INSTALL path based on text '", self.text, "'")
-			self.disabled = true; self.text = TEXT_WAITING; add_theme_stylebox_override("normal", stylebox_busy)
+			self.disabled = true; self.text = tr(TEXT_WAITING); add_theme_stylebox_override("normal", stylebox_busy)
 			var app_data_for_task = {"name": app_name, "icon": icon_url, "icon_url": icon_url}
 			current_operation_id = DownloadManager.queue_install(app_id, app_data_for_task)
 
 		TEXT_UNINSTALL: 
 			print("ActionButton: Choosing UNINSTALL path based on text '", self.text, "'")
-			self.disabled = true; self.text = TEXT_WAITING; add_theme_stylebox_override("normal", stylebox_busy)
+			self.disabled = true; self.text = tr(TEXT_WAITING); add_theme_stylebox_override("normal", stylebox_busy)
 			var app_data_for_task = {"name": app_name, "icon": icon_url, "icon_url": icon_url}
 			current_operation_id = DownloadManager.queue_uninstall(app_id, app_data_for_task)
 
@@ -239,16 +246,16 @@ func _update_ui(status_data: Dictionary):
 			button_text = TEXT_SYSTEM; button_disabled = true; button_stylebox = stylebox_busy
 
 	if button_text == TEXT_INSTALL and AppBlacklist.is_blacklisted(app_id):
-		button_text = "Blacklisted"
+		button_text = "LBL_BLACKLISTED"
 		button_disabled = true
 		button_stylebox = stylebox_busy
 		
 	if button_text == TEXT_INSTALL and Engine.has_singleton("OnlineStatusManager") and not get_node("/root/OnlineStatusManager").is_online:
-		button_text = "Offline"
+		button_text = "TXT_OFFLINE"
 		button_disabled = true
 		button_stylebox = stylebox_busy
 
-	self.text = button_text
+	self.text = tr(button_text)
 	self.disabled = button_disabled
 	self.visible = show_button
 	self.add_theme_stylebox_override("normal", button_stylebox)

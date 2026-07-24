@@ -51,17 +51,17 @@ func _unhandled_input(event: InputEvent):
 			return
 
 func display_reviews(reviews_data: Array, app_name_str: String, has_error: bool = false):
-	app_name_label.text = "Reviews for: " + app_name_str
+	app_name_label.text = tr("LBL_REVIEWS_FOR") + " " + app_name_str
 
 	for child in review_list_container.get_children():
 		child.queue_free()
 
 	if has_error:
-		status_label.text = "Error loading reviews."
+		status_label.text = tr("ERR_LOADING_REVIEWS")
 		status_label.visible = true
 		review_list_container.visible = false
 	elif reviews_data.is_empty():
-		status_label.text = "No reviews available."
+		status_label.text = tr("LBL_NO_REVIEWS")
 		status_label.visible = true
 		review_list_container.visible = false
 	else:

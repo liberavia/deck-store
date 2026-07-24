@@ -30,3 +30,68 @@ SETTINGS_UI_SOUNDS,Play UI Sounds,UI-Töne abspielen
 SETTINGS_AUTO_REFRESH,Auto Refresh Installed Apps,Auto-Refresh installierter Apps
 SETTINGS_AUTO_ADD_STEAM,Add installed Apps automatically to Steam,Neue Apps sofort zu Steam hinzufügen
 SETTINGS_STEAM_WARNING,Show Steam Restart Warning,Steam-Neustart Hinweis anzeigen
+TAB_CATEGORIES,Categories,Kategorien
+TAB_EXTENSIONS,Extensions,Erweiterungen
+LBL_CATEGORIES,Categories,Kategorien
+BTN_BACK,< Back,< Zurück
+LBL_MISSING_DEPS,Dependencies Missing,Fehlende Abhängigkeiten
+LBL_STEAMOS_MUST_HAVES,SteamOS Must-Haves,SteamOS Must-Haves
+LBL_INSTALLED_APPS,Installed Applications,Installierte Anwendungen
+LBL_UPDATED,Updated:,Aktualisiert:
+LBL_SORT_BY,Sort by ,Sortieren nach 
+SORT_NAME_ASC,Name ▲,Name ▲
+SORT_NAME_DESC,Name ▼,Name ▼
+SORT_SIZE_ASC,Size ▲,Größe ▲
+SORT_SIZE_DESC,Size ▼,Größe ▼
+LBL_TOTAL_SIZE,Total Size: %s,Gesamtgröße: %s
+LBL_TOTAL_SIZE_CALCULATING,Total Size: calculating...,Gesamtgröße: berechne...
+LBL_STEAM_RESTART_REQ,Steam Restart Required,Steam-Neustart erforderlich
+LBL_STEAM_RESTART_MSG,"The game has been added to Steam. You need to restart Steam to see it in your Non-Steam Games library.","Das Spiel wurde zu Steam hinzugefügt. Du musst Steam neustarten, um es in der Bibliothek zu sehen."
+LBL_AVAILABLE_UPDATES,Available Updates,Verfügbare Updates
+BTN_UPDATE_SELECTED,Update Selected,Ausgewählte updaten
+LBL_NO_UPDATES,No updates available.,Keine Updates verfügbar.
+LBL_VERIFIED_APP,Verified App,Verifizierte App
+LBL_PREPARING,Preparing...,Vorbereitung...
+LBL_LOADING,Loading...,Laden...
+LBL_DEV_PUB,Developer/Publisher:,Entwickler/Herausgeber:
+LBL_PROJECT_WEB,Project Website:,Projekt-Webseite:
+BTN_OPEN_BROWSER,Open in Browser,Im Browser öffnen
+LBL_CURRENT_VER,Current Version:,Aktuelle Version:
+LBL_LAST_RELEASE,Last Release:,Letztes Release:
+LBL_INSTALLED_SIZE,Installed Size:,Installationsgröße:
+LBL_RATING,Rating:,Bewertung:
+BTN_SHOW_REVIEWS,Show Reviews,Reviews anzeigen
+TXT_NA,N/A,k.A.
+TXT_UNKNOWN,Unknown,Unbekannt
+TXT_OFFLINE,Offline,Offline
+ERR_NO_APP_ID,Error: No App ID,Fehler: Keine App ID
+ERR_INVALID_DATA,Error: Invalid Data,Fehler: Ungültige Daten
+LBL_DOWNLOADING_PERCENT,Downloading (%d%%),Herunterladen (%d%%)
+LBL_DOWNLOADING,Downloading...,Herunterladen...
+LBL_INSTALLING,Installing...,Installieren...
+LBL_STATUS,Status: %s,Status: %s
+LBL_NO_DESCRIPTION,No description available.,Keine Beschreibung verfügbar.
+LBL_NO_UPDATES,No updates available.,Keine Updates verfügbar.
+LBL_AVAILABLE_UPDATES,Available Updates,Verfügbare Updates
+BTN_SELECT_ALL,Select All,Alle auswählen
+BTN_DESELECT_ALL,Deselect All,Alle abwählen
+BTN_UPDATE_SELECTED,Update Selected,Ausgewählte aktualisieren
+LBL_UPDATED,Updated:,Aktualisiert:
+BTN_SEARCH,Search,Suchen
+TAB_SEARCH,Search,Suchen
+LBL_SEARCH_PLACEHOLDER,Search for apps...,Nach Apps suchen...
+LBL_NO_RESULTS,No results found.,Keine Ergebnisse gefunden.
+LBL_STEAMOS_MUST_HAVES,SteamOS Must-Haves,SteamOS Must-Haves
+BTN_INSTALL,Install,Installieren
+BTN_UNINSTALL,Remove,Deinstallieren
+BTN_CANCEL,Cancel,Abbrechen
+LBL_WAITING,Waiting...,Warten...
+LBL_REMOVING,Removing...,Entfernen...
+LBL_ERROR,Error,Fehler
+LBL_CANCELLED,Cancelled,Abgebrochen
+LBL_SYSTEM_INSTALLED,Installed (System),Installiert (System)
+LBL_BLACKLISTED,Blacklisted,Auf der schwarzen Liste
+BTN_ADD_TO_STEAM,Add to Steam,Zu Steam hinzufügen
+LBL_REVIEWS_FOR,Reviews for:,Reviews für:
+ERR_LOADING_REVIEWS,Error loading reviews.,Fehler beim Laden der Reviews.
+LBL_NO_REVIEWS,No reviews available.,Keine Reviews verfügbar.

@@ -317,14 +317,15 @@ func _update_ui_state():
 
 	var total_items = available_updates.size()
 	var selected_count = selected_app_ids.size()
+	var all_selected = (total_items > 0 and selected_count == total_items)
 	
 	if total_items > 0:
-		if selected_count == total_items:
-			select_all_button.text = "Deselect All"
+		if all_selected:
+			select_all_button.text = tr("BTN_DESELECT_ALL")
 		else:
-			select_all_button.text = "Select All"
+			select_all_button.text = tr("BTN_SELECT_ALL")
 	else:
-		select_all_button.text = "Select All"
+		select_all_button.text = tr("BTN_SELECT_ALL")
 		select_all_button.disabled = true
 	
 	update_selected_button.disabled = (selected_count == 0)

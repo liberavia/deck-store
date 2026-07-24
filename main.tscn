@@ -77,43 +77,42 @@ custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
-text = "Home"
+text = "TAB_HOME"
 
 [node name="ButtonCategories" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
-text = "Categories
-"
+text = "TAB_CATEGORIES"
 
 [node name="ButtonInstalled" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
-text = "Installed"
+text = "TAB_INSTALLED"
 
 [node name="ButtonUpdates" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
-text = "Updates"
+text = "TAB_UPDATES"
 
 [node name="ButtonExtensions" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
-text = "Extensions"
+text = "TAB_EXTENSIONS"
 
 [node name="ButtonSearch" type="Button" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_efxa6")
 theme_override_styles/focus = SubResource("StyleBoxFlat_kek77")
-text = "Search"
+text = "TAB_SEARCH"
 
 [node name="SpacerR1" type="Control" parent="CanvasLayer/VBoxContainer/TopButtonBar"]
 custom_minimum_size = Vector2(20, 0)
