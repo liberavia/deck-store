@@ -45,7 +45,7 @@ func set_app_info(p_app_id: String, p_app_name: String, p_icon_url: String):
 	app_name = p_app_name
 	icon_url = p_icon_url
 	tooltip_text = "Add '%s' to your Steam library" % app_name
-	text = "Add to Steam" 
+	text = tr("BTN_ADD_TO_STEAM")
 	disabled = false
 
 
@@ -100,13 +100,14 @@ func _on_pressed():
 		text = "Cache Error!"
 		await get_tree().create_timer(1.5).timeout
 		text = "Add to Steam"
+		text = tr("BTN_ADD_TO_STEAM")
 		return
 
 	if icon_cache_path.is_empty():
 		printerr("AddToSteamButton ERROR: Icon for app_id '", app_id, "' not found in cache (URL: ", icon_url, "). Cannot add to Steam.")
 		text = "Icon Missing!"
 		await get_tree().create_timer(1.5).timeout
-		text = "Add to Steam"
+		text = tr("BTN_ADD_TO_STEAM")
 		return
 
 	var global_icon_path: String = ProjectSettings.globalize_path(icon_cache_path)
@@ -114,30 +115,30 @@ func _on_pressed():
 		printerr("AddToSteamButton ERROR: Globalized icon path does not exist: '", global_icon_path, "' (Original cache path: '", icon_cache_path, "')")
 		text = "Icon Path Error!"
 		await get_tree().create_timer(1.5).timeout
-		text = "Add to Steam"
+		text = tr("BTN_ADD_TO_STEAM")
 		return
 
 	print("INFO AddToSteamButton: Button pressed for app_id: '", app_id, "', Name: '", app_name, "'")
 	print("INFO AddToSteamButton: Using Icon Path (absolute): '", global_icon_path, "'")
 	
 	disabled = true
-	text = "Adding..."
+	text = tr("BTN_ADDING")
 
 	if not ProjectSettings.has_setting("autoload/SteamIntegration"):
 		printerr("AddToSteamButton ERROR: SteamIntegration Autoload setting not found!")
-		text = "Integration Error!"
+		text = tr("BTN_INTEGRATION_ERROR")
 		await get_tree().create_timer(1.5).timeout
 		disabled = false
-		text = "Add to Steam"
+		text = tr("BTN_ADD_TO_STEAM")
 		return
 
 	var steam_integration_node = get_node_or_null("/root/SteamIntegration")
 	if not is_instance_valid(steam_integration_node) or not steam_integration_node.has_method("add_to_steam"):
 		printerr("AddToSteamButton ERROR: SteamIntegration node not found or 'add_to_steam' method is missing!")
-		text = "Integration Error!"
+		text = tr("BTN_INTEGRATION_ERROR")
 		await get_tree().create_timer(1.5).timeout
 		disabled = false
-		text = "Add to Steam"
+		text = tr("BTN_ADD_TO_STEAM")
 		return
 
 	var flatpak_exe_path = DEFAULT_FLATPAK_EXE_PATH
@@ -149,7 +150,7 @@ func _on_pressed():
 		print("INFO AddToSteamButton: Successfully called/started add_to_steam for app_id '", app_id, "'. Waiting for signal...")
 	else:
 		printerr("ERROR AddToSteamButton: Failed to start add_to_steam process for app_id '", app_id, "'.")
-		text = "Start Failed!"
+		text = tr("BTN_START_FAILED")
 		await get_tree().create_timer(1.5).timeout
 		disabled = false
-		text = "Add to Steam"
+		text = tr("BTN_ADD_TO_STEAM")

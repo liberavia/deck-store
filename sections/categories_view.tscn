@@ -36,7 +36,7 @@ theme_override_constants/separation = 20
 
 [node name="Label" type="Label" parent="ListMargin/HSplitContainer/LeftPanel/VBoxContainer"]
 layout_mode = 2
-text = "Categories"
+text = "LBL_CATEGORIES"
 horizontal_alignment = 1
 uppercase = true
 

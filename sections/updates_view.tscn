@@ -76,7 +76,7 @@ alignment = 1
 [node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer/HeaderContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "Available Updates"
+text = "LBL_AVAILABLE_UPDATES"
 
 [node name="SpacerLeft" type="Control" parent="MarginContainer/VBoxContainer/HeaderContainer"]
 layout_mode = 2
@@ -88,7 +88,7 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 18
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
 theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
-text = "Select All"
+text = "BTN_SELECT_ALL"
 
 [node name="SpacerMiddle1" type="Control" parent="MarginContainer/VBoxContainer/HeaderContainer"]
 custom_minimum_size = Vector2(20, 0)
@@ -103,7 +103,7 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 18
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
 theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
-text = "Refresh List"
+text = "BTN_REFRESH"
 
 [node name="SpacerMiddle2" type="Control" parent="MarginContainer/VBoxContainer/HeaderContainer"]
 custom_minimum_size = Vector2(20, 0)
@@ -113,7 +113,7 @@ layout_mode = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_font_sizes/font_size = 20
-text = "Sort by "
+text = "LBL_SORT_BY"
 
 [node name="SortOptionButton" type="OptionButton" parent="MarginContainer/VBoxContainer/HeaderContainer"]
 custom_minimum_size = Vector2(180, 0)
@@ -122,13 +122,13 @@ theme_override_font_sizes/font_size = 20
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
 selected = 0
 item_count = 4
-popup/item_0/text = "Name ▲"
+popup/item_0/text = "SORT_NAME_ASC"
 popup/item_0/id = 0
-popup/item_1/text = "Name ▼"
+popup/item_1/text = "SORT_NAME_DESC"
 popup/item_1/id = 1
-popup/item_2/text = "Size ▼"
+popup/item_2/text = "SORT_SIZE_DESC"
 popup/item_2/id = 2
-popup/item_3/text = "Size ▲"
+popup/item_3/text = "SORT_SIZE_ASC"
 popup/item_3/id = 3
 
 [node name="SpacerMiddle3" type="Control" parent="MarginContainer/VBoxContainer/HeaderContainer"]
@@ -144,7 +144,7 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 18
 theme_override_styles/focus = SubResource("StyleBoxFlat_focus")
 theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
-text = "Update Selected"
+text = "BTN_UPDATE_SELECTED"
 
 [node name="SpacerRight" type="Control" parent="MarginContainer/VBoxContainer/HeaderContainer"]
 layout_mode = 2
@@ -176,6 +176,6 @@ visible = false
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_font_sizes/font_size = 24
-text = "No updates available."
+text = "LBL_NO_UPDATES"
 horizontal_alignment = 1
 vertical_alignment = 1

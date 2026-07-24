@@ -317,14 +317,15 @@ func _update_ui_state():
 
 	var total_items = available_updates.size()
 	var selected_count = selected_app_ids.size()
+	var all_selected = (total_items > 0 and selected_count == total_items)
 	
 	if total_items > 0:
-		if selected_count == total_items:
-			select_all_button.text = "Deselect All"
+		if all_selected:
+			select_all_button.text = tr("BTN_DESELECT_ALL")
 		else:
-			select_all_button.text = "Select All"
+			select_all_button.text = tr("BTN_SELECT_ALL")
 	else:
-		select_all_button.text = "Select All"
+		select_all_button.text = tr("BTN_SELECT_ALL")
 		select_all_button.disabled = true
 	
 	update_selected_button.disabled = (selected_count == 0)
@@ -396,7 +397,7 @@ func _start_updates():
 			for app_id in selected_app_ids:
 				# Prepare item UI
 				var item = _find_item_by_id(app_id)
-				if item: item.set_progress(0, "Queued")
+				if item: item.set_progress(0, tr("LBL_QUEUED"))
 				
 				# Find the update data to pass installation scope
 				var update_data = {}
@@ -478,13 +479,13 @@ func _on_task_updated(_operation_id: String, status_data: Dictionary):
 		if item:
 			var msg = ""
 			match status:
-				"queued": msg = "Queued"
-				"preparing": msg = "Preparing..."
+				"queued": msg = tr("LBL_QUEUED")
+				"preparing": msg = tr("LBL_PREPARING")
 				"downloading": 
-					msg = "Downloading (%d%%)" % progress
+					msg = tr("LBL_DOWNLOADING") % progress
 					var speed = status_data.get("speed")
 					if speed: msg += " (%s)" % speed
-				"installing": msg = "Installing..."
+				"installing": msg = tr("LBL_INSTALLING")
 			item.set_progress(progress, msg)
 
 func _on_task_finished(_operation_id: String, _final_status: String, _operation_type: String):

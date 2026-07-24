@@ -132,7 +132,7 @@ func _update_queue():
 			name_lbl.name = "NameLabel"
 			name_lbl.add_theme_font_size_override("font_size", 16)
 			name_lbl.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
-			name_lbl.text = "Loading..."
+			name_lbl.text = tr("LBL_LOADING")
 			vbox.add_child(name_lbl)
 			
 			var status_vbox = VBoxContainer.new()
@@ -154,7 +154,7 @@ func _update_queue():
 			var status_lbl = Label.new()
 			status_lbl.name = "StatusLabel"
 			status_lbl.add_theme_font_size_override("font_size", 14)
-			status_lbl.text = "0% - Pending"
+			status_lbl.text = "0% - " + tr("LBL_PENDING")
 			status_vbox.add_child(status_lbl)
 			
 			vbox.add_child(status_vbox)
@@ -188,8 +188,11 @@ func _update_queue():
 		name_lbl.text = app_data.get("name", status_data.get("name", actual_app_id))
 		pbar.value = status_data.get("progress", 0)
 		var status_text = status_data.get("status", "pending")
-		if status_text == "pending": status_text = "In Queue"
-		status_lbl.text = str(status_data.get("progress", 0)) + "% - " + status_text.capitalize()
+		if status_text == "pending": status_text = tr("LBL_IN_QUEUE")
+		elif status_text == "downloading": status_text = tr("LBL_DOWNLOADING_SHORT")
+		elif status_text == "installing": status_text = tr("LBL_INSTALLING")
+		elif status_text == "completed": status_text = tr("LBL_COMPLETED")
+		status_lbl.text = str(status_data.get("progress", 0)) + "% - " + status_text
 
 func _focus_first_item():
 	if queue_container.get_child_count() > 0:

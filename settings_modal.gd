@@ -24,10 +24,11 @@ func _populate_settings():
 	for child in settings_container.get_children():
 		child.queue_free()
 		
-	_create_check_setting("Play UI Sounds", "play_ui_sounds")
-	_create_check_setting("Auto Refresh Installed Apps", "auto_refresh_installed")
-	_create_check_setting("Add installed Apps automatically to Steam", "auto_add_to_steam")
-	_create_check_setting("Show Steam Restart Warning", "show_steam_restart_warning")
+	_create_option_setting(tr("SETTINGS_LANGUAGE"), "language", ["auto", "en", "de", "fr", "es", "it", "pl", "uk"], ["Auto", "English", "Deutsch", "Français", "Español", "Italiano", "Polski", "Українська"])
+	_create_check_setting(tr("SETTINGS_UI_SOUNDS"), "play_ui_sounds")
+	_create_check_setting(tr("SETTINGS_AUTO_REFRESH"), "auto_refresh_installed")
+	_create_check_setting(tr("SETTINGS_AUTO_ADD_STEAM"), "auto_add_to_steam")
+	_create_check_setting(tr("SETTINGS_STEAM_WARNING"), "show_steam_restart_warning")
 
 func _create_check_setting(label_text: String, setting_key: String):
 	var hbox = HBoxContainer.new()
@@ -47,7 +48,7 @@ func _create_check_setting(label_text: String, setting_key: String):
 	hbox.add_child(check)
 	settings_container.add_child(hbox)
 
-func _create_option_setting(label_text: String, setting_key: String, options: Array):
+func _create_option_setting(label_text: String, setting_key: String, options: Array, display_names: Array = []):
 	var hbox = HBoxContainer.new()
 	var label = Label.new()
 	label.text = label_text
@@ -55,8 +56,11 @@ func _create_option_setting(label_text: String, setting_key: String, options: Ar
 	hbox.add_child(label)
 	
 	var option_btn = OptionButton.new()
-	for opt in options:
-		option_btn.add_item(opt.capitalize())
+	for i in range(options.size()):
+		if i < display_names.size():
+			option_btn.add_item(display_names[i])
+		else:
+			option_btn.add_item(options[i].capitalize())
 	
 	var current_val = SettingsManager.get_setting(setting_key, options[0])
 	var idx = options.find(current_val)

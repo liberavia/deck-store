@@ -60,8 +60,8 @@ const ODRS_REVIEWS_CACHE_SUBDIR = "cache/odrs_reviews"
 
 const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 hour
 const ODRS_DETAILED_REVIEWS_CACHE_DURATION_SEC = 60 * 60 * 6 # 6 hours
-const DEFAULT_REVIEWS_BUTTON_CAPTION: String = "Show Reviews"
-const REVIEWS_BUTTON_LOADING_CAPTION: String = "Loading..."
+const DEFAULT_REVIEWS_BUTTON_CAPTION: String = "BTN_SHOW_REVIEWS"
+const REVIEWS_BUTTON_LOADING_CAPTION: String = "LBL_LOADING"
 
 # =============================================================================
 # BUILT-IN GODOT METHODS
@@ -170,11 +170,11 @@ func set_initial_state(assigned_id: String, initially_installed: bool, assigned_
 func clear_data():
 	current_app_id = ""
 	is_currently_installed
-	app_title.text = "Loading..."
+	app_title.text = tr("LBL_LOADING")
 	app_desc.text = ""
 	app_icon.texture = null
-	app_current_version.text = "N/A"
-	app_release_date.text = "N/A"
+	app_current_version.text = tr("TXT_NA")
+	app_release_date.text = tr("TXT_NA")
 	for screenshot in screenshot_container.get_children():
 		screenshot_container.remove_child(screenshot)
 		screenshot.queue_free()
@@ -196,7 +196,7 @@ func clear_data():
 func load_details():
 	if current_app_id.is_empty():
 		printerr("ERROR: Cannot load details, app_id is empty.")
-		app_title.text = "Error: No App ID" 
+		app_title.text = tr("ERR_NO_APP_ID") 
 		_clear_rating_ui()
 		return
 	if progress_info: progress_info.visible = false
@@ -292,7 +292,7 @@ func _on_product_details_request_completed(result, response_code, headers, body,
 			_display_details(api_json)
 		else:
 			printerr("ERROR: JSON parse error for URL '%s'." % url)
-			app_title.text = "Error: Invalid Data" 
+			app_title.text = tr("ERR_INVALID_DATA") 
 	elif response_code == 404:
 		print("INFO DetailsView: App not found on Flathub (404). Using fallback info for ", current_app_id)
 		_show_fallback_product()
@@ -306,9 +306,9 @@ func _on_product_details_request_completed(result, response_code, headers, body,
 		http_request.queue_free()
 
 func _fetch_summary(app_id: String):
-	app_installed_size.text = "Loading..."
+	app_installed_size.text = tr("LBL_LOADING")
 	if Engine.has_singleton("OnlineStatusManager") and not get_node("/root/OnlineStatusManager").is_online:
-		app_installed_size.text = "Offline"
+		app_installed_size.text = tr("TXT_OFFLINE")
 		return
 
 	var summary_url = "https://flathub.org/api/v2/summary/%s" % app_id
@@ -320,7 +320,7 @@ func _fetch_summary(app_id: String):
 	var error = http_request.request(summary_url)
 	if error != OK:
 		printerr("ERROR: Starting summary request failed for '%s' (%s): %s" % [app_id, summary_url, error])
-		app_installed_size.text = "Unknown"
+		app_installed_size.text = tr("TXT_UNKNOWN")
 		if is_instance_valid(http_request): http_request.queue_free()
 
 func _on_summary_request_completed(result, response_code, headers, body, http_request: HTTPRequest):
@@ -334,11 +334,11 @@ func _on_summary_request_completed(result, response_code, headers, body, http_re
 				if is_instance_valid(action_button):
 					action_button.app_size_bytes = int(size_bytes)
 			else:
-				app_installed_size.text = "Unknown"
+				app_installed_size.text = tr("TXT_UNKNOWN")
 		else:
-			app_installed_size.text = "Unknown"
+			app_installed_size.text = tr("TXT_UNKNOWN")
 	else:
-		app_installed_size.text = "Unknown"
+		app_installed_size.text = tr("TXT_UNKNOWN")
 
 	if is_instance_valid(http_request):
 		http_request.queue_free()
@@ -349,7 +349,7 @@ func _show_fallback_product():
 		"name": current_app_name if not current_app_name.is_empty() else current_app_id,
 		"description": "Metadata is currently unavailable because the application is not listed on Flathub or you are offline. You can still manage the installation if it is installed locally.",
 		"icon": "",
-		"developer_name": "Unknown",
+		"developer_name": tr("TXT_UNKNOWN"),
 		"releases": []
 	}
 	_display_details(fallback_product)
@@ -363,11 +363,11 @@ func _show_fallback_product():
 func _display_details(product: Dictionary):
 	if not product is Dictionary:
 		printerr("ERROR: Invalid data passed to _display_details.")
-		app_title.text = "Error: Invalid Data"
+		app_title.text = tr("ERR_INVALID_DATA")
 		return
 
 	# navbar
-	app_title.text = product.get("name") if product.get("name") != null else "N/A"
+	app_title.text = product.get("name") if product.get("name") != null else tr("TXT_NA")
 	var icon_url = product.get("icon")
 	if icon_url and not icon_url.is_empty():
 		emit_signal("image_load_requested", icon_url, app_icon)
@@ -386,7 +386,7 @@ func _display_details(product: Dictionary):
 
 	# description
 	var description_html = product.get("description", "")
-	app_desc.text = limited_html_to_bbcode(description_html) if not description_html.is_empty() else "No description available."
+	app_desc.text = limited_html_to_bbcode(description_html) if not description_html.is_empty() else tr("LBL_NO_DESCRIPTION")
 
 	# screenshots
 	# Clear old ones first
@@ -421,7 +421,7 @@ func _display_details(product: Dictionary):
 	if releases is Array and not releases.is_empty():
 		var latest_release = releases[0]
 		if latest_release is Dictionary:
-			app_current_version.text = latest_release.get("version") if latest_release.get("version") != null else "N/A"
+			app_current_version.text = latest_release.get("version") if latest_release.get("version") != null else tr("TXT_NA")
 			var timestamp_str = str(latest_release.get("timestamp", ""))
 			if not timestamp_str.is_empty() and timestamp_str.is_valid_int():
 				var timestamp_int = int(timestamp_str)
@@ -431,22 +431,22 @@ func _display_details(product: Dictionary):
 				var year = str(datetime_dict["year"])
 				app_release_date.text = "%s-%s-%s" % [year, month, day] 
 			else:
-				app_release_date.text = "N/A"
+				app_release_date.text = tr("TXT_NA")
 		else:
-			app_current_version.text = "N/A"
-			app_release_date.text = "N/A"
+			app_current_version.text = tr("TXT_NA")
+			app_release_date.text = tr("TXT_NA")
 	else:
-		app_current_version.text = "N/A"
-		app_release_date.text = "N/A"
+		app_current_version.text = tr("TXT_NA")
+		app_release_date.text = tr("TXT_NA")
 		
 	var main_app_node = get_node_or_null("/root/App")
 	if main_app_node and main_app_node._installed_flatpak_ids.has(current_app_id):
-		app_installed_size.text = main_app_node._installed_flatpak_ids[current_app_id].get("size", "Unknown")
+		app_installed_size.text = main_app_node._installed_flatpak_ids[current_app_id].get("size", tr("TXT_UNKNOWN"))
 	else:
-		app_installed_size.text = "N/A"
+		app_installed_size.text = tr("TXT_NA")
 		
-	current_app_name = product.get("name") if product.get("name") != null else "N/A"
-	app_developer.text = product.get("developer_name") if product.get("developer_name") != null else "N/A"
+	current_app_name = product.get("name") if product.get("name") != null else tr("TXT_NA")
+	app_developer.text = product.get("developer_name") if product.get("developer_name") != null else tr("TXT_NA")
 	
 	# Extract Website URL
 	var urls_dict = product.get("urls", {})
@@ -672,15 +672,15 @@ func _on_task_updated_for_progress(operation_id: String, status_data: Dictionary
 
 				match status:
 					"downloading": 
-						label_text = "Downloading (%d%%)" % progress if progress != null else "Downloading..."
+						label_text = tr("LBL_DOWNLOADING_PERCENT") % progress if progress != null else tr("LBL_DOWNLOADING")
 						label_text += step_info
 						var speed = status_data.get("speed", null)
 						var eta = status_data.get("eta", null)
 						if speed: label_text += " [%s]" % speed
 						if eta: label_text += " (%s)" % eta
 					"installing": 
-						label_text = "Installing..." + step_info
-					_: label_text = "Status: %s" % status + step_info
+						label_text = tr("LBL_INSTALLING") + step_info
+					_: label_text = tr("LBL_STATUS") % status + step_info
 				progress_label.text = label_text
 		else:
 			_stop_pulse()
@@ -801,7 +801,7 @@ func _on_show_reviews_button_pressed():
 		return
 	const DEFAULT_REVIES_BUTTON_CAPTION: String = "Show Reviews"
 	show_reviews_button.disabled = true
-	show_reviews_button.text = REVIEWS_BUTTON_LOADING_CAPTION
+	show_reviews_button.text = tr(REVIEWS_BUTTON_LOADING_CAPTION)
 	
 	var cache_filepath = _get_detailed_reviews_cache_filepath(current_app_id)
 
@@ -916,7 +916,7 @@ func _show_reviews_popup(reviews_array: Array, has_error: bool = false):
 		add_child(reviews_popup_instance)
 		
 		show_reviews_button.disabled = false
-		show_reviews_button.text = DEFAULT_REVIEWS_BUTTON_CAPTION
+		show_reviews_button.text = tr(DEFAULT_REVIEWS_BUTTON_CAPTION)
 
 	if not is_instance_valid(reviews_popup_instance):
 		printerr("DetailsView: Could not instantiate Review-Popup.")

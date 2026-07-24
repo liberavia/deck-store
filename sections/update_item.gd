@@ -32,7 +32,7 @@ func _ready():
 func setup(p_app_id: String, p_name: String, p_old_version: String, p_new_version: String, p_size: String, p_icon_url: String):
 	app_id = p_app_id
 	name_label.text = p_name
-	version_label.text = "Update from version [b]%s[/b] to [b]%s[/b]" % [p_old_version, p_new_version]
+	version_label.text = tr("LBL_UPDATE_VERSION_FROM_TO") % [p_old_version, p_new_version]
 	size_label.text = p_size
 	
 	if not p_icon_url.is_empty():
@@ -52,7 +52,7 @@ func set_progress(value, message: String = ""):
 		status_label.text = message
 	
 	# Indeterminate / Pulse mode for finishing installation
-	if float_value >= 100.0 and message.to_lower().begins_with("installing"):
+	if float_value >= 100.0 and message.begins_with("Installing") or message.begins_with(tr("LBL_INSTALLING").replace("...", "")):
 		_start_pulse()
 	else:
 		_stop_pulse()

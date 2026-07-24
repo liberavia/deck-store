@@ -30,13 +30,13 @@ alignment = 1
 custom_minimum_size = Vector2(500, 50)
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
-placeholder_text = "Search for apps..."
+placeholder_text = "LBL_SEARCH_PLACEHOLDER"
 caret_blink = true
 caret_blink_interval = 0.5
 
 [node name="SearchButton" type="Button" parent="VBoxContainer/TopBar" unique_id=982187708]
 layout_mode = 2
-text = "Search"
+text = "TAB_SEARCH"
 
 [node name="ListMargin" type="MarginContainer" parent="VBoxContainer" unique_id=1440964451]
 layout_mode = 2

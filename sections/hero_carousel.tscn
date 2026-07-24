@@ -21,7 +21,7 @@ grow_vertical = 2
 [node name="TitleLabel" type="Label" parent="VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
-text = "SteamOS Must-Haves"
+text = "LBL_STEAMOS_MUST_HAVES"
 horizontal_alignment = 1
 uppercase = true
 
