@@ -1289,12 +1289,19 @@ func _on_download_task_finished(operation_id: String, final_status: String, op_t
 	if dm and dm.running_tasks.has(operation_id):
 		app_name = dm.running_tasks[operation_id].status_data.get("name", operation_id)
 		
-	var type_str = "processed"
-	if op_type == "install": type_str = "installed"
-	elif op_type == "uninstall": type_str = "uninstalled"
-	elif op_type == "update": type_str = "updated"
+	var msg_key = ""
+	if success:
+		if op_type == "install": msg_key = "MSG_SUCCESS_INSTALL"
+		elif op_type == "uninstall": msg_key = "MSG_SUCCESS_UNINSTALL"
+		elif op_type == "update": msg_key = "MSG_SUCCESS_UPDATE"
+		else: msg_key = "MSG_SUCCESS_PROCESS"
+	else:
+		if op_type == "install": msg_key = "MSG_FAIL_INSTALL"
+		elif op_type == "uninstall": msg_key = "MSG_FAIL_UNINSTALL"
+		elif op_type == "update": msg_key = "MSG_FAIL_UPDATE"
+		else: msg_key = "MSG_FAIL_PROCESS"
 	
-	msg = "%s %s %s" % [app_name, "was successfully" if success else "failed to be", type_str]
+	msg = tr(msg_key) % app_name
 	_show_toast(msg, success)
 
 func _show_toast(message: String, success: bool = true):

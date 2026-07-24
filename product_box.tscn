@@ -96,7 +96,7 @@ alignment = 1
 layout_mode = 2
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
-text = "Installing..."
+text = "LBL_INSTALLING"
 autowrap_mode = 3
 
 [node name="ProgressBar" type="ProgressBar" parent="Panel/InstallOverlay/VBoxContainer"]

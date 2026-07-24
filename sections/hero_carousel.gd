@@ -56,12 +56,21 @@ func _process(_delta):
 		if pb: pb.value = prog
 		
 		if lbl:
-			var status_text = task_status.get("status", "Installing")
-			if typeof(status_text) != TYPE_STRING:
-				status_text = "Installing"
-			if status_text == "pending":
-				status_text = "In Queue..."
-			lbl.text = status_text.capitalize() + "\n" + str(prog) + "%"
+			var raw_status = task_status.get("status", "")
+			if typeof(raw_status) != TYPE_STRING:
+				raw_status = ""
+			
+			var status_text = tr("LBL_INSTALLING")
+			if raw_status == "pending":
+				status_text = tr("LBL_IN_QUEUE")
+			elif raw_status == "downloading":
+				status_text = tr("LBL_DOWNLOADING_SHORT")
+			elif raw_status == "removing" or raw_status == "uninstalling":
+				status_text = tr("LBL_REMOVING")
+			elif raw_status != "installing" and raw_status != "":
+				status_text = raw_status.capitalize()
+			
+			lbl.text = status_text + "\n" + str(prog) + "%"
 
 func _load_json():
 	var file_path = "res://must_haves.json"

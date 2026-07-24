@@ -397,7 +397,7 @@ func _start_updates():
 			for app_id in selected_app_ids:
 				# Prepare item UI
 				var item = _find_item_by_id(app_id)
-				if item: item.set_progress(0, "Queued")
+				if item: item.set_progress(0, tr("LBL_QUEUED"))
 				
 				# Find the update data to pass installation scope
 				var update_data = {}
@@ -479,13 +479,13 @@ func _on_task_updated(_operation_id: String, status_data: Dictionary):
 		if item:
 			var msg = ""
 			match status:
-				"queued": msg = "Queued"
-				"preparing": msg = "Preparing..."
+				"queued": msg = tr("LBL_QUEUED")
+				"preparing": msg = tr("LBL_PREPARING")
 				"downloading": 
-					msg = "Downloading (%d%%)" % progress
+					msg = tr("LBL_DOWNLOADING") % progress
 					var speed = status_data.get("speed")
 					if speed: msg += " (%s)" % speed
-				"installing": msg = "Installing..."
+				"installing": msg = tr("LBL_INSTALLING")
 			item.set_progress(progress, msg)
 
 func _on_task_finished(_operation_id: String, _final_status: String, _operation_type: String):

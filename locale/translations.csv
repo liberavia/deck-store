@@ -121,3 +121,16 @@ LBL_DOWNLOADING_SHORT,Downloading,Wird heruntergeladen
 LBL_COMPLETED,Completed,Abgeschlossen
 LBL_DOWNLOADS_UPDATES,Downloads & Updates,Downloads & Updates
 LBL_NO_ACTIVE_TASKS,No active tasks.,Keine aktiven Aufgaben.
+MSG_SUCCESS_INSTALL,%s was successfully installed,%s wurde erfolgreich installiert
+MSG_SUCCESS_UNINSTALL,%s was successfully uninstalled,%s wurde erfolgreich entfernt
+MSG_SUCCESS_UPDATE,%s was successfully updated,%s wurde erfolgreich aktualisiert
+MSG_SUCCESS_PROCESS,%s was successfully processed,%s wurde erfolgreich verarbeitet
+MSG_FAIL_INSTALL,%s failed to be installed,%s konnte nicht installiert werden
+MSG_FAIL_UNINSTALL,%s failed to be uninstalled,%s konnte nicht entfernt werden
+MSG_FAIL_UPDATE,%s failed to be updated,%s konnte nicht aktualisiert werden
+MSG_FAIL_PROCESS,%s failed to be processed,%s konnte nicht verarbeitet werden
+LBL_QUEUED,Queued,Eingereiht
+LBL_PREPARING,Preparing...,Vorbereiten...
+LBL_DOWNLOADING,Downloading (%d%%),Wird heruntergeladen (%d%%)
+LBL_UPDATE_VERSION_FROM_TO,Update from version [b]%s[/b] to [b]%s[/b],Aktualisierung von Version [b]%s[/b] auf [b]%s[/b]
+LBL_REMOVING,Removing...,Wird entfernt...

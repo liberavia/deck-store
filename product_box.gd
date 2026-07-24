@@ -78,12 +78,21 @@ func _process(delta):
 				if is_instance_valid(progress_bar):
 					progress_bar.value = prog
 				if is_instance_valid(status_label):
-					var status_text = status_data.get("status", "Installing")
-					if typeof(status_text) != TYPE_STRING:
-						status_text = "Installing"
-					if status_text == "pending":
-						status_text = "In Queue..."
-					status_label.text = status_text.capitalize() + "\n" + str(prog) + "%"
+					var raw_status = status_data.get("status", "")
+					if typeof(raw_status) != TYPE_STRING:
+						raw_status = ""
+					
+					var status_text = tr("LBL_INSTALLING")
+					if raw_status == "pending":
+						status_text = tr("LBL_IN_QUEUE")
+					elif raw_status == "downloading":
+						status_text = tr("LBL_DOWNLOADING_SHORT")
+					elif raw_status == "removing" or raw_status == "uninstalling":
+						status_text = tr("LBL_REMOVING")
+					elif raw_status != "installing" and raw_status != "":
+						status_text = raw_status.capitalize()
+					
+					status_label.text = status_text + "\n" + str(prog) + "%"
 
 func set_app_id(assigned_id: String):
 	app_id = assigned_id
@@ -138,12 +147,21 @@ func _show_installing(task_data: Dictionary):
 		if is_instance_valid(progress_bar):
 			progress_bar.value = progress
 		if is_instance_valid(status_label):
-			var status_text = task_data.get("status", "Installing")
-			if typeof(status_text) != TYPE_STRING:
-				status_text = "Installing"
-			if status_text == "pending":
-				status_text = "In Queue..."
-			status_label.text = status_text.capitalize() + "\n" + str(progress) + "%"
+			var raw_status = task_data.get("status", "")
+			if typeof(raw_status) != TYPE_STRING:
+				raw_status = ""
+			
+			var status_text = tr("LBL_INSTALLING")
+			if raw_status == "pending":
+				status_text = tr("LBL_IN_QUEUE")
+			elif raw_status == "downloading":
+				status_text = tr("LBL_DOWNLOADING_SHORT")
+			elif raw_status == "removing" or raw_status == "uninstalling":
+				status_text = tr("LBL_REMOVING")
+			elif raw_status != "installing" and raw_status != "":
+				status_text = raw_status.capitalize()
+			
+			status_label.text = status_text + "\n" + str(progress) + "%"
 
 func _hide_installing():
 	if is_instance_valid(install_overlay):
