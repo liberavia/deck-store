@@ -205,6 +205,11 @@ func _ready():
 			var footer = get_node_or_null("CanvasLayer/FooterBar")
 			if is_instance_valid(footer) and footer.has_method("set_context_actions"):
 				footer.call_deferred("update_context_actions")
+				
+	if ProjectSettings.has_setting("autoload/SteamIntegration"):
+		var steam_int = get_node_or_null("/root/SteamIntegration")
+		if steam_int and steam_int.has_signal("shortcut_action_completed"):
+			steam_int.shortcut_action_completed.connect(_on_shortcut_action_completed)
 	
 	_switch_to_section(0)
 	
@@ -227,6 +232,23 @@ func _ready():
 	home_button.grab_focus()
 	await get_tree().process_frame
 	_suppress_focus_sound = false
+
+func _on_shortcut_action_completed(action: String, app_id: String, success: bool):
+	if action == "add" and success:
+		if SettingsManager.get_setting("show_steam_restart_warning", true):
+			await get_tree().create_timer(1.0).timeout
+			if not SettingsManager.get_setting("show_steam_restart_warning", true): return
+			var popup_scene = load("res://sections/steam_restart_popup.tscn")
+			if popup_scene:
+				var popup = popup_scene.instantiate()
+				var prev_focus = get_viewport().gui_get_focus_owner()
+				get_tree().root.add_child(popup)
+				popup.popup_closed.connect(func():
+					if is_instance_valid(prev_focus):
+						prev_focus.grab_focus()
+					else:
+						home_button.grab_focus()
+				)
 
 func _on_settings_changed(key: String, value):
 	if key == "play_ui_sounds":

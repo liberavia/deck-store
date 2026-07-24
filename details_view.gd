@@ -212,6 +212,7 @@ func _on_shortcut_action_completed(action: String, app_id: String, success: bool
 	elif (action == "add" or action == "remove") and app_id == current_app_id:
 		print("DEBUG DetailsView: Add/Remove finished for ", app_id, " Re-triggering Steam check.")
 		steam_check_pending = false
+		await get_tree().create_timer(0.5).timeout
 		_trigger_steam_check_if_needed()
 
 # =============================================================================
