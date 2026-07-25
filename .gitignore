@@ -21,9 +21,9 @@ node_modules/*
 package.json
 package-lock.json
 
-#local screenshots
+#local screenshots and logs
 screenshots/*
-
+logs/*
 
 
 

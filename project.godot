@@ -19,7 +19,7 @@ run/main_scene="uid://bl8qcy5u1yua6"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 boot_splash/bg_color=Color(0, 0, 0, 1)
 boot_splash/show_image=false
-config/icon="res://icon.svg"
+config/icon="res://assets/graphics/icon.svg"
 
 [internationalization]
 
@@ -31,7 +31,7 @@ OnlineStatusManager="*res://scripts/OnlineStatusManager.gd"
 AppBlacklist="*res://scripts/AppBlacklist.gd"
 DownloadManager="*res://scripts/DownloadManager.gd"
 SteamIntegration="*res://scripts/SteamIntegration.gd"
-GlobalBackgroundShader="*res://global_background_shader.tscn"
+GlobalBackgroundShader="*res://shaders/global_background_shader.tscn"
 OdrsRatingsCache="*res://scripts/OdrsRatingsCache.gd"
 ExtensionsManager="*res://scripts/ExtensionsManager.gd"
 ControllerManager="*res://scripts/ControllerManager.gd"
@@ -59,7 +59,7 @@ version_control/autoload_on_startup=true
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/godotsteam/plugin.cfg")
+enabled=PackedStringArray("res://addons/godotsteam/plugin.cfg", "res://addons/gut/plugin.cfg")
 
 [input]
 
