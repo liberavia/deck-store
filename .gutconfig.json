@@ -1,0 +1,16 @@
+{
+	"dirs": ["res://tests"],
+	"include_subdirs": true,
+	"prefix": "test_",
+	"suffix": ".gd",
+	"log_level": 1,
+	"ignore_pause": false,
+	"post_run_script": "",
+	"pre_run_script": "",
+	"inner_class_prefix": "Test",
+	"double_strategy": "partial",
+	"unit_test_name": "",
+	"hide_orphans": false,
+	"compact_mode": false,
+	"compiler_mode": false
+}

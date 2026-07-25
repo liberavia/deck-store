@@ -1,0 +1,65 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on tags like v26.07.1-SilentSound
+
+jobs:
+  export-linux:
+    name: Linux Export
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        
+      - name: Setup Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: "4.3.0"
+          use-dotnet: false
+          
+      - name: Export Project
+        run: |
+          mkdir -p build/linux
+          # Run headless import first
+          godot --headless --editor --quit || true
+          # Export using the Linux preset
+          godot --headless --export-release "Linux" build/linux/deck-store.x86_64
+          
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deck-store-linux
+          path: build/linux/
+          
+  release:
+    name: GitHub Release
+    needs: export-linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Download Linux Build
+        uses: actions/download-artifact@v4
+        with:
+          name: deck-store-linux
+          path: linux-build
+          
+      - name: Zip Release
+        run: |
+          cd linux-build
+          zip -r ../deck-store-linux.zip .
+          cd ..
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            deck-store-linux.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

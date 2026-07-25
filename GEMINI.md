@@ -187,4 +187,22 @@ This document summarizes the key aspects of the DeckStore application based on a
 
 ### 14.2. Next Steps
 *   **Mouse Control Implementation:** Currently working on the `navigation` branch to implement proper mouse control ("Maussteuerung").
+
+## 15. Recent Session Log (July 20, 2026 - Part 2)
+
+### 15.1. Accomplishments (Settings MVP & Architecture Refactoring)
+*   **Settings Modal MVP:**
+    *   Implemented `SettingsManager` Autoload to persist user settings in `~/.deck-store/settings.json`.
+    *   Added dynamic `settings_modal.tscn` to toggle UI sounds and Automatic Refresh.
+    *   Fixed padding (`MarginContainer`) and visual bugs where the `ScrollContainer` masked the focus ring of form elements.
+    *   Fixed a visual bug in `installed_view.gd` where the cooldown progress bar kept updating even if auto-refresh was disabled.
+*   **Publishing / Native Execution Architecture:**
+    *   Created `SystemUtils` Autoload to abstract command execution across different runtimes.
+    *   The app now safely detects if it runs in a Flatpak sandbox (`/.flatpak-info`). If yes, it uses `flatpak-spawn --host`; if no (e.g. running natively via Steam), it uses the host's `/usr/bin/flatpak` directly.
+    *   Refactored `DownloadManager`, `main.gd`, and `SteamIntegration.gd` to completely replace hardcoded `flatpak-spawn` calls with `SystemUtils`.
+    *   Created `TESTING_ON_STEAM_MACHINE.md` outlining the Linux/X11 export process for pristine SteamOS testing.
+
+### 15.2. Next Steps
+*   **Verify Native Build:** Test the exported `.x86_64` binary on the pristine Steam Machine as a Non-Steam Game to verify the `SystemUtils` wrapper correctly discovers and manages Flatpaks outside the Godot sandbox.
+*   **GodotSteam Integration:** Once native execution is verified, integrate the GodotSteam plugin to utilize the native Steamworks floating keyboard (`Steam.showFloatingGamepadTextInput()`) and resolve the Wayland focus issues during search.
 --- End of Context from: GEMINI.md ---
