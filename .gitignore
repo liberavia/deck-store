@@ -24,6 +24,7 @@ package-lock.json
 #local screenshots and logs
 screenshots/*
 logs/*
+GEMINI.md
 
 
 
