@@ -1,11 +1,11 @@
 [gd_scene load_steps=8 format=3 uid="uid://b8fwocgf5txps"]
 
-[ext_resource type="Script" uid="uid://op52a17oa8br" path="res://product_list.gd" id="1_xbf5n"]
-[ext_resource type="PackedScene" uid="uid://bubfvije4jq88" path="res://product_box.tscn" id="2_bsby6"]
-[ext_resource type="Script" uid="uid://cbdjfi6c6bvbu" path="res://prev_button.gd" id="3_oosp4"]
-[ext_resource type="Script" uid="uid://bv0d0leqmjrwt" path="res://next_button.gd" id="4_xwbbg"]
-[ext_resource type="PackedScene" path="res://glyph_display.tscn" id="5_glyph"]
-[ext_resource type="PackedScene" uid="uid://c5y1x2z3a4b5" path="res://loading_overlay.tscn" id="6_overlay"]
+[ext_resource type="Script" uid="uid://op52a17oa8br" path="res://ui/components/product_list.gd" id="1_xbf5n"]
+[ext_resource type="PackedScene" uid="uid://bubfvije4jq88" path="res://ui/components/product_box.tscn" id="2_bsby6"]
+[ext_resource type="Script" uid="uid://cbdjfi6c6bvbu" path="res://ui/components/prev_button.gd" id="3_oosp4"]
+[ext_resource type="Script" uid="uid://bv0d0leqmjrwt" path="res://ui/components/next_button.gd" id="4_xwbbg"]
+[ext_resource type="PackedScene" path="res://ui/components/glyph_display.tscn" id="5_glyph"]
+[ext_resource type="PackedScene" uid="uid://c5y1x2z3a4b5" path="res://ui/modals/loading_overlay.tscn" id="6_overlay"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5x0sp"]
 bg_color = Color(0, 0, 0, 0.35)

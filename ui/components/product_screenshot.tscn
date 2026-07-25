@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://1ykejd4mf2v4"]
 
-[ext_resource type="Script" uid="uid://c8geld0qvks6h" path="res://product_screenshot.gd" id="1_sgn36"]
+[ext_resource type="Script" uid="uid://c8geld0qvks6h" path="res://ui/components/product_screenshot.gd" id="1_sgn36"]
 
 [node name="ProductScreenshot" type="Control"]
 custom_minimum_size = Vector2(454, 261)

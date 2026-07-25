@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://ny0jkwl7xnql"]
 
-[ext_resource type="Script" uid="uid://clsy0nom1b4ux" path="res://review_item.gd" id="1_oh6h3"]
-[ext_resource type="PackedScene" uid="uid://v076dx1dqhl3" path="res://rating_stars_display.tscn" id="2_ynt13"]
+[ext_resource type="Script" uid="uid://clsy0nom1b4ux" path="res://ui/components/review_item.gd" id="1_oh6h3"]
+[ext_resource type="PackedScene" uid="uid://v076dx1dqhl3" path="res://ui/components/rating_stars_display.tscn" id="2_ynt13"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_o6g5t"]
 bg_color = Color(0.6, 0.6, 0.6, 0)

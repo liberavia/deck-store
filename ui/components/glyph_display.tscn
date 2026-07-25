@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://glyph_display.gd" id="1_glyph"]
+[ext_resource type="Script" path="res://ui/components/glyph_display.gd" id="1_glyph"]
 
 [node name="GlyphDisplay" type="TextureRect"]
 custom_minimum_size = Vector2(30, 30)

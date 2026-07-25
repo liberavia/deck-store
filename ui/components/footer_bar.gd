@@ -43,7 +43,7 @@ func _create_action_item(button_str: String, label_text: String) -> HBoxContaine
 		var b_name = button_names[i].strip_edges()
 		
 		# Instantiate our interactive GlyphDisplay
-		var glyph_scene = load("res://glyph_display.tscn")
+		var glyph_scene = load("res://ui/components/glyph_display.tscn")
 		var glyph_instance = glyph_scene.instantiate()
 		glyph_instance.name = "Glyph_" + b_name
 		glyph_instance.action_name = b_name

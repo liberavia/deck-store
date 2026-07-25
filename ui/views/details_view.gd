@@ -4,9 +4,9 @@ extends Control
 signal move_back_to_main_view
 signal image_load_requested(url: String, texture_rect: TextureRect)
 
-@export var product_screenshot_scene: PackedScene = preload("res://product_screenshot.tscn")
-@export var screenshot_zoom_popup_scene: PackedScene = preload("res://screenshot_zoom_popup.tscn")
-@export var reviews_popup_scene: PackedScene = preload("res://reviews_popup.tscn")
+@export var product_screenshot_scene: PackedScene = preload("res://ui/components/product_screenshot.tscn")
+@export var screenshot_zoom_popup_scene: PackedScene = preload("res://ui/modals/screenshot_zoom_popup.tscn")
+@export var reviews_popup_scene: PackedScene = preload("res://ui/modals/reviews_popup.tscn")
 
 @onready var app_icon: TextureRect = $MarginContainer/Panel/DetailsContents/DetailsNavbar/AppIcon
 @onready var app_title: RichTextLabel = $MarginContainer/Panel/DetailsContents/DetailsNavbar/TitleGroup/AppTitle

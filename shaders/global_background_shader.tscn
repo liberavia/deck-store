@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://c24rrol4fe5h3"]
 
-[ext_resource type="Shader" uid="uid://bps5stjdijuoj" path="res://purplefog.gdshader" id="1_0eyeh"]
-[ext_resource type="Script" path="res://global_background_shader.gd" id="2_script"]
+[ext_resource type="Shader" uid="uid://bps5stjdijuoj" path="res://shaders/purplefog.gdshader" id="1_0eyeh"]
+[ext_resource type="Script" path="res://shaders/global_background_shader.gd" id="2_script"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_i7s6n"]
 shader = ExtResource("1_0eyeh")

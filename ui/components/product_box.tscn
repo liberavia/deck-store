@@ -1,6 +1,6 @@
 [gd_scene load_steps=4 format=3 uid="uid://bubfvije4jq88"]
 
-[ext_resource type="Script" uid="uid://d3yiqlqnvtqyr" path="res://product_box.gd" id="1_pn8qf"]
+[ext_resource type="Script" uid="uid://d3yiqlqnvtqyr" path="res://ui/components/product_box.gd" id="1_pn8qf"]
 [ext_resource type="Texture2D" uid="uid://cyceumguanpq3" path="res://assets/check_green.png" id="2_mvps1"]
 [ext_resource type="Texture2D" path="res://assets/spinner.svg" id="3_spin"]
 

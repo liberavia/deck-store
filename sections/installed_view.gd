@@ -16,7 +16,7 @@ const REFRESH_COOLDOWN_SECONDS = 300
 @onready var refresh_button: Button = $MarginContainer/VBoxContainer/HeaderContainer/RefreshContainer/RefreshButton
 @onready var last_updated_label: Label = $MarginContainer/VBoxContainer/HeaderContainer/RefreshContainer/LastUpdatedLabel
 @onready var cooldown_progress: TextureProgressBar = $MarginContainer/VBoxContainer/HeaderContainer/RefreshContainer/RefreshButton/CooldownProgress
-@onready var loading_overlay_scene = preload("res://loading_overlay.tscn")
+@onready var loading_overlay_scene = preload("res://ui/modals/loading_overlay.tscn")
 
 var loading_overlay_instance: Control = null
 var installed_app_item_scene = preload("res://sections/installed_app_item.tscn")

@@ -11,7 +11,7 @@ signal focus_exited_up_from_lists()
 @onready var sort_option_button: OptionButton = $MarginContainer/VBoxContainer/HeaderContainer/SortOptionButton
 
 var update_item_scene = preload("res://sections/update_item.tscn")
-var loading_overlay_scene = preload("res://loading_overlay.tscn")
+var loading_overlay_scene = preload("res://ui/modals/loading_overlay.tscn")
 var available_updates: Array = [] 
 var selected_app_ids: Array = []
 var _update_check_thread: Thread = null

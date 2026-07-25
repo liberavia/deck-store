@@ -1,12 +1,12 @@
 [gd_scene load_steps=18 format=3 uid="uid://cauevp0c1nuys"]
 
-[ext_resource type="Script" uid="uid://bggmpdvub3pb" path="res://details_view.gd" id="1_wsyjd"]
+[ext_resource type="Script" uid="uid://bggmpdvub3pb" path="res://ui/views/details_view.gd" id="1_wsyjd"]
 [ext_resource type="Texture2D" uid="uid://ds54ar1gj76jv" path="res://assets/icons/verified_badge.svg" id="2_u0jqg"]
-[ext_resource type="Script" uid="uid://cd3qm3wofpocw" path="res://action_button.gd" id="2_uows0"]
-[ext_resource type="Script" uid="uid://lx48drc58j14" path="res://add_to_steam_button.gd" id="3_8dtdw"]
-[ext_resource type="Script" uid="uid://c7ispvo0n3qfy" path="res://details_description_scroller.gd" id="4_8dtdw"]
-[ext_resource type="PackedScene" uid="uid://v076dx1dqhl3" path="res://rating_stars_display.tscn" id="5_283hg"]
-[ext_resource type="Script" uid="uid://b25emru7mx44x" path="res://show_reviews.gd" id="6_mufgs"]
+[ext_resource type="Script" uid="uid://cd3qm3wofpocw" path="res://ui/components/action_button.gd" id="2_uows0"]
+[ext_resource type="Script" uid="uid://lx48drc58j14" path="res://ui/components/add_to_steam_button.gd" id="3_8dtdw"]
+[ext_resource type="Script" uid="uid://c7ispvo0n3qfy" path="res://utils/details_description_scroller.gd" id="4_8dtdw"]
+[ext_resource type="PackedScene" uid="uid://v076dx1dqhl3" path="res://ui/components/rating_stars_display.tscn" id="5_283hg"]
+[ext_resource type="Script" uid="uid://b25emru7mx44x" path="res://ui/components/show_reviews.gd" id="6_mufgs"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shba1"]
 bg_color = Color(0, 0, 0, 0.35)

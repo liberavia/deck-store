@@ -1,10 +1,10 @@
 extends Control
 
-@export var product_box: PackedScene = preload("res://product_box.tscn")
-@export var product_list_scene: PackedScene = preload("res://product_list.tscn")
-@export var settings_modal_scene: PackedScene = preload("res://settings_modal.tscn")
-@export var app_menu_modal_scene: PackedScene = preload("res://app_menu_modal.tscn")
-@export var downloads_flyout_scene: PackedScene = preload("res://downloads_flyout.tscn")
+@export var product_box: PackedScene = preload("res://ui/components/product_box.tscn")
+@export var product_list_scene: PackedScene = preload("res://ui/components/product_list.tscn")
+@export var settings_modal_scene: PackedScene = preload("res://ui/modals/settings_modal.tscn")
+@export var app_menu_modal_scene: PackedScene = preload("res://ui/modals/app_menu_modal.tscn")
+@export var downloads_flyout_scene: PackedScene = preload("res://ui/modals/downloads_flyout.tscn")
 
 @onready var details_view: Control = $DetailsView
 @onready var main_view: VBoxContainer = $CanvasLayer/VBoxContainer

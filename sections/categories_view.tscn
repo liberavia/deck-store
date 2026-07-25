@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://dj5ssnh1gy0ax"]
 
 [ext_resource type="Script" path="res://sections/categories_view.gd" id="1_script"]
-[ext_resource type="PackedScene" uid="uid://b8fwocgf5txps" path="res://product_list.tscn" id="2_plist"]
+[ext_resource type="PackedScene" uid="uid://b8fwocgf5txps" path="res://ui/components/product_list.tscn" id="2_plist"]
 
 [node name="CategoriesView" type="Control"]
 layout_mode = 3

@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://b8yhu8ttgv2wr"]
 
 [ext_resource type="Script" uid="uid://b5jjqk6pqrdum" path="res://sections/search_view.gd" id="1_script"]
-[ext_resource type="PackedScene" uid="uid://b8fwocgf5txps" path="res://product_list.tscn" id="2_plist"]
+[ext_resource type="PackedScene" uid="uid://b8fwocgf5txps" path="res://ui/components/product_list.tscn" id="2_plist"]
 
 [node name="SearchView" type="Control" unique_id=1433272615]
 layout_mode = 3
