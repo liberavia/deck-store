@@ -1,8 +1,8 @@
 # DeckStore
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![CI Build](https://github.com/USERNAME/deck-store/actions/workflows/build.yml/badge.svg)](https://github.com/USERNAME/deck-store/actions/workflows/build.yml)
-[![Unit Tests](https://github.com/USERNAME/deck-store/actions/workflows/test.yml/badge.svg)](https://github.com/USERNAME/deck-store/actions/workflows/test.yml)
+[![CI Build](https://github.com/liberavia/deck-store/actions/workflows/build.yml/badge.svg)](https://github.com/liberavia/deck-store/actions/workflows/build.yml)
+[![Unit Tests](https://github.com/liberavia/deck-store/actions/workflows/test.yml/badge.svg)](https://github.com/liberavia/deck-store/actions/workflows/test.yml)
 
 DeckStore is a modern, open-source App-Store alternative built for SteamOS devices (like the Steam Deck). It is designed to easily find, install, and manage Flatpak packages from Flathub with a controller-first user interface.
 
@@ -20,7 +20,7 @@ If you want to run or test DeckStore locally:
 ### Using Godot Engine
 1. Clone this repository:
    ```bash
-   git clone https://github.com/USERNAME/deck-store.git
+   git clone https://github.com/liberavia/deck-store.git
    cd deck-store
    ```
 2. Open the project in the **Godot 4** Editor.
