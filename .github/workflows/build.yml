@@ -28,6 +28,8 @@ jobs:
           godot --headless --editor --quit || true
           # Export using the Linux preset
           godot --headless --export-release "Linux" build/linux/deck-store.x86_64
+          # Include marketing images in the release zip
+          cp -r marketing build/linux/marketing
           
       - name: Upload Artifacts
         uses: actions/upload-artifact@v5
