@@ -1,6 +1,8 @@
 # Contributing to DeckStore
 
-First off, thank you for considering contributing to DeckStore! We aim to build a strong community to improve this tool for everyone.
+First off, thank you for considering contributing to DeckStore! 
+
+DeckStore is primarily a personal passion project that I develop in my free time to scratch my own itch on the Steam Deck. I'm keeping the scope focused and development happens whenever I find the time. However, if you're interested in fixing bugs, adding languages, or helping out, your Pull Requests are absolutely welcome!
 
 ## Git & Branching Strategy
 
@@ -13,11 +15,11 @@ First off, thank you for considering contributing to DeckStore! We aim to build 
 
 All Pull Requests are subject to automated checks:
 1. **Build Check**: Ensures the Godot project successfully builds without script errors.
-2. **Unit Tests**: We use GUT (Godot Unit Test) for our test suite. Your PR must pass all existing tests. If you are adding a major feature, please include accompanying tests.
+2. **Unit Tests**: I use GUT (Godot Unit Test) for the test suite. Your PR must pass all existing tests. If you are adding a major feature, please include accompanying tests.
 
 ## Versioning & Codenames
 
-We use a custom, chronological versioning schema combined with paradoxical codenames.
+I use a custom, chronological versioning schema combined with paradoxical codenames.
 
 **Format**: `YY.MM.<Release-Number>-<Codename>`
 *Example: `26.07.1-SilentSound`*
@@ -38,4 +40,4 @@ When a new version is built via GitHub Actions, a Release is automatically gener
 ## Code Standards
 - Adhere to the existing Godot UI architecture (`ui/components`, `ui/views`, `ui/modals`).
 - Keep controllers (gamepads) in mind for all new UI additions (ensure focus layers and B-button "go back" behavior are respected).
-- We use GDScript 2.0 features (Godot 4.x). Ensure static typing is used wherever reasonable.
+- I use GDScript 2.0 features (Godot 4.x). Ensure static typing is used wherever reasonable.
