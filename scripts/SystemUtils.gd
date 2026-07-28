@@ -6,18 +6,13 @@ var _flatpak_cmd: String = "flatpak"
 var _flatpak_args_prefix: PackedStringArray = []
 
 func _ready():
-	_is_flatpak_container = FileAccess.file_exists("/.flatpak-info")
-	
 	var is_pressure_vessel = OS.has_environment("container") and OS.get_environment("container") == "pressure-vessel"
+	_is_flatpak_container = FileAccess.file_exists("/.flatpak-info") or is_pressure_vessel
 	
 	if _is_flatpak_container:
-		print("SystemUtils: Running inside Flatpak sandbox. Using 'flatpak-spawn --host' wrapper.")
+		print("SystemUtils: Running inside sandbox (Flatpak or Pressure-Vessel). Using 'flatpak-spawn --host'.")
 		_flatpak_cmd = "flatpak-spawn"
 		_flatpak_args_prefix = ["--host", "flatpak"]
-	elif is_pressure_vessel:
-		print("SystemUtils: Running inside Steam pressure-vessel. Escaping via /run/host.")
-		_flatpak_cmd = "/run/host/usr/bin/env"
-		_flatpak_args_prefix = ["-u", "LD_LIBRARY_PATH", "-u", "LD_PRELOAD", "-u", "STEAM_RUNTIME", "/run/host/usr/bin/flatpak"]
 	else:
 		print("SystemUtils: Running natively (Steam). Stripping LD_LIBRARY_PATH via env.")
 		_flatpak_cmd = "/usr/bin/env"
@@ -73,20 +68,14 @@ func execute_flatpak(args: PackedStringArray, read_stderr: bool = false) -> Dict
 func get_host_sh_cmd() -> String:
 	if _is_flatpak_container:
 		return "flatpak-spawn"
-	if OS.has_environment("container") and OS.get_environment("container") == "pressure-vessel":
-		return "/run/host/usr/bin/env"
 	return "/usr/bin/env"
 
 func get_host_sh_args(shell_command: String) -> PackedStringArray:
 	if _is_flatpak_container:
 		return PackedStringArray(["--host", "sh", "-c", shell_command])
-	if OS.has_environment("container") and OS.get_environment("container") == "pressure-vessel":
-		return PackedStringArray(["-u", "LD_LIBRARY_PATH", "-u", "LD_PRELOAD", "-u", "STEAM_RUNTIME", "/run/host/usr/bin/sh", "-c", shell_command])
 	return PackedStringArray(["-u", "LD_LIBRARY_PATH", "-u", "LD_PRELOAD", "-u", "STEAM_RUNTIME", "sh", "-c", shell_command])
 
 func get_flatpak_host_cmd_prefix() -> String:
 	if _is_flatpak_container:
 		return "flatpak-spawn --host "
-	if OS.has_environment("container") and OS.get_environment("container") == "pressure-vessel":
-		return "/run/host/usr/bin/env -u LD_LIBRARY_PATH -u LD_PRELOAD -u STEAM_RUNTIME "
 	return "/usr/bin/env -u LD_LIBRARY_PATH -u LD_PRELOAD -u STEAM_RUNTIME "
