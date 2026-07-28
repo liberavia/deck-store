@@ -4,5 +4,11 @@
 			"type": "flatpak_override",
 			"args": ["--user", "--device=all"]
 		}
+	],
+	"com.obsproject.Studio": [
+		{
+			"type": "flatpak_override",
+			"args": ["--user", "--device=all"]
+		}
 	]
 }

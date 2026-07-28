@@ -1,10 +1,13 @@
 {
 	"must_have_apps": [
+		"org.vinegarhq.Sober",
 		"tv.kodi.Kodi",
 		"com.heroicgameslauncher.hgl",
 		"net.lutris.Lutris",
-		"net.davidotek.pupgui2",
 		"com.discordapp.Discord",
-		"com.github.tchx84.Flatseal"
+		"com.obsproject.Studio",
+		"com.github.tchx84.Flatseal",
+		"net.davidotek.pupgui2",
+		"com.moonlight_stream.Moonlight"
 	]
 }

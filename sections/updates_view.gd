@@ -159,10 +159,23 @@ func _execute_update_check_in_thread():
 		
 		if exit_code == 0 and output_updates.size() > 0:
 			accumulated_output += output_updates[0] + "\n"
+			
+	# 4. Get installed versions to show old versions
+	var installed_versions = {}
+	var cmd_installed = "LC_ALL=C flatpak list --app --columns=application,version"
+	var output_installed = []
+	OS.execute(run_cmd, SystemUtils.get_host_sh_args(cmd_installed), output_installed, true)
+	if output_installed.size() > 0:
+		for line in output_installed[0].strip_edges().split("\n"):
+			line = line.strip_edges()
+			if line.is_empty(): continue
+			var parts = line.split("\t")
+			if parts.size() >= 2:
+				installed_versions[parts[0].strip_edges()] = parts[1].strip_edges()
 	
-	call_deferred("_process_update_check_result", accumulated_output)
+	call_deferred("_process_update_check_result", accumulated_output, installed_versions)
 
-func _process_update_check_result(output: String):
+func _process_update_check_result(output: String, installed_versions: Dictionary = {}):
 	if _update_check_thread:
 		_update_check_thread.wait_to_finish()
 		_update_check_thread = null
@@ -194,10 +207,11 @@ func _process_update_check_result(output: String):
 				if u.app_id == app_id: exists = true; break
 			
 			if not exists:
+				var old_version = installed_versions.get(app_id, "?")
 				available_updates.append({
 					"app_id": app_id,
 					"name": app_name,
-					"old_version": "?",
+					"old_version": old_version,
 					"new_version": new_version,
 					"size": size_str,
 					"icon": "",
@@ -261,9 +275,9 @@ func _populate_list():
 		for update in available_updates:
 			var item = update_item_scene.instantiate()
 			update_list_container.add_child(item)
-			item.setup(update.app_id, update.name, update.old_version, update.new_version, update.size, update.icon)
 			item.selection_toggled.connect(_on_item_selection_toggled)
 			item.image_load_requested.connect(func(url, rect): emit_signal("image_load_requested", url, rect))
+			item.setup(update.app_id, update.name, update.old_version, update.new_version, update.size, update.icon)
 			if selected_app_ids.has(update.app_id): item.set_selected(true)
 
 	_update_ui_state()

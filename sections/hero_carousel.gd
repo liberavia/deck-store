@@ -98,9 +98,9 @@ func _fetch_apps_data():
 		http.request(url)
 		active_requests += 1
 		
-	# Füge einen leeren Spacer am Ende ein, damit der rechte Rand im ScrollContainer nicht verschluckt wird
+	# Fix right margin clipping on ScrollContainer
 	var spacer = Control.new()
-	spacer.custom_minimum_size = Vector2(20, 0)
+	spacer.custom_minimum_size = Vector2(30, 0)
 	container.add_child(spacer)
 
 func _on_request_completed(result, response_code, headers, body, http_node, app_id):
@@ -147,6 +147,10 @@ func _create_empty_card(app_id: String) -> Button:
 			_focus_sound_player.play()
 		if card.get_index() == 0 and is_instance_valid(scroll):
 			scroll.scroll_horizontal = 0
+		elif card.get_index() == apps.size() - 1 and is_instance_valid(scroll):
+			var sp = container.get_child(container.get_child_count() - 1)
+			if sp is Control and sp != card:
+				scroll.call_deferred("ensure_control_visible", sp)
 		emit_signal("focus_entered_carousel")
 	)
 	card.focus_exited.connect(func():
