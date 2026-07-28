@@ -1,21 +1,17 @@
 extends Control
 
-# --- Signals (Required by Main) ---
 signal move_to_details_view_requested(app_id: String, installed: bool)
 signal image_load_requested(url: String, texture_rect: TextureRect)
 signal focus_exited_up_from_lists()
 signal load_new_page_requested(url: String, target_list: ProductList)
 
-# --- UI Nodes ---
 @onready var category_button_container: VBoxContainer = $ListMargin/HSplitContainer/LeftPanel/VBoxContainer/ScrollContainer/CategoryList
 @onready var product_list: ProductList = $ListMargin/HSplitContainer/RightPanel/ProductList
 @onready var back_button: Button = $ListMargin/HSplitContainer/LeftPanel/VBoxContainer/BackButton
 
-# --- Internal State ---
 var _api_cache_dir: String = ""
-const CACHE_DURATION_SEC: int = 86400 # 24 hours
+const CACHE_DURATION_SEC: int = 86400
 
-# --- Styling & Audio ---
 var _style_normal: StyleBoxFlat
 var _style_focus: StyleBoxFlat
 var _style_pressed: StyleBoxFlat
@@ -30,15 +26,13 @@ func _ready():
 	_setup_paths()
 	_setup_product_list()
 	
-	# Fetch categories dynamically
 	_fetch_categories()
 	
 	if back_button:
 		back_button.pressed.connect(_on_back_button_pressed)
-		back_button.visible = false # Hidden initially
+		back_button.visible = false
 
 func _setup_styles():
-	# Normal Style (Transparent Black, Thin White Border)
 	_style_normal = StyleBoxFlat.new()
 	_style_normal.bg_color = Color(0, 0, 0, 0.35)
 	_style_normal.set_border_width_all(1)
@@ -46,7 +40,6 @@ func _setup_styles():
 	_style_normal.content_margin_left = 15
 	_style_normal.content_margin_right = 15
 	
-	# Focus Style (Transparent Black, Thick Purple Border)
 	_style_focus = StyleBoxFlat.new()
 	_style_focus.bg_color = Color(0, 0, 0, 0.35)
 	_style_focus.set_border_width_all(3)
@@ -54,11 +47,10 @@ func _setup_styles():
 	_style_focus.content_margin_left = 15
 	_style_focus.content_margin_right = 15
 	
-	# Pressed/Selected Style (Purple Background, Purple Border)
 	_style_pressed = StyleBoxFlat.new()
-	_style_pressed.bg_color = Color(0.627, 0.125, 0.941, 0.6) # Semi-transparent Purple
+	_style_pressed.bg_color = Color(0.627, 0.125, 0.941, 0.6)
 	_style_pressed.set_border_width_all(3)
-	_style_pressed.border_color = Color(0.627, 0.125, 0.941, 1) # Solid Purple border
+	_style_pressed.border_color = Color(0.627, 0.125, 0.941, 1)
 	_style_pressed.content_margin_left = 15
 	_style_pressed.content_margin_right = 15
 	
@@ -67,7 +59,7 @@ func _setup_styles():
 func _setup_audio():
 	_focus_sound_player = AudioStreamPlayer.new()
 	_focus_sound_player.stream = load("res://assets/change.mp3")
-	_focus_sound_player.bus = "Master" # Or specific UI bus if exists
+	_focus_sound_player.bus = "Master"
 	add_child(_focus_sound_player)
 	
 	_select_sound_player = AudioStreamPlayer.new()
@@ -93,14 +85,12 @@ func _setup_product_list():
 
 func _on_products_loaded():
 	if is_instance_valid(product_list) and is_visible_in_tree():
-		# Wait for layout to stabilize (fixes scroll/focus issues)
 		await get_tree().create_timer(0.05).timeout
 		if product_list.has_method("has_products") and not product_list.has_products():
 			focus_default_element()
 		else:
 			product_list.focus_first_product()
 
-# --- Data Fetching ---
 
 func _fetch_categories():
 	var url = "https://flathub.org/api/v2/collection/category"
@@ -167,34 +157,28 @@ func _save_to_cache(url: String, api_data):
 		file.store_string(JSON.stringify(cache_data))
 		file.close()
 
-# --- UI Population ---
 
 func _populate_category_list(categories: Array):
-	# Clear existing
 	for child in category_button_container.get_children():
 		child.queue_free()
 		
 	categories.sort()
 	
-	# Add some spacing between buttons
 	category_button_container.add_theme_constant_override("separation", 10)
 	
 	for cat_id in categories:
 		var btn = Button.new()
-		# Display name: capitalize first letter (or specific mapping)
 		var display_name = cat_id.capitalize() 
 		btn.text = display_name
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		
-		# Styling
 		btn.add_theme_stylebox_override("normal", _style_normal)
 		btn.add_theme_stylebox_override("focus", _style_focus)
 		btn.add_theme_stylebox_override("pressed", _style_pressed)
-		btn.add_theme_stylebox_override("hover", _style_focus) # Mouse hover behaves like focus
+		btn.add_theme_stylebox_override("hover", _style_focus)
 		
-		btn.custom_minimum_size.y = 45 # Make them easily touchable/clickable
+		btn.custom_minimum_size.y = 45
 		
-		# Toggle behavior for "Selected" state
 		btn.toggle_mode = true
 		btn.button_group = _category_button_group
 		
@@ -205,11 +189,10 @@ func _populate_category_list(categories: Array):
 		
 		category_button_container.add_child(btn)
 		
-	# Initial selection if first load
 	if _first_load and category_button_container.get_child_count() > 0:
 		var first_btn = category_button_container.get_child(0)
 		first_btn.set_pressed_no_signal(true)
-		_on_category_button_pressed(categories[0], false) # Manually trigger load without sound
+		_on_category_button_pressed(categories[0], false)
 		_first_load = false
 
 func _on_button_focus_entered():
@@ -236,17 +219,14 @@ func _on_category_button_pressed(category_id: String, play_sound: bool = true):
 		emit_signal("load_new_page_requested", url, product_list)
 
 func _on_back_button_pressed():
-	# If we have subcategories later, implement this.
 	pass
 
-# --- Interface for Main ---
 
 func update_internal_list_install_status(installed_ids: Dictionary):
 	if is_instance_valid(product_list):
 		product_list.update_installed_status(installed_ids)
 
 func focus_default_element():
-	# Try to focus the selected button first, otherwise the first one
 	var pressed_btn = _category_button_group.get_pressed_button()
 	if pressed_btn:
 		pressed_btn.grab_focus()
@@ -262,13 +242,11 @@ func _unhandled_input(event: InputEvent):
 	if event.is_action_pressed("go_back"):
 		var focus_owner = get_viewport().gui_get_focus_owner()
 		if is_instance_valid(focus_owner):
-			# If we are in the product list, go back to the category selection
 			if product_list.is_ancestor_of(focus_owner):
 				focus_default_element()
 				get_viewport().set_input_as_handled()
 				return
 			
-			# If we are already in the category list, exit to the top bar
 			if category_button_container.is_ancestor_of(focus_owner):
 				emit_signal("focus_exited_up_from_lists")
 				get_viewport().set_input_as_handled()

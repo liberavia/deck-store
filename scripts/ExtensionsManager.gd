@@ -21,11 +21,9 @@ var _is_checking: bool = false
 var _update_check_queue: Array[Dictionary] = []
 var _is_checking_updates: bool = false 
 
-# Transaction Queue
 var _transaction_queue: Array[Dictionary] = []
 var _transaction_active: bool = false
 
-# Progress Monitoring
 var _progress_timer: Timer
 var _monitored_extensions: Array[String] = []
 var _progress_base_path: String = ""
@@ -39,12 +37,12 @@ func _ready():
 func _setup_paths():
 	var home = OS.get_environment("HOME")
 	if home.is_empty():
-		home = "user://" # Fallback
+		home = "user://"
 	_progress_base_path = home.path_join(".deck-store/tmp/progress/extensions")
 
 func _setup_timer():
 	_progress_timer = Timer.new()
-	_progress_timer.wait_time = 0.1 # Check every 100ms
+	_progress_timer.wait_time = 0.1
 	_progress_timer.one_shot = false
 	_progress_timer.timeout.connect(_check_progress_files)
 	add_child(_progress_timer)
@@ -65,7 +63,6 @@ func _check_progress_files():
 						if percent_str.is_valid_int():
 							emit_signal("extension_progress_updated", ext_id, int(percent_str), message)
 
-# --- Public API ---
 
 func get_all_extensions() -> Array[Dictionary]:
 	return _extensions_data
@@ -82,11 +79,9 @@ func get_extension_data(extension_id: String) -> Dictionary:
 			return ext
 	return {}
 
-# Returns a list of extension IDs that are required by `extension_id` but NOT currently installed.
-# Recursively checks dependencies. Returns ordered list (Leaf -> Root).
 func get_missing_dependencies(extension_id: String) -> Array[String]:
 	var missing: Array[String] = []
-	var visited: Array[String] = [] # To prevent infinite loops
+	var visited: Array[String] = []
 	_collect_missing_dependencies_recursive(extension_id, missing, visited)
 	return missing
 
@@ -100,15 +95,11 @@ func _collect_missing_dependencies_recursive(current_id: String, missing_list: A
 	
 	if dependencies is Array:
 		for dep_id in dependencies:
-			# Check sub-dependencies first (Depth-First)
 			_collect_missing_dependencies_recursive(dep_id, missing_list, visited)
 			
-			# If this dependency is missing and not already in our list, add it
 			if not get_extension_status(dep_id) and not missing_list.has(dep_id):
 				missing_list.append(dep_id)
 
-# Returns a list of extension IDs that are installed and depend on `extension_id`.
-# Recursively checks dependents. Returns ordered list for removal (Leaf dependents first).
 func get_installed_dependents(extension_id: String) -> Array[String]:
 	var dependents: Array[String] = []
 	var visited: Array[String] = []
@@ -120,25 +111,20 @@ func _collect_installed_dependents_recursive(target_id: String, dependents_list:
 		return
 	visited.append(target_id)
 	
-	# Find direct dependents
 	var direct_dependents = []
 	for ext in _extensions_data:
 		var ext_id = ext.get("id")
-		# Only consider installed extensions
 		if get_extension_status(ext_id):
 			var deps = ext.get("dependencies", [])
 			if deps is Array and deps.has(target_id):
 				direct_dependents.append(ext_id)
 	
-	# For each direct dependent, collect IT'S dependents first (recursion)
 	for dep_id in direct_dependents:
 		_collect_installed_dependents_recursive(dep_id, dependents_list, visited)
 		
-		# Add to list if not present
 		if not dependents_list.has(dep_id):
 			dependents_list.append(dep_id)
 
-# Starts a batch transaction.
 func execute_transaction(ids: Array, operation: String):
 	if _transaction_active:
 		printerr("ExtensionsManager: Transaction already active. Cannot start new one.")
@@ -165,7 +151,6 @@ func update_extension(extension_id: String):
 	execute_transaction([extension_id], "update")
 
 
-# --- Internal Logic ---
 
 func _process_next_transaction_item():
 	if _transaction_queue.is_empty():
@@ -208,7 +193,7 @@ func _execute_operation(extension_id: String, operation: String):
 
 func _execute_operation_script_in_thread(extension_data: Dictionary, operation: String):
 	var script_name = extension_data.get("script_name", "")
-	var internal_path = extension_data.get("internal_path", "") # Added internal path
+	var internal_path = extension_data.get("internal_path", "")
 	
 	if script_name.is_empty() or internal_path.is_empty():
 		printerr("ExtensionManager ERROR: Missing script name or internal path for ", extension_data.get("id"))
@@ -231,8 +216,6 @@ func _execute_operation_script_in_thread(extension_data: Dictionary, operation: 
 			var line = file.get_line().strip_edges()
 			if line.is_empty(): continue
 			
-			# Filter out Flatpak progress bars/lines to avoid console spam
-			# They usually look like: "Installiere 1/6 … ██  10% 354,5 KB/s"
 			if (line.contains("Installiere") or line.contains("Downloading") or line.contains("Updating")) and line.contains("%"):
 				continue
 				
@@ -265,7 +248,6 @@ func _process_operation_result(extension_data: Dictionary, operation: String, ex
 
 	check_all_extensions_status() 
 	
-	# If update was successful, clear the update flag immediately
 	if operation == "update" and exit_code == 0:
 		if _extensions_update_available.has(extension_id):
 			_extensions_update_available.erase(extension_id)
@@ -281,7 +263,6 @@ func _process_operation_result(extension_data: Dictionary, operation: String, ex
 			_process_next_transaction_item()
 
 
-# Scans the extensions folder for extension.json files.
 func _load_extensions():
 	_extensions_data.clear()
 	var dir = DirAccess.open(EXTENSIONS_ROOT_DIR)
@@ -314,14 +295,12 @@ func _load_single_extension(json_path: String, dir_path: String):
 	var parse_result = JSON.parse_string(json_string)
 	if parse_result is Dictionary:
 		var ext_data = parse_result as Dictionary
-		# Inject the internal path so we know where assets are located
 		ext_data["internal_path"] = dir_path
 		_extensions_data.append(ext_data)
 	else:
 		printerr("ExtensionManager WARNING: Invalid JSON in ", json_path)
 
 
-# Queues up all extensions to have their installation status checked.
 func check_all_extensions_status():
 	if _is_checking:
 		print("INFO ExtensionManager: A check is already in progress.")
@@ -380,11 +359,9 @@ func _process_check_result(extension_data: Dictionary, exit_code: int):
 		_extensions_status[extension_id] = is_installed
 		emit_signal("extension_status_updated", extension_id, is_installed)
 	
-	# We don't set _is_checking to false here, _start_next_check handles it
 	_start_next_check()
 
 
-# --- Update Check Logic ---
 
 func check_for_updates_for_all_installed_extensions():
 	if _is_checking_updates:
@@ -392,8 +369,6 @@ func check_for_updates_for_all_installed_extensions():
 		return
 	
 	print("INFO ExtensionManager: Starting update check for installed extensions.")
-	# We don't clear all updates here, only when a check succeeds we update the status.
-	# Actually, clearing is fine if we check everything.
 
 	_update_check_queue.clear()
 	for ext_data in _extensions_data:
@@ -526,7 +501,6 @@ func _get_executable_script_path(internal_path: String, script_name: String) -> 
 	if not DirAccess.dir_exists_absolute(tmp_ext_dir):
 		DirAccess.make_dir_recursive_absolute(tmp_ext_dir)
 		
-	# Copy deckstore_base.sh
 	var base_res = "res://extensions/deckstore_base.sh"
 	var base_user = tmp_dir.path_join("deckstore_base.sh")
 	if FileAccess.file_exists(base_res):
@@ -536,7 +510,6 @@ func _get_executable_script_path(internal_path: String, script_name: String) -> 
 			f_base.store_string(base_content)
 			f_base.close()
 			
-	# Copy target script
 	var target_res = internal_path.path_join(script_name)
 	var target_user = tmp_ext_dir.path_join(script_name)
 	if FileAccess.file_exists(target_res):

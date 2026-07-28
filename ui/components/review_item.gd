@@ -1,4 +1,3 @@
-# ReviewItem.gd
 extends PanelContainer
 
 @onready var username_label: Label = $MarginContainer/ContentVBox/HBoxContainer/UsernameLabel
@@ -30,8 +29,6 @@ func set_review_data(data: Dictionary):
 		var star_value = (float(percentage_rating) / 100.0) * float(review_rating_stars.max_stars)
 		review_rating_stars.set_stars(star_value)
 	elif is_instance_valid(review_rating_stars):
-		review_rating_stars.set_stars(-1.0) # Signalisiert "kein Rating" / versteckt Sterne	
+		review_rating_stars.set_stars(-1.0)
 	
-	review_text_label.text = data.get("description", "No Review text found.") # ODRS verwendet oft "review"
-	# Falls der Key "review_text" in Ihren ODRS-Daten anders heißt (z.B. nur "review"), anpassen.
-	# Beispiel ODRS: data.get("review", "Kein Review-Text vorhanden.")
+	review_text_label.text = data.get("description", "No Review text found.")

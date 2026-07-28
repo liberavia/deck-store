@@ -9,7 +9,6 @@ var _focus_sound_player: AudioStreamPlayer
 func _ready():
 	if panel: 
 		_original_panel_style = panel.get_theme_stylebox("panel")
-		# Ensure children don't block mouse events
 		panel.mouse_filter = Control.MOUSE_FILTER_PASS
 		for child in panel.get_children():
 			if child is Control: child.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -48,7 +47,6 @@ func _on_focus_exited_visual():
 
 func _on_gui_input(event: InputEvent):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		# Simulate ui_accept to trigger the zoom logic in DetailsView
 		var a = InputEventAction.new()
 		a.action = "ui_accept"
 		a.pressed = true

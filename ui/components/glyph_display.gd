@@ -13,7 +13,6 @@ func _ready():
 	self.mouse_filter = Control.MOUSE_FILTER_STOP
 	self.gui_input.connect(_on_gui_input)
 	
-	# Initial pivot for scaling
 	self.pivot_offset = custom_minimum_size / 2.0
 
 func _on_gui_input(event: InputEvent):
@@ -74,7 +73,7 @@ func _get_button_name_from_index(index: int) -> String:
 		JOY_BUTTON_LEFT_SHOULDER: return "L1"
 		JOY_BUTTON_RIGHT_SHOULDER: return "R1"
 		JOY_BUTTON_START: return "Menu"
-		4: return "View" # Select/Back button
+		4: return "View"
 	return ""
 
 func apply_feedback(is_pressed: bool):

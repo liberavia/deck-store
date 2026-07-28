@@ -1,8 +1,6 @@
-# product_list.gd
 class_name ProductList
 extends Control
 
-# --- Configuraton ---
 enum DisplayMode { MULTI_LINE_WRAP, SINGLE_LINE_SCROLL }
 @export var display_mode: DisplayMode = DisplayMode.MULTI_LINE_WRAP
 @export var product_box_scene: PackedScene
@@ -15,14 +13,12 @@ enum DisplayMode { MULTI_LINE_WRAP, SINGLE_LINE_SCROLL }
 @export var min_rows: int = 2
 @export var use_auto_height: bool = true
 
-# --- Signals ---
 signal focus_exited_up
 signal image_load_requested(url: String, texture_rect: TextureRect)
 signal move_to_details_view(app_id: String, installed: bool)
 signal load_new_page(url: String, target_list: ProductList)
 signal products_loaded
 
-# --- Nodes ---
 @onready var multi_line_scroll: ScrollContainer = $VBoxContainer/MultiLineScroll
 @onready var multi_line_content: HFlowContainer = $VBoxContainer/MultiLineScroll/MultiLineContent
 @onready var single_line_scroll: ScrollContainer = $VBoxContainer/SingleLineScroll
@@ -44,7 +40,6 @@ signal products_loaded
 @onready var no_results_label: Label = $VBoxContainer/NoResultsLabel
 @onready var loading_overlay: Control = $LoadingOverlay
 
-# --- Internal Variables ---
 var _active_content_container: Container 
 var _product_box_min_width: float = 160.0 
 var _product_box_min_height: float = 240.0
@@ -59,7 +54,6 @@ var current_query = ""
 var current_category = ""
 var current_url = ""
 
-# --- Cooldown Variables ---
 const NAV_COOLDOWN_MS_PAGING = 150
 const NAV_COOLDOWN_MS_CARDS = 200
 var last_nav_time = { "ui_up": 0, "ui_down": 0, "ui_left": 0, "ui_right": 0, "ui_page_up": 0, "ui_page_down": 0 }
@@ -112,7 +106,7 @@ func _ready():
 		_active_content_container = multi_line_content
 		_update_pagination_visibility()
 		print("ProductList: Multi-line mode activated.")
-	else: # SINGLE_LINE_SCROLL
+	else:
 		multi_line_scroll.visible = false
 		single_line_scroll.visible = true
 		_active_content_container = single_line_content
@@ -128,11 +122,9 @@ func _ready():
 		
 	call_deferred("_update_minimum_height")
 	
-	# Connect Top Pagination
 	if prev_button: prev_button.pressed.connect(_on_prev_button_pressed)
 	if next_button: next_button.pressed.connect(_on_next_button_pressed)
 	
-	# Connect Bottom Pagination
 	if prev_button_bottom: prev_button_bottom.pressed.connect(_on_prev_button_pressed)
 	if next_button_bottom: next_button_bottom.pressed.connect(_on_next_button_pressed)
 	
@@ -165,7 +157,6 @@ func set_pagination_data(hitsPerPage: int, page: int, totalPages: int):
 	page_label.text = label_text
 	if page_label_bottom: page_label_bottom.text = label_text
 	
-	# Disable/Enable Buttons logic
 	var can_go_next = current_page < total_pages
 	var can_go_prev = current_page > 1
 	
@@ -174,7 +165,6 @@ func set_pagination_data(hitsPerPage: int, page: int, totalPages: int):
 	_update_nav_button(prev_button, can_go_prev)
 	_update_nav_button(prev_button_bottom, can_go_prev)
 
-	# Focus handling if button was disabled while focused (simple fallback)
 	if not can_go_next and (next_button.has_focus() or next_button_bottom.has_focus()):
 		if can_go_prev: 
 			if next_button.has_focus(): prev_button.grab_focus()
@@ -193,7 +183,6 @@ func _update_nav_button(btn: Button, enabled: bool):
 func set_products(product_data: Array):
 	hide_loading()
 	
-	# Reset scroll position
 	if is_instance_valid(multi_line_scroll): multi_line_scroll.scroll_vertical = 0
 	if is_instance_valid(single_line_scroll): single_line_scroll.scroll_horizontal = 0
 	
@@ -202,7 +191,6 @@ func set_products(product_data: Array):
 	if is_instance_valid(no_results_label):
 		no_results_label.visible = not has_products
 		
-	# Determine target scroll based on mode
 	var target_scroll = multi_line_scroll if display_mode == DisplayMode.MULTI_LINE_WRAP else single_line_scroll
 	if is_instance_valid(target_scroll): target_scroll.visible = has_products
 	
@@ -210,7 +198,6 @@ func set_products(product_data: Array):
 	var focus_was_inside = is_instance_valid(focus_owner) and is_ancestor_of(focus_owner)
 
 	if not has_products:
-		# Hide pagination if no results
 		if pagination_bar: pagination_bar.visible = false
 		if pagination_bar_bottom: pagination_bar_bottom.visible = false
 		print("--- ProductList set_products (Empty) END ---")
@@ -233,7 +220,6 @@ func set_products(product_data: Array):
 	for product in product_data:
 		var product_app_id = product.get("app_id")
 		
-		# Skip blacklisted apps
 		if AppBlacklist.is_blacklisted(product_app_id):
 			continue
 			
@@ -266,7 +252,6 @@ func set_products(product_data: Array):
 	print("--- ProductList set_products END ---")
 	print("Final child count in active container: ", final_child_count)
 	
-	# Restore pagination visibility if products exist and we are in multi-line mode
 	if display_mode == DisplayMode.MULTI_LINE_WRAP:
 		_update_pagination_visibility()
 	
@@ -314,7 +299,6 @@ func _build_url(base: String, params: Dictionary) -> String:
 	return base + "?" + query_string
 
 func _show_pagination():
-	# Do not show pagination for single-line scrolling lists (e.g. on Home View)
 	if display_mode == DisplayMode.SINGLE_LINE_SCROLL:
 		return false
 	return true
@@ -331,7 +315,6 @@ func _on_prev_button_pressed():
 	
 	params["page"] = str(current_page - 1)
 	params["per_page"] = str(items_per_page)
-	# Ensure locale is present if it was hardcoded before, though ideally it should be in current_url
 	if not params.has("locale"): params["locale"] = "en" 
 	
 	var target_url = _build_url(base_url, params)
@@ -370,7 +353,7 @@ func _update_minimum_height():
 		printerr("Nodes für Mindesthöhenberechnung ungültig in '%s'." % title)
 		return
 
-	await get_tree().process_frame # Wait for next frame for size adjustments
+	await get_tree().process_frame
 
 	var calculated_min_height: float = 0.0
 	var title_height: float = 0.0
@@ -384,20 +367,16 @@ func _update_minimum_height():
 	if display_mode == DisplayMode.MULTI_LINE_WRAP:
 		var num_rows = max(1, min_rows)
 		var content_v_separation = _active_content_container.get_theme_constant("v_separation", "HFlowContainer")
-		# Height = (Amount Rows * Box Height) + (Amount Seperations * Seperation Height)
 		content_min_height = (_product_box_min_height * num_rows) + (content_v_separation * max(0, num_rows - 1))
-	else: # SINGLE_LINE_SCROLL
+	else:
 		content_min_height = _product_box_min_height
 
-	# Complete min height = Title + Seperation + Content
 	calculated_min_height = title_height + content_min_height
 	if title_label.visible:
 		calculated_min_height += vbox_separation
 
-	# Add padding
 	calculated_min_height += 10.0
 	
-	# Add height for bottom pagination if visible
 	if pagination_bar_bottom and pagination_bar_bottom.visible:
 		calculated_min_height += pagination_bar_bottom.size.y + vbox_separation
 
@@ -406,7 +385,6 @@ func _update_minimum_height():
 
 
 func focus_first_product():
-	# Reset scroll explicitly before focusing to prevent jumping to bottom
 	if multi_line_scroll.visible: multi_line_scroll.scroll_vertical = 0
 	elif single_line_scroll.visible: single_line_scroll.scroll_horizontal = 0
 
@@ -427,7 +405,6 @@ func _input(event: InputEvent):
 	if not has_focus_ownership:
 		return
 		
-	# Pagination Shortcuts - only for multi-line wrap lists
 	if display_mode == DisplayMode.MULTI_LINE_WRAP:
 		if event.is_action_pressed("ui_page_up"):
 			var current_time = Time.get_ticks_msec()
@@ -462,7 +439,6 @@ func _input(event: InputEvent):
 			get_viewport().set_input_as_handled()
 
 
-# --- Core Navigation Logic  ---
 func _handle_navigation(action_string: String) -> bool:
 	var focused_control = get_viewport().gui_get_focus_owner()
 	if not is_instance_valid(focused_control) or not _active_content_container.is_ancestor_of(focused_control):
@@ -471,7 +447,6 @@ func _handle_navigation(action_string: String) -> bool:
 	var navigation_occurred = false
 	var target_node_to_focus: Control = null
 
-	# Focus is in current product container
 	var current_index = focused_control.get_index()
 	var child_count = _active_content_container.get_child_count()
 
@@ -488,13 +463,10 @@ func _handle_navigation(action_string: String) -> bool:
 				is_in_first_row = true
 
 		if is_in_first_row:
-			# Check if there is anything focusable above this list before exiting
 			var neighbor = focused_control.find_valid_focus_neighbor(SIDE_TOP)
 			if is_instance_valid(neighbor):
-				# Let Godot handle the focus switch to the neighbor above
 				return false
 			else:
-				# Nothing above, exit to top bar
 				emit_signal("focus_exited_up")
 				navigation_occurred = true
 		else:
@@ -529,7 +501,6 @@ func _handle_navigation(action_string: String) -> bool:
 
 	return navigation_occurred
 
-# --- Helper Functions ---
 
 func _get_current_column_count() -> int:
 	if not is_instance_valid(_active_content_container): return 1
@@ -544,7 +515,6 @@ func _get_current_column_count() -> int:
 		var columns = floor((container_width + h_separation) / divisor)
 		return max(1, int(columns))
 	elif _active_content_container is HBoxContainer:
-		# Count only valid children
 		var valid_count = 0
 		for child in _active_content_container.get_children():
 			if not child.is_queued_for_deletion():
@@ -564,7 +534,6 @@ func _focus_product_at_index(target_node: Control):
 		if target_node.focus_mode != Control.FOCUS_NONE:
 			target_node.grab_focus()
 			
-			# Wait one frame for layout to stabilize and positions to be accurate
 			await get_tree().process_frame
 			if not is_instance_valid(target_node) or not target_node.has_focus():
 				return
@@ -576,7 +545,7 @@ func _focus_product_at_index(target_node: Control):
 				scroll_container = single_line_scroll
 				
 			if is_instance_valid(scroll_container):
-				var margin = 30.0 # Slightly larger margin for better visibility
+				var margin = 30.0
 				
 				if display_mode == DisplayMode.MULTI_LINE_WRAP:
 					var node_y = target_node.position.y

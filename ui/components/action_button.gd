@@ -2,8 +2,8 @@ extends Button
 
 @export var install_color := Color.from_string("#245322", Color.GREEN)
 @export var remove_color := Color.from_string("#5c0001", Color.RED)
-@export var busy_color := Color.from_string("#4a4a4a", Color.DARK_GRAY) # Farbe für nicht-interaktive Zustände
-@export var normal_color := Color.from_string("#626262", Color.GRAY) # Standardfarbe, wenn nichts zutrifft
+@export var busy_color := Color.from_string("#4a4a4a", Color.DARK_GRAY)
+@export var normal_color := Color.from_string("#626262", Color.GRAY)
 
 @export var app_id: String = ""
 @export var is_initially_installed: bool = false
@@ -46,7 +46,7 @@ func _ready():
 	stylebox_install = stylebox_normal.duplicate(); stylebox_install.bg_color = install_color
 	stylebox_remove = stylebox_normal.duplicate(); stylebox_remove.bg_color = remove_color
 	stylebox_busy = stylebox_normal.duplicate(); stylebox_busy.bg_color = busy_color
-	stylebox_normal.bg_color = normal_color # Setze die normale Hintergrundfarbe
+	stylebox_normal.bg_color = normal_color
 
 	self.pressed.connect(_on_pressed)
 
@@ -62,11 +62,10 @@ func _ready():
 
 func set_app_info(id: String, p_name: String, url):
 	app_id = id
-	app_name = p_name # Speichern!
-	icon_url = str(url) if url != null else ""   # Sicherstellen, dass es ein String ist!
+	app_name = p_name
+	icon_url = str(url) if url != null else ""
 
-	# Initialen Status basierend auf Installation und DownloadManager setzen
-	var main_node = get_node_or_null("/root/App") # Pfad anpassen!
+	var main_node = get_node_or_null("/root/App")
 	var is_installed = false
 	app_scope = ""
 	if main_node and main_node.has_method("is_app_installed"):
@@ -85,12 +84,11 @@ func set_app_info(id: String, p_name: String, url):
 	if manager_has_active_task:
 		_update_ui(active_task_status)
 	else:
-		if is_installed: _update_ui({"status": "completed", "app_id": app_id, "name": app_name, "icon_url": icon_url, "scope": app_scope}) # Name/Icon/Scope mitgeben
+		if is_installed: _update_ui({"status": "completed", "app_id": app_id, "name": app_name, "icon_url": icon_url, "scope": app_scope})
 		else: _update_ui({})
 
 
 func set_app_id_and_initial_state(assigned_id: String, is_initially_installed: bool):
-	# print("DEBUG UI: Setting initial state for ", assigned_id, " - Installed: ", is_initially_installed) # Weniger Output
 	app_id = assigned_id
 	current_operation_id = ""
 	app_scope = ""
@@ -108,10 +106,8 @@ func set_app_id_and_initial_state(assigned_id: String, is_initially_installed: b
 			if active_task_status.has("operation_id"): current_operation_id = active_task_status.operation_id
 
 	if manager_has_active_task:
-		# print("DEBUG UI: Initial state from active task: ", active_task_status) # Weniger Output
 		_update_ui(active_task_status)
 	else:
-		# print("DEBUG UI: Initial state from installed flag: ", is_initially_installed) # Weniger Output
 		if is_initially_installed: _update_ui({"status": "completed", "app_id": app_id, "scope": app_scope})
 		else: _update_ui({})
 
@@ -148,7 +144,6 @@ func _on_pressed():
 				space_left = dir.get_space_left()
 				
 			if space_left > 0 and app_size_bytes > 0:
-				# Add 10% safety buffer
 				if space_left < (app_size_bytes * 1.1):
 					print("ActionButton: Not enough space! Need ", app_size_bytes, " but have ", space_left)
 					self.text = "Not enough space"
@@ -179,19 +174,16 @@ func _on_pressed():
 
 
 func _on_task_updated(operation_id: String, status_data: Dictionary):
-	# print("DEBUG UI: _on_task_updated SIGNAL RECEIVED for OpID: ", operation_id, " My OpID: ", current_operation_id) # Weniger Output
 	if status_data.has("app_id") and status_data.app_id == app_id:
 		var status = status_data.get("status", "unknown")
 		if status == "preparing" or status == "queued":
 			if current_operation_id != operation_id:
-				# print("DEBUG UI: Storing current_operation_id: ", operation_id) # Weniger Output
 				current_operation_id = operation_id
 		if operation_id == current_operation_id or current_operation_id.is_empty():
 			_update_ui(status_data)
 
 
 func _on_task_finished(operation_id: String, final_status: String, operation_type: String):
-	# print("DEBUG UI: _on_task_finished SIGNAL RECEIVED for OpID: ", operation_id, " My OpID: ", current_operation_id, " Status: ", final_status, " Type: ", operation_type) # Weniger Output
 	if operation_id == current_operation_id:
 		var final_ui_status_data = {}
 		if final_status == "completed":
@@ -241,7 +233,6 @@ func _update_ui(status_data: Dictionary):
 			_:
 				button_text = TEXT_INSTALL; button_disabled = false; button_stylebox = stylebox_install
 	else:
-		# No task data, but check our internal app_scope for initial state
 		if app_scope == "system":
 			button_text = TEXT_SYSTEM; button_disabled = true; button_stylebox = stylebox_busy
 

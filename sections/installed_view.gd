@@ -11,8 +11,6 @@ const REFRESH_COOLDOWN_SECONDS = 300
 @onready var sort_option_button: OptionButton = $MarginContainer/VBoxContainer/HeaderContainer/SortOptionButton
 @onready var scroll_container: ScrollContainer = $MarginContainer/VBoxContainer/ScrollContainer
 
-# Refresh UI Elements (dynamically connected in _ready or via scene if we updated scene)
-# Assuming they will be added to the scene:
 @onready var refresh_button: Button = $MarginContainer/VBoxContainer/HeaderContainer/RefreshContainer/RefreshButton
 @onready var last_updated_label: Label = $MarginContainer/VBoxContainer/HeaderContainer/RefreshContainer/LastUpdatedLabel
 @onready var cooldown_progress: TextureProgressBar = $MarginContainer/VBoxContainer/HeaderContainer/RefreshContainer/RefreshButton/CooldownProgress
@@ -25,38 +23,31 @@ var last_refresh_time: int = 0
 var last_updated_time_str: String = "--:--"
 var _refresh_pending: bool = false
 
-# Sounds
 var audio_player: AudioStreamPlayer
 var stream_focus = preload("res://assets/change.mp3")
 var stream_select = preload("res://assets/nextprev.wav")
 
 func _ready():
-	# Setup Audio
 	audio_player = AudioStreamPlayer.new()
 	add_child(audio_player)
 
-	# Setup Loading Overlay
 	if loading_overlay_scene:
 		loading_overlay_instance = loading_overlay_scene.instantiate()
 		add_child(loading_overlay_instance)
 		loading_overlay_instance.visible = false
 
-	# Connect Sort Button signals
 	sort_option_button.item_selected.connect(_on_sort_option_selected)
 	sort_option_button.focus_entered.connect(_on_sort_focus_entered)
-	sort_option_button.pressed.connect(_on_sort_pressed) # When dropdown opens
+	sort_option_button.pressed.connect(_on_sort_pressed)
 	
-	# Connect Refresh Button
 	if is_instance_valid(refresh_button):
 		refresh_button.pressed.connect(_on_refresh_pressed)
-		refresh_button.focus_entered.connect(_on_sort_focus_entered) # Use same sound logic
+		refresh_button.focus_entered.connect(_on_sort_focus_entered)
 
-	# Manual Focus Neighbors for Header
 	if is_instance_valid(refresh_button) and is_instance_valid(sort_option_button):
 		refresh_button.focus_neighbor_right = sort_option_button.get_path()
 		sort_option_button.focus_neighbor_left = refresh_button.get_path()
 		
-	# Initial populate if data is already available
 	var main_node = get_node_or_null("/root/App")
 	if main_node and main_node.has_method("get_installed_ids"):
 		var apps = main_node.get_installed_ids()
@@ -84,13 +75,11 @@ func _process(_delta):
 			else:
 				cooldown_progress.visible = false
 	else:
-		# Cooldown expired
 		if is_instance_valid(refresh_button): 
 			refresh_button.text = "Refresh List"
 		if is_instance_valid(cooldown_progress):
 			cooldown_progress.visible = false
 			
-		# Auto-Refresh if enabled
 		if SettingsManager.get_setting("auto_refresh_installed", true) and last_refresh_time > 0:
 			_trigger_refresh()
 
@@ -114,8 +103,6 @@ func _trigger_refresh():
 	if main_node and main_node.has_method("refresh_installed_apps_list"):
 		main_node.refresh_installed_apps_list()
 	
-	# Fallback/Safety: Hide overlay after a few seconds if no update comes back quickly, 
-	# though normally update_internal_list_install_status will clear it.
 	get_tree().create_timer(5.0).timeout.connect(func(): if is_instance_valid(loading_overlay_instance): loading_overlay_instance.hide_overlay())
 
 func _update_last_updated_label():
@@ -136,7 +123,6 @@ func _on_sort_focus_entered():
 		audio_player.play()
 
 func _on_sort_pressed():
-	# Optional: Play select sound when opening the dropdown
 	if audio_player and stream_select:
 		audio_player.stream = stream_select
 		audio_player.play()
@@ -159,11 +145,9 @@ func on_view_entered():
 
 func update_internal_list_install_status(installed_apps: Dictionary):
 	_refresh_pending = false
-	# Hide overlay when data arrives
 	if is_instance_valid(loading_overlay_instance):
 		loading_overlay_instance.hide_overlay()
 		
-	# If this update came from an external source (not our refresh trigger), update timestamp anyway
 	if installed_apps.hash() != current_installed_apps_data.hash():
 		_update_last_updated_label()
 		
@@ -191,28 +175,26 @@ func update_internal_list_install_status(installed_apps: Dictionary):
 				refresh_button.grab_focus()
 
 func _populate_list(installed_apps: Dictionary):
-	# Clear existing
 	for child in app_list_container.get_children():
 		child.queue_free()
 	
 	var app_ids = installed_apps.keys()
 	var sort_mode = sort_option_button.selected
-	# 0 = Name Asc, 1 = Name Desc, 2 = Size Desc, 3 = Size Asc
 	
 	app_ids.sort_custom(func(a, b):
-		if sort_mode == 2: # Size Descending (▼)
+		if sort_mode == 2:
 			var size_a = _parse_size(installed_apps[a].get("size", "0 B")).value_bytes
 			var size_b = _parse_size(installed_apps[b].get("size", "0 B")).value_bytes
 			return size_a > size_b
-		elif sort_mode == 3: # Size Ascending (▲)
+		elif sort_mode == 3:
 			var size_a = _parse_size(installed_apps[a].get("size", "0 B")).value_bytes
 			var size_b = _parse_size(installed_apps[b].get("size", "0 B")).value_bytes
 			return size_a < size_b
-		elif sort_mode == 1: # Name Descending (Z-A, ▼)
+		elif sort_mode == 1:
 			var name_a = installed_apps[a].get("name", a).to_lower()
 			var name_b = installed_apps[b].get("name", b).to_lower()
 			return name_a > name_b
-		else: # Name Ascending (A-Z, ▲, Default 0)
+		else:
 			var name_a = installed_apps[a].get("name", a).to_lower()
 			var name_b = installed_apps[b].get("name", b).to_lower()
 			return name_a < name_b
@@ -223,7 +205,6 @@ func _populate_list(installed_apps: Dictionary):
 	for app_id in app_ids:
 		var info = installed_apps[app_id]
 		
-		# Only show user apps in this list
 		if info.get("scope") != "user":
 			continue
 			
@@ -233,9 +214,8 @@ func _populate_list(installed_apps: Dictionary):
 		var parsed_size = _parse_size(raw_size_str)
 		total_bytes += parsed_size.value_bytes
 		
-		# Use cleaned string for display (e.g. "450.3 MB")
 		var display_size_str = parsed_size.display_str
-		if display_size_str.is_empty(): display_size_str = raw_size_str # Fallback
+		if display_size_str.is_empty(): display_size_str = raw_size_str
 		
 		var item = installed_app_item_scene.instantiate()
 		app_list_container.add_child(item)
@@ -244,7 +224,6 @@ func _populate_list(installed_apps: Dictionary):
 		if item.has_signal("image_load_requested"):
 			item.image_load_requested.connect(func(url, rect): emit_signal("image_load_requested", url, rect))
 		
-	# Update Total Size Label
 	total_size_label.text = tr("LBL_TOTAL_SIZE") % _format_size(total_bytes)
 
 func _on_item_pressed(app_id: String):
@@ -254,9 +233,7 @@ func _on_item_pressed(app_id: String):
 	emit_signal("move_to_details_view_requested", app_id, true, app_name)
 
 func _parse_size(size_str: String) -> Dictionary:
-	# Returns { "value_bytes": float, "display_str": String }
 	
-	# Regex to capture number and unit, ignoring potential garbage in between
 	var regex = RegEx.new()
 	regex.compile("([0-9.,]+).*?([A-Za-z]+)") 
 	
@@ -264,7 +241,7 @@ func _parse_size(size_str: String) -> Dictionary:
 	if not match_result:
 		return { "value_bytes": 0.0, "display_str": size_str }
 		
-	var val_str = match_result.get_string(1).replace(",", ".") # Ensure dot decimal
+	var val_str = match_result.get_string(1).replace(",", ".")
 	var unit_str = match_result.get_string(2)
 	
 	var value = val_str.to_float()
@@ -277,11 +254,11 @@ func _parse_size(size_str: String) -> Dictionary:
 		"MB": bytes = value * 1024 * 1024
 		"KB", "K": bytes = value * 1024
 		"B": bytes = value
-		_: bytes = 0.0 # Unknown unit
+		_: bytes = 0.0
 		
 	return {
 		"value_bytes": bytes,
-		"display_str": "%s %s" % [val_str, unit_str] # Clean formatted string
+		"display_str": "%s %s" % [val_str, unit_str]
 	}
 
 func _format_size(size_bytes: float) -> String:

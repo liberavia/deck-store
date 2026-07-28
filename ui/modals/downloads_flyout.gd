@@ -60,7 +60,6 @@ func _update_queue():
 	for op_id in active_tasks.keys():
 		active_safe_ids.append(op_id.replace(".", "_"))
 	
-	# Clean up removed tasks
 	for child in queue_container.get_children():
 		if not active_safe_ids.has(child.name):
 			child.queue_free()

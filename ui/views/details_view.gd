@@ -1,4 +1,3 @@
-# details_view.gd
 extends Control
 
 signal move_back_to_main_view
@@ -29,7 +28,6 @@ signal image_load_requested(url: String, texture_rect: TextureRect)
 @onready var rating_label: Label = $MarginContainer/Panel/DetailsContents/ContainerDetailsMain/MarginContainerAppDetails/ContainerAppDetails/RatingContainer/RatingStars/MarginContainer/RatingCountLabel
 @onready var verified_app: HBoxContainer = $MarginContainer/Panel/DetailsContents/DetailsNavbar/TitleGroup/MarginContainer/VerifiedContainer
 
-# --- Internal State ---
 var current_app_id: String = ""
 var is_currently_installed: bool = false
 var current_app_name: String = ""
@@ -53,19 +51,15 @@ var _api_cache_abs_path: String = ""
 var _odrs_reviews_cache_abs_path: String = ""
 var pulse_tween: Tween
 
-# --- Constants ---
 const DECKSTORE_BASE_DIR_NAME = ".deck-store" 
 const API_CACHE_SUBDIR = "cache/api"          
 const ODRS_REVIEWS_CACHE_SUBDIR = "cache/odrs_reviews"
 
-const CACHE_DURATION_MSEC: int = 3600 * 1000 # 1 hour
-const ODRS_DETAILED_REVIEWS_CACHE_DURATION_SEC = 60 * 60 * 6 # 6 hours
+const CACHE_DURATION_MSEC: int = 3600 * 1000
+const ODRS_DETAILED_REVIEWS_CACHE_DURATION_SEC = 60 * 60 * 6
 const DEFAULT_REVIEWS_BUTTON_CAPTION: String = "BTN_SHOW_REVIEWS"
 const REVIEWS_BUTTON_LOADING_CAPTION: String = "LBL_LOADING"
 
-# =============================================================================
-# BUILT-IN GODOT METHODS
-# =============================================================================
 
 func _ready():
 	var home_dir = OS.get_environment("HOME")
@@ -129,7 +123,6 @@ func _on_installed_apps_refreshed():
 		_trigger_steam_check_if_needed()
 
 func _unhandled_input(event: InputEvent):
-	# Only handle back button if this view is visible
 	if not self.visible:
 		return
 
@@ -150,9 +143,6 @@ func _unhandled_input(event: InputEvent):
 			get_viewport().set_input_as_handled()
 			return
 
-# =============================================================================
-# PUBLIC METHODS (called from main.gd or elsewhere)
-# =============================================================================
 
 func set_initial_state(assigned_id: String, initially_installed: bool, assigned_name: String = ""):
 	print("DEBUG DetailsView: set_initial_state - AppID:", assigned_id, "Name:", assigned_name, "Installed:", initially_installed)
@@ -164,7 +154,6 @@ func set_initial_state(assigned_id: String, initially_installed: bool, assigned_
 
 	if is_instance_valid(action_button) and action_button.has_method("set_app_id_and_initial_state"):
 		action_button.set_app_id_and_initial_state(assigned_id, is_currently_installed)
-		# If we already have a name, we can set it on the action button too
 		if not assigned_name.is_empty():
 			action_button.app_name = assigned_name	
 func clear_data():
@@ -192,7 +181,6 @@ func clear_data():
 		detailed_reviews_request = null
 	current_detailed_reviews = []
 	
-# Main entry point to load data for the current_app_id
 func load_details():
 	if current_app_id.is_empty():
 		printerr("ERROR: Cannot load details, app_id is empty.")
@@ -215,11 +203,7 @@ func _on_shortcut_action_completed(action: String, app_id: String, success: bool
 		await get_tree().create_timer(0.5).timeout
 		_trigger_steam_check_if_needed()
 
-# =============================================================================
-# INTERNAL DATA LOADING & CACHING
-# =============================================================================
 
-# --- Helper function to get cache file path ---
 func _get_api_cache_filepath(url: String) -> String:
 	if _api_cache_abs_path.is_empty():
 		printerr("ERROR DetailsView: _get_api_cache_filepath - API Cache Path not initialized!")
@@ -227,13 +211,11 @@ func _get_api_cache_filepath(url: String) -> String:
 	var request_hash = url.md5_text()
 	return _api_cache_abs_path.path_join(request_hash + ".json")
 	
-# --- Load details: Check cache or start request ---
 func _load_details_data(app_id_to_load: String):
 	_fetch_summary(app_id_to_load)
 	
 	var detail_api_url = "https://flathub.org/api/v2/appstream/%s?locale=en" % app_id_to_load
 
-	# --- File Cache Check ---
 	var cache_filepath = _get_api_cache_filepath(detail_api_url)
 	if FileAccess.file_exists(cache_filepath):
 		var file = FileAccess.open(cache_filepath, FileAccess.READ)
@@ -264,7 +246,6 @@ func _load_details_data(app_id_to_load: String):
 			printerr("ERROR: Opening cache file %s failed: %s" % [cache_filepath.get_file(), open_error])
 			if is_instance_valid(file): file.close()
 
-	# --- Cache MISS or expired: Start HTTP Request ---
 	if Engine.has_singleton("OnlineStatusManager") and not get_node("/root/OnlineStatusManager").is_online:
 		print("INFO DetailsView: App is offline. Using fallback info for ", current_app_id)
 		_show_fallback_product()
@@ -273,7 +254,7 @@ func _load_details_data(app_id_to_load: String):
 	var http_request = HTTPRequest.new()
 	add_child(http_request)
 	http_request.request_completed.connect(
-		_on_product_details_request_completed.bind(http_request, detail_api_url) # Bind URL
+		_on_product_details_request_completed.bind(http_request, detail_api_url)
 	)
 	var error = http_request.request(detail_api_url)
 	if error != OK:
@@ -281,14 +262,12 @@ func _load_details_data(app_id_to_load: String):
 		_show_fallback_product()
 		if is_instance_valid(http_request): http_request.queue_free()
 
-# --- Handle request completion: Save to cache and display ---
 func _on_product_details_request_completed(result, response_code, headers, body, http_request: HTTPRequest, url: String):
 	if response_code == 200 and result == HTTPRequest.RESULT_SUCCESS:
 		var response_string = body.get_string_from_utf8()
 		var api_json = JSON.parse_string(response_string)
 
 		if api_json != null:
-			# ... (cache logic remains same)
 			_display_details(api_json)
 		else:
 			printerr("ERROR: JSON parse error for URL '%s'." % url)
@@ -300,8 +279,6 @@ func _on_product_details_request_completed(result, response_code, headers, body,
 		printerr("ERROR: HTTP Error %d (Result %d) requesting details from '%s'." % [response_code, result, url])
 		_show_fallback_product()
 
-	# --- Cleanup ---
-	# hide_loading_indicator() # Optional
 	if is_instance_valid(http_request):
 		http_request.queue_free()
 
@@ -355,26 +332,20 @@ func _show_fallback_product():
 	_display_details(fallback_product)
 
 
-# =============================================================================
-# UI DISPLAY & HELPERS
-# =============================================================================
 
-# --- Display the fetched/cached details ---
 func _display_details(product: Dictionary):
 	if not product is Dictionary:
 		printerr("ERROR: Invalid data passed to _display_details.")
 		app_title.text = tr("ERR_INVALID_DATA")
 		return
 
-	# navbar
 	app_title.text = product.get("name") if product.get("name") != null else tr("TXT_NA")
 	var icon_url = product.get("icon")
 	if icon_url and not icon_url.is_empty():
 		emit_signal("image_load_requested", icon_url, app_icon)
 	else:
-		app_icon.texture = null # Clear old icon if none provided
+		app_icon.texture = null
 
-	# verified
 	verified_app.visible = false
 	var metadata = product.get("metadata", false)
 	if metadata:
@@ -384,16 +355,12 @@ func _display_details(product: Dictionary):
 		if verified_flag:
 			verified_app.visible = true
 
-	# description
 	var description_html = product.get("description", "")
 	app_desc.text = limited_html_to_bbcode(description_html) if not description_html.is_empty() else tr("LBL_NO_DESCRIPTION")
 
-	# screenshots
-	# Clear old ones first
 	for child in screenshot_container.get_children():
 		screenshot_container.remove_child(child)
 		child.queue_free()
-	# Add new ones
 	var screenshots_data = product.get("screenshots", []) 
 	if screenshots_data is Array:
 		for screenshot_collection in screenshots_data:
@@ -416,8 +383,7 @@ func _display_details(product: Dictionary):
 							else:
 								printerr("ERROR: Failed to instantiate product_screenshot.tscn")
 
-	# app details (version, release date)
-	var releases = product.get("releases", []) # Default to empty array
+	var releases = product.get("releases", [])
 	if releases is Array and not releases.is_empty():
 		var latest_release = releases[0]
 		if latest_release is Dictionary:
@@ -448,7 +414,6 @@ func _display_details(product: Dictionary):
 	current_app_name = product.get("name") if product.get("name") != null else tr("TXT_NA")
 	app_developer.text = product.get("developer_name") if product.get("developer_name") != null else tr("TXT_NA")
 	
-	# Extract Website URL
 	var urls_dict = product.get("urls", {})
 	if typeof(urls_dict) == TYPE_DICTIONARY:
 		current_website_url = urls_dict.get("homepage", "")
@@ -567,7 +532,6 @@ func _open_screenshot_zoom_popup(start_index: int):
 	else:
 		printerr("DetailsView: ScreenshotZoomPopup instance does not have 'popup_zoomed_image_list' method.")
 
-# --- Set initial focus when view becomes active ---
 func set_initial_focus():
 	description_scroll_container.remove_theme_stylebox_override("panel")
 	if is_instance_valid(action_button) and action_button.visible and not action_button.disabled:
@@ -601,7 +565,7 @@ func _update_action_buttons_visibility():
 
 	if is_instance_valid(add_to_steam_button):
 		add_to_steam_button.visible = not task_is_active and is_installed and not is_known_to_be_in_steam
-		print("DEBUG DetailsView: Setting 'Add to Steam' visibility: ", add_to_steam_button.visible) # DEBUG
+		print("DEBUG DetailsView: Setting 'Add to Steam' visibility: ", add_to_steam_button.visible)
 
 func _trigger_steam_check_if_needed():
 	if is_currently_installed and not steam_check_pending:
@@ -713,11 +677,7 @@ func _on_task_finished_for_progress(operation_id: String, final_status: String, 
 		_trigger_steam_check_if_needed()
 
 
-# Function to convert a limited subset of HTML to Godot-compatible BBCode
 func limited_html_to_bbcode(html_string: String) -> String:
-	# print("--- Incoming HTML ---")
-	# print(html_string)
-	# print("-------------------------")
 	var work_string: String = html_string
 
 	var regex_p_open = RegEx.new()
@@ -727,25 +687,21 @@ func limited_html_to_bbcode(html_string: String) -> String:
 	regex_p_close.compile("\\s*</p>\\s*")
 	work_string = regex_p_close.sub(work_string, "\n", true)
 
-	# Basic inline tags
 	work_string = work_string.replace("<b>", "[b]").replace("</b>", "[/b]")
 	work_string = work_string.replace("<strong>", "[b]").replace("</strong>", "[/b]")
 	work_string = work_string.replace("<i>", "[i]").replace("</i>", "[/i]")
 	work_string = work_string.replace("<em>", "[i]").replace("</em>", "[/i]")
 
-	# Links
 	var regex_a = RegEx.new()
 	regex_a.compile("<a\\s+[^>]*?href\\s*=\\s*[\"']?([^\"'\\s>]+)[\"']?[^>]*>(.*?)</a>")
 	work_string = regex_a.sub(work_string, "[url=$1]$2[/url]", true)
 
-	# -- Replace HTML list tags with placeholders --
-	# Use regex to consume whitespace around tags
 	var regex_ul_open = RegEx.new()
 	regex_ul_open.compile("\\s*<ul>\\s*")
 	work_string = regex_ul_open.sub(work_string, "<LIST_START>", true)
 	var regex_ol_open = RegEx.new()
 	regex_ol_open.compile("\\s*<ol>\\s*")
-	work_string = regex_ol_open.sub(work_string, "<LIST_START>", true) # Treat ol like ul for now
+	work_string = regex_ol_open.sub(work_string, "<LIST_START>", true)
 
 	var regex_ul_close = RegEx.new()
 	regex_ul_close.compile("\\s*</ul>\\s*")
@@ -762,35 +718,29 @@ func limited_html_to_bbcode(html_string: String) -> String:
 	work_string = regex_li_close.sub(work_string, "<ITEM_END>", true)
 
 	var regex_tags = RegEx.new()
-	regex_tags.compile("<(?!LIST_START|LIST_END|ITEM_START|ITEM_END)[^>]*>") # Remove HTML tags EXCEPT our placeholders
+	regex_tags.compile("<(?!LIST_START|LIST_END|ITEM_START|ITEM_END)[^>]*>")
 	work_string = regex_tags.sub(work_string, "", true)
 	work_string = work_string.xml_unescape()
 
 	var regex_item_start = RegEx.new()
 	regex_item_start.compile("\\s*<ITEM_START>\\s*")
-	work_string = regex_item_start.sub(work_string, "[indent]\u2022  ", true) # Bullet + two spaces
+	work_string = regex_item_start.sub(work_string, "[indent]\u2022  ", true)
 	var regex_item_end = RegEx.new()
 	regex_item_end.compile("\\s*<ITEM_END>\\s*")
-	work_string = regex_item_end.sub(work_string, "[/indent]\n", true) # Close indent + newline
+	work_string = regex_item_end.sub(work_string, "[/indent]\n", true)
 
-	# Replace list container placeholders, adding the definitive spacing HERE
 	var regex_list_start = RegEx.new()
 	regex_list_start.compile("\\s*<LIST_START>\\s*")
-	work_string = regex_list_start.sub(work_string, "\n\n", true) # Force blank line before list
+	work_string = regex_list_start.sub(work_string, "\n\n", true)
 	var regex_list_end = RegEx.new()
 	regex_list_end.compile("\\s*<LIST_END>\\s*")
-	work_string = regex_list_end.sub(work_string, "\n\n", true) # Force blank line after list
+	work_string = regex_list_end.sub(work_string, "\n\n", true)
 	var regex_newlines = RegEx.new()
 	regex_newlines.compile("\n{3,}")
 	work_string = regex_newlines.sub(work_string, "\n\n", true)
 
-	# Final trim
 	work_string = work_string.strip_edges()
 
-	# --- Debug Output (Optional) ---
-	# print("--- Generated BBCode ---")
-	# print(work_string)
-	# print("-------------------------")
 
 	return work_string
 
@@ -849,7 +799,7 @@ func _fetch_detailed_reviews(app_id: String):
 	detailed_reviews_request = HTTPRequest.new()
 	add_child(detailed_reviews_request)
 	detailed_reviews_request.request_completed.connect(
-		_on_detailed_reviews_request_completed.bind(odrs_reviews_url, app_id) # URL und app_id für Kontext binden
+		_on_detailed_reviews_request_completed.bind(odrs_reviews_url, app_id)
 	)
 	
 	var error = detailed_reviews_request.request(odrs_reviews_url)
@@ -858,8 +808,7 @@ func _fetch_detailed_reviews(app_id: String):
 		if is_instance_valid(detailed_reviews_request):
 			detailed_reviews_request.queue_free()
 			detailed_reviews_request = null
-		# Optional: Fehlermeldung im Popup anzeigen
-		var popup_instance = get_node_or_null("ReviewsPopupInstance") # Annahme: Popup ist schon da und heißt so
+		var popup_instance = get_node_or_null("ReviewsPopupInstance")
 		if is_instance_valid(popup_instance) and popup_instance.has_method("show_error"):
 			popup_instance.show_error("Fehler beim Laden der Bewertungen.")
 
@@ -873,15 +822,14 @@ func _on_detailed_reviews_request_completed(result, response_code, headers, body
 		var odrs_json = JSON.parse_string(response_string)
 		if odrs_json is Array:
 			reviews_to_display = odrs_json
-			current_detailed_reviews = reviews_to_display # Für sofortige Anzeige merken
+			current_detailed_reviews = reviews_to_display
 			success = true
 			
-			# Daten für diese App im Cache speichern
 			var cache_content = {
 				"timestamp": Time.get_unix_time_from_system(),
 				"reviews_data": reviews_to_display
 			}
-			var cache_filepath = _get_detailed_reviews_cache_filepath(app_id_ctx) # app_id_ctx ist die gebundene app_id
+			var cache_filepath = _get_detailed_reviews_cache_filepath(app_id_ctx)
 			var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
 			if file:
 				file.store_string(JSON.stringify(cache_content))
@@ -893,12 +841,12 @@ func _on_detailed_reviews_request_completed(result, response_code, headers, body
 			printerr("DetailsView: JSON Parse-Fehler für detaillierte Reviews URL '%s'." % url)
 	elif response_code == 404:
 		printerr("DetailsView: Detaillierte Reviews nicht gefunden (404) für URL '%s'." % url)
-		current_detailed_reviews = [] # Leeren, falls vorher was drin war
+		current_detailed_reviews = []
 	else:
 		printerr("DetailsView: HTTP Fehler %d (Result %d) bei Abfrage von detaillierten Reviews von '%s'." % [response_code, result, url])
 		current_detailed_reviews = []
 
-	_show_reviews_popup(current_detailed_reviews, not success and response_code != 404) # error_flag übergeben, außer bei 404
+	_show_reviews_popup(current_detailed_reviews, not success and response_code != 404)
 
 	if is_instance_valid(detailed_reviews_request):
 		detailed_reviews_request.queue_free()

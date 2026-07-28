@@ -23,7 +23,6 @@ var scale_tween: Tween = null
 func _ready():
 	if panel: 
 		_original_panel_style = panel.get_theme_stylebox("panel")
-		# Ensure children don't block mouse events for the parent
 		panel.mouse_filter = Control.MOUSE_FILTER_PASS
 		for child in panel.get_children():
 			if child is Control:
@@ -37,7 +36,7 @@ func _ready():
 	self.mouse_entered.connect(_on_mouse_entered)
 	self.gui_input.connect(_on_gui_input)
 	
-	self.mouse_filter = Control.MOUSE_FILTER_STOP # Parent should catch everything
+	self.mouse_filter = Control.MOUSE_FILTER_STOP
 	self.focus_mode = Control.FOCUS_ALL
 	
 	default_scale = self.scale
@@ -218,7 +217,6 @@ func _on_focus_exited_visual():
 	panel.add_theme_stylebox_override("panel", _original_panel_style)
 
 func _on_mouse_entered():
-	# Grab focus on hover for visual consistency with controller navigation
 	self.grab_focus()
 
 func _on_gui_input(event: InputEvent):

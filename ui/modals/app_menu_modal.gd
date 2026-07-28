@@ -11,7 +11,6 @@ func _ready():
 	hide()
 	close_button.pressed.connect(close_modal)
 	
-	# Close when clicking outside
 	$ColorRect.gui_input.connect(func(event):
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			close_modal()
@@ -20,7 +19,6 @@ func _ready():
 	_populate_menu()
 
 func _populate_menu():
-	# Clear placeholder
 	for child in settings_container.get_children():
 		child.queue_free()
 		

@@ -5,7 +5,7 @@ extends Control
 @onready var background_panel: Panel = $Background 
 @onready var l2_container: Control = %L2Container
 @onready var r2_container: Control = %R2Container
-@onready var layout: HBoxContainer = %Layout # Using % since it's unique now
+@onready var layout: HBoxContainer = %Layout
 @onready var animation_container: Control = %AnimationContainer
 @onready var close_button: Button = %CloseButton
 
@@ -40,14 +40,13 @@ func _unhandled_input(event: InputEvent):
 		return
 		
 	if _textures.size() > 1 and not _is_animating:
-		if event.is_action_pressed("ui_page_up"): # L2
+		if event.is_action_pressed("ui_page_up"):
 			_switch_screenshot(-1)
 			get_viewport().set_input_as_handled()
-		elif event.is_action_pressed("ui_page_down"): # R2
+		elif event.is_action_pressed("ui_page_down"):
 			_switch_screenshot(1)
 			get_viewport().set_input_as_handled()
 	elif _textures.size() <= 1:
-		# Consume tab actions even if only one screenshot, to prevent background navigation
 		if event.is_action_pressed("ui_page_up") or event.is_action_pressed("ui_page_down"):
 			get_viewport().set_input_as_handled()
 
@@ -67,22 +66,18 @@ func _switch_screenshot(direction: int):
 	var new_texture = _textures[new_index]
 	new_tex_rect.texture = new_texture
 	
-	# Transition setup
 	var container_width = animation_container.size.x
-	# New image starts at the edge (right if direction=1, left if direction=-1)
 	new_tex_rect.position.x = container_width * direction
-	new_tex_rect.modulate.a = 1.0 # Ensure full visibility
+	new_tex_rect.modulate.a = 1.0
 	
 	if active_tween and active_tween.is_valid(): active_tween.kill()
 	active_tween = create_tween()
 	active_tween.set_parallel(true)
 	active_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	
-	# Current image slides out in opposite direction
 	active_tween.tween_property(old_tex_rect, "position:x", -container_width * direction, 0.4)
 	active_tween.tween_property(old_tex_rect, "modulate:a", 0.0, 0.3)
 	
-	# New image slides into center
 	active_tween.tween_property(new_tex_rect, "position:x", 0, 0.4)
 	
 	active_tween.chain().tween_callback(func():
@@ -159,5 +154,4 @@ func _on_about_to_popup():
 		_zoom_sound_player.play()
 
 func _on_visibility_changed():
-	# This might be redundant now but keeping it safe
 	pass

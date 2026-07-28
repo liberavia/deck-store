@@ -23,7 +23,6 @@ var audio_player: AudioStreamPlayer
 var stream_select = preload("res://assets/nextprev.wav")
 var stream_focus = preload("res://assets/change.mp3")
 
-# Styles for Update Button
 var stylebox_install: StyleBoxFlat
 var stylebox_cancel: StyleBoxFlat
 var stylebox_normal: StyleBoxFlat
@@ -57,7 +56,6 @@ func _ready():
 		sort_option_button.focus_entered.connect(_on_focus_entered)
 		sort_option_button.pressed.connect(_on_sort_pressed)
 		
-	# Manual Focus Neighbors
 	if is_instance_valid(select_all_button) and is_instance_valid(refresh_button):
 		select_all_button.focus_neighbor_right = refresh_button.get_path()
 		refresh_button.focus_neighbor_left = select_all_button.get_path()
@@ -70,7 +68,6 @@ func _ready():
 		sort_option_button.focus_neighbor_right = update_selected_button.get_path()
 		update_selected_button.focus_neighbor_left = sort_option_button.get_path()
 
-	# Connect DownloadManager signals
 	if ProjectSettings.has_setting("autoload/DownloadManager"):
 		if DownloadManager.has_signal("task_updated"):
 			DownloadManager.task_updated.connect(_on_task_updated)
@@ -89,10 +86,10 @@ func _setup_styles():
 			stylebox_normal.set_border_width_all(1)
 		
 		stylebox_install = stylebox_normal.duplicate()
-		stylebox_install.bg_color = Color.from_string("#245322", Color.GREEN) # Green
+		stylebox_install.bg_color = Color.from_string("#245322", Color.GREEN)
 		
 		stylebox_cancel = stylebox_normal.duplicate()
-		stylebox_cancel.bg_color = Color.from_string("#5c0001", Color.RED) # Red
+		stylebox_cancel.bg_color = Color.from_string("#5c0001", Color.RED)
 		
 		_update_button_style()
 
@@ -130,14 +127,11 @@ func _start_update_check():
 func _execute_update_check_in_thread():
 	var run_cmd = SystemUtils.get_host_sh_cmd()
 
-	# 1. AppStream
 	var host_cmd_metadata = "flatpak update --appstream"
 	var args_metadata = SystemUtils.get_host_sh_args(host_cmd_metadata)
 	OS.execute(run_cmd, args_metadata, [], false)
 
-	# 2. Remotes
 	var remotes_info = [] 
-	# Alle Remotes prüfen (system und user), um Flathub auch auf Bazzite/SteamOS zu finden
 	var cmd_remotes = "LC_ALL=C flatpak remotes --columns=name"
 	var output_remotes = []
 	OS.execute(run_cmd, SystemUtils.get_host_sh_args(cmd_remotes), output_remotes)
@@ -149,10 +143,7 @@ func _execute_update_check_in_thread():
 	
 	var accumulated_output = ""
 	
-	# 3. Query
 	for remote_name in remotes_info:
-		# Wir prüfen weiterhin primär auf User-Updates, da DeckStore --user Installationen bevorzugt.
-		# Falls eine App im System-Scope installiert ist, würde sie hier nicht auftauchen.
 		var host_cmd_list = "LC_ALL=C flatpak remote-ls --user %s --updates --app --columns=application,name,version,download-size" % [remote_name]
 		var output_updates = []
 		var exit_code = OS.execute(run_cmd, SystemUtils.get_host_sh_args(host_cmd_list), output_updates, true) 
@@ -160,7 +151,6 @@ func _execute_update_check_in_thread():
 		if exit_code == 0 and output_updates.size() > 0:
 			accumulated_output += output_updates[0] + "\n"
 			
-	# 4. Get installed versions to show old versions
 	var installed_versions = {}
 	var cmd_installed = "LC_ALL=C flatpak list --app --columns=application,version"
 	var output_installed = []
@@ -218,14 +208,12 @@ func _process_update_check_result(output: String, installed_versions: Dictionary
 					"installation": "user"
 				})
 				
-				# Preserve selection or select all on first run
 				if is_first_run or old_selected.has(app_id):
 					selected_app_ids.append(app_id)
 
 	_populate_list()
 
 func _populate_list():
-	# Ensure sort button is focusable
 	if is_instance_valid(sort_option_button) and sort_option_button.focus_mode == Control.FOCUS_NONE:
 		sort_option_button.focus_mode = Control.FOCUS_ALL
 
@@ -247,7 +235,6 @@ func _populate_list():
 		else: return a.get("name", "").to_lower() < b.get("name", "").to_lower()
 	)
 	
-	# Reuse logic
 	var current_nodes = {}
 	var children_to_remove = []
 	for child in update_list_container.get_children():
@@ -310,7 +297,6 @@ func _update_ui_state():
 		refresh_button.disabled = true
 		sort_option_button.disabled = true
 		
-		# Disable all checkboxes
 		for child in update_list_container.get_children():
 			if child.has_node("MarginContainer/HBoxContainer/CheckBox"):
 				child.get_node("MarginContainer/HBoxContainer/CheckBox").disabled = true
@@ -320,7 +306,6 @@ func _update_ui_state():
 		update_selected_button.disabled = false
 		return
 
-	# Normal State
 	select_all_button.disabled = false
 	refresh_button.disabled = false
 	sort_option_button.disabled = false
@@ -409,11 +394,9 @@ func _start_updates():
 			is_updating = true
 			_update_ui_state()
 			for app_id in selected_app_ids:
-				# Prepare item UI
 				var item = _find_item_by_id(app_id)
 				if item: item.set_progress(0, tr("LBL_QUEUED"))
 				
-				# Find the update data to pass installation scope
 				var update_data = {}
 				for u in available_updates:
 					if u.app_id == app_id:
@@ -427,11 +410,6 @@ func _start_updates():
 		printerr("UpdatesView: Autoload setting not found!")
 
 func _cancel_updates():
-	# Cancel all queued/running operations for selected apps
-	# We iterate backwards through our selected list or ask DownloadManager?
-	# DownloadManager.cancel_operation(op_id). We need OpID.
-	# We don't store OpIDs here easily.
-	# But DownloadManager has get_task_status(app_id) which has 'operation_id'.
 	
 	var dm = get_node_or_null("/root/DownloadManager")
 	if dm:
@@ -440,9 +418,6 @@ func _cancel_updates():
 			if status.has("operation_id"):
 				dm.cancel_operation(status.operation_id)
 	
-	# We rely on task_finished signals to reset state, 
-	# OR we force state reset if we want immediate feedback.
-	# Usually task_finished comes back with "cancelled".
 
 func _find_item_by_id(app_id: String) -> Control:
 	for child in update_list_container.get_children():
@@ -463,30 +438,19 @@ func _on_task_updated(_operation_id: String, status_data: Dictionary):
 	
 	if status == "completed":
 		print("UpdatesView: Update completed for ", app_id)
-		# Remove from internal lists
 		selected_app_ids.erase(app_id)
 		for i in range(available_updates.size()):
 			if available_updates[i].app_id == app_id:
 				available_updates.remove_at(i)
 				break
-		# Remove UI Node
 		if item: item.queue_free()
 		
-		# Check if done
 		_check_all_updates_finished()
 		
 	elif status == "failed" or status == "cancelled":
 		print("UpdatesView: Update ", status, " for ", app_id)
 		if item: 
 			item.reset_progress()
-			# Optionally show error? status_data.get("error")
-		# We don't remove failed items, user might try again.
-		# But we should consider them "done" for this batch process?
-		# If we keep is_updating = true, user can't select others.
-		# If failed, we should probably just stop tracking it as "active".
-		# But we queue all at once.
-		# Let's keep them in selected_app_ids but maybe mark as not running?
-		# Actually, if we cancel, we stop updating.
 		pass
 		
 	else:
@@ -503,15 +467,11 @@ func _on_task_updated(_operation_id: String, status_data: Dictionary):
 			item.set_progress(progress, msg)
 
 func _on_task_finished(_operation_id: String, _final_status: String, _operation_type: String):
-	# Fallback if task_updated didn't catch final state or for cleanup
-	# We mostly handled it in _on_task_updated via status checks
-	# But let's check if we are completely idle now
 	_check_all_updates_finished()
 
 func _check_all_updates_finished():
 	if not is_updating: return
 	
-	# Check if DownloadManager has any running tasks for our selected apps
 	var any_running = false
 	if ProjectSettings.has_setting("autoload/DownloadManager"):
 		var dm = get_node_or_null("/root/DownloadManager")
@@ -532,7 +492,6 @@ func _unhandled_input(event):
 	if event.is_action_pressed("go_back"):
 		var focus_owner = get_viewport().gui_get_focus_owner()
 		if is_instance_valid(focus_owner):
-			# Check if focus is in list or on header buttons
 			if update_list_container.is_ancestor_of(focus_owner) or \
 			   focus_owner == select_all_button or \
 			   focus_owner == refresh_button or \

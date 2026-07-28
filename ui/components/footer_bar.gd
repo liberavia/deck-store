@@ -7,7 +7,6 @@ var _current_actions: Array = []
 func _ready():
 	ControllerManager.controller_type_changed.connect(_on_controller_type_changed)
 
-# Example: [{"button": "A", "label": "Select"}, {"button": "L1 / R1", "label": "Back"}]
 func set_actions(actions: Array):
 	_current_actions = actions
 	_refresh_ui()
@@ -16,7 +15,6 @@ func _on_controller_type_changed(_type: String):
 	_refresh_ui()
 
 func _refresh_ui():
-	# Clear existing children
 	for child in container.get_children():
 		child.queue_free()
 	
@@ -28,27 +26,23 @@ func _create_action_item(button_str: String, label_text: String) -> HBoxContaine
 	var hbox = HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 10)
 	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE # Don't block
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	
-	# Add spacing before item
 	var spacer = Control.new()
 	spacer.custom_minimum_size = Vector2(20, 0)
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(spacer)
 	
-	# Split by "/" for multiple buttons
 	var button_names = button_str.split("/")
 	
 	for i in range(button_names.size()):
 		var b_name = button_names[i].strip_edges()
 		
-		# Instantiate our interactive GlyphDisplay
 		var glyph_scene = load("res://ui/components/glyph_display.tscn")
 		var glyph_instance = glyph_scene.instantiate()
 		glyph_instance.name = "Glyph_" + b_name
 		glyph_instance.action_name = b_name
 		
-		# Determine size based on button type
 		if b_name.length() > 1:
 			glyph_instance.custom_minimum_size = Vector2(50, 25)
 		else:
@@ -56,14 +50,12 @@ func _create_action_item(button_str: String, label_text: String) -> HBoxContaine
 		
 		hbox.add_child(glyph_instance)
 		
-		# Add "/" separator label if not the last one
 		if i < button_names.size() - 1:
 			var sep = Label.new()
 			sep.text = "/"
 			sep.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			hbox.add_child(sep)
 	
-	# Action Label
 	var action_label = Label.new()
 	action_label.text = label_text
 	action_label.mouse_filter = Control.MOUSE_FILTER_IGNORE

@@ -1,10 +1,7 @@
 #!/bin/bash
 
-# Exit immediately if a command exits with a non-zero status.
 set -e
 
-# Source base functionality
-# Use absolute path resolving relative to this script location
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 source "${SCRIPT_DIR}/../deckstore_base.sh"
 
@@ -12,7 +9,6 @@ ACTION="$1"
 OUT_FILE="$2"
 EXTENSION_ID="steam_shortcut_manager_installer"
 
-# Initialize Base
 ds_init "$EXTENSION_ID" "$OUT_FILE"
 
 FLATPAK_APP_ID="io.github.liberavia.steamshortcutmanager"
@@ -21,8 +17,6 @@ GITHUB_REPO_NAME="steam-shortcut-manager"
 
 VERSION_FILE="${HOME}/.deck-store/extensions/ssm.version"
 
-# Gibt die installierte Version in die Log-Datei aus.
-# WICHTIG: Diese Funktion wird nur für den 'version'-Befehl verwendet und schreibt NUR die Version.
 get_installed_version_for_file() {
     if [ -f "$VERSION_FILE" ]; then
         cat "$VERSION_FILE" > "$OUT_FILE"
@@ -31,7 +25,6 @@ get_installed_version_for_file() {
     fi
 }
 
-# Holt die Version für interne Skript-Nutzung, ohne die Log-Datei zu beeinflussen.
 get_installed_version_for_var() {
     if [ -f "$VERSION_FILE" ]; then
         cat "$VERSION_FILE"
@@ -68,7 +61,6 @@ install_ssm() {
     local bundle_filename="${FLATPAK_APP_ID}.flatpak"
     local download_url="https://github.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/releases/download/${latest_tag_name}/${bundle_filename}"
     
-    # Download to a shared location in the user's home directory
     local temp_dir="${HOME}/.deck-store/tmp"
     mkdir -p "$temp_dir"
     local temp_bundle_path="${temp_dir}/${bundle_filename}"
@@ -80,7 +72,6 @@ install_ssm() {
     ds_send_progress 60 "Installing Flatpak..."
     ds_log "Installing bundle..."
 
-    # Explicitly remove existing version to force update/reinstall
     if $DS_FLATPAK_CMD info "${FLATPAK_APP_ID}" &> /dev/null; then
          ds_log "Removing existing version to ensure clean install..."
          $DS_FLATPAK_CMD uninstall --user --assumeyes "${FLATPAK_APP_ID}" >> "$OUT_FILE" 2>&1
@@ -140,7 +131,6 @@ check_ssm() {
         exit 0
     else
         ds_log "NOT_INSTALLED: Steam Shortcut Manager Flatpak ($FLATPAK_APP_ID) is not installed or version is invalid."
-        # Clean up potentially stale file
         if [ -f "$VERSION_FILE" ]; then
             rm "$VERSION_FILE"
             ds_log "Removed stale or invalid version file."
@@ -151,11 +141,9 @@ check_ssm() {
 
 update_ssm() {
     ds_log "Update requested. Fetching and installing latest version..."
-    # Update is essentially an install of the latest version
     install_ssm
 }
 
-# --- Main Logic ---
 case "$ACTION" in
     install)
         install_ssm

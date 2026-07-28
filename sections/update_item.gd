@@ -51,7 +51,6 @@ func set_progress(value, message: String = ""):
 		if not status_label.visible: status_label.visible = true
 		status_label.text = message
 	
-	# Indeterminate / Pulse mode for finishing installation
 	if float_value >= 100.0 and message.begins_with("Installing") or message.begins_with(tr("LBL_INSTALLING").replace("...", "")):
 		_start_pulse()
 	else:
@@ -77,10 +76,8 @@ func reset_progress():
 func set_selected(selected: bool):
 	is_selected = selected
 	checkbox.set_pressed_no_signal(selected)
-	# Optionally update visual style for selection
 
 func _on_main_button_pressed():
-	# Toggle checkbox when the whole row is clicked
 	checkbox.button_pressed = not checkbox.button_pressed
 
 func _on_checkbox_toggled(toggled_on: bool):
@@ -94,7 +91,6 @@ func _on_focus_entered():
 		audio_player.play()
 
 func _load_icon():
-	# Fetch metadata to get the URL
 	var metadata_url = "https://flathub.org/api/v2/appstream/%s" % app_id
 	var http = HTTPRequest.new()
 	add_child(http)

@@ -19,7 +19,7 @@ var settings = {
 func _ready():
 	var home_dir = OS.get_environment("HOME")
 	if home_dir.is_empty():
-		home_dir = "/home/deck" # Fallback
+		home_dir = "/home/deck"
 	var base_path = home_dir.path_join(DECKSTORE_BASE_DIR_NAME)
 	
 	if not DirAccess.dir_exists_absolute(base_path):
@@ -32,7 +32,6 @@ func _ready():
 func _apply_language():
 	var lang = settings.get("language", "auto")
 	if lang == "auto":
-		# Try Steam first
 		var steam_lang = ""
 		if ProjectSettings.has_setting("autoload/SteamIntegration"):
 			var steam_int = get_node_or_null("/root/SteamIntegration")
@@ -50,7 +49,6 @@ func _apply_language():
 			"ukrainian": mapped_lang = "uk"
 			"english": mapped_lang = "en"
 			_:
-				# Fallback to OS
 				var os_lang = OS.get_locale().left(2)
 				if os_lang in ["de", "fr", "es", "it", "pl", "uk"]:
 					mapped_lang = os_lang
@@ -69,7 +67,6 @@ func load_settings():
 			if error == OK:
 				var loaded_data = json.data
 				if typeof(loaded_data) == TYPE_DICTIONARY:
-					# Merge loaded settings into default settings
 					for key in loaded_data:
 						if settings.has(key):
 							settings[key] = loaded_data[key]

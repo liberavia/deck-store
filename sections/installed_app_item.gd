@@ -39,7 +39,6 @@ func _on_focus_entered():
 		audio_player.play()
 
 func _load_icon():
-	# So we fetch metadata to get the URL.
 	var metadata_url = "https://flathub.org/api/v2/appstream/%s" % app_id
 	var http = HTTPRequest.new()
 	add_child(http)
@@ -54,17 +53,14 @@ func _on_metadata_received(result, response_code, headers, body, http_request):
 		if json and json is Dictionary:
 			var icon_url = ""
 			
-			# 1. Try top-level "icon" field (String)
 			if json.has("icon") and json["icon"] is String:
 				icon_url = json["icon"]
 			
-			# 2. Fallback: "icons" field (Array of Objects)
 			elif json.has("icons") and json["icons"] is Array:
 				var icons_list = json["icons"]
 				for icon_data in icons_list:
 					if icon_data is Dictionary and icon_data.has("url"):
 						icon_url = icon_data["url"]
-						# Valid sizing? prefer 128 or 64, but taking the first valid one is often fine as fallback
 						if icon_data.get("width") == 128:
 							break 
 
@@ -74,6 +70,5 @@ func _on_metadata_received(result, response_code, headers, body, http_request):
 	http_request.queue_free()
 
 func _fetch_icon_image(url: String):
-	# Delegate image loading to the main system (via parent view)
 	emit_signal("image_load_requested", url, icon_rect)
 

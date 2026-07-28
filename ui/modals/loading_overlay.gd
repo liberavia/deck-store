@@ -16,7 +16,6 @@ func _process(delta):
 func show_overlay():
 	visible = true
 	_is_spinning = true
-	# Reset rotation if desired, or keep spinning
 	
 func hide_overlay():
 	visible = false
