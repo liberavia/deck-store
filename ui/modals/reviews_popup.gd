@@ -79,7 +79,6 @@ func display_reviews(reviews_data: Array, app_name_str: String, has_error: bool 
 func show_modal():
 	original_focused_element = get_viewport().gui_get_focus_owner()
 	self.visible = true
-	# Wait for layout
 	await get_tree().process_frame
 	if review_list_container.get_child_count() > 0:
 		review_list_container.get_child(0).grab_focus()

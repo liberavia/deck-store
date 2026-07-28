@@ -18,7 +18,6 @@ extends Control
 @onready var top_button_bar: HBoxContainer = $CanvasLayer/VBoxContainer/TopButtonBar
 @onready var l1_glyph: TextureRect = $CanvasLayer/VBoxContainer/TopButtonBar/L1Glyph
 @onready var r1_glyph: TextureRect = $CanvasLayer/VBoxContainer/TopButtonBar/R1Glyph
-# ContentScrollContainer was removed from main.tscn, keeping variable for fallback
 var global_scroll_container: ScrollContainer = null
 @onready var footer_bar: PanelContainer = $CanvasLayer/FooterBar
 @onready var select_sound: AudioStreamPlayer = $SelectSoundPlayer
@@ -47,27 +46,22 @@ var _is_switching_section: bool = false
 var _suppress_focus_sound: bool = false
 var _current_connected_item: Control = null
 
-# --- Cache-Constants ---
 const DECKSTORE_BASE_DIR_NAME = ".deck-store"
 const API_CACHE_SUBDIR = "cache/api"
 const IMAGE_CACHE_SUBDIR = "cache/images"
 
-const CACHE_DURATION_SEC: int = 3600 # 1 hour
-const IMAGE_CACHE_DURATION_SEC: int = 7 * 24 * 60 * 60 # 1 week
+const CACHE_DURATION_SEC: int = 3600
+const IMAGE_CACHE_DURATION_SEC: int = 7 * 24 * 60 * 60
 
 var transition_time := 0.5
 var transition_time_section_change := 0.2
 
-# Absolute paths, will be initialized in _ready()
 var _deckstore_abs_base_path: String = ""
 var _api_cache_abs_path: String = ""
 var _image_cache_abs_path: String = ""
 
 signal installed_apps_updated
 
-# =============================================================================
-# LIFECYCLE METHODS
-# =============================================================================
 
 func _ready():
 	var home_dir = OS.get_environment("HOME")
@@ -75,7 +69,6 @@ func _ready():
 		printerr("FATAL ERROR: Could not determine user's HOME directory. Caching will fail.")
 		return
 
-	# Construct absolute paths for DeckStore data
 	_deckstore_abs_base_path = home_dir.path_join(DECKSTORE_BASE_DIR_NAME)
 	_api_cache_abs_path = _deckstore_abs_base_path.path_join(API_CACHE_SUBDIR)
 	_image_cache_abs_path = _deckstore_abs_base_path.path_join(IMAGE_CACHE_SUBDIR)
@@ -84,27 +77,21 @@ func _ready():
 	print("INFO: API Cache Directory (absolute Path): ", _api_cache_abs_path)
 	print("INFO: Image Cache Directory (absolute Path): ", _image_cache_abs_path)
 
-	# Create API cache directory
 	var err_api_cache = DirAccess.make_dir_recursive_absolute(_api_cache_abs_path)
 	if err_api_cache != OK and err_api_cache != ERR_ALREADY_EXISTS:
 		printerr("ERROR: Could not create API cache directory: ", _api_cache_abs_path, ", Code: ", err_api_cache)
 	
-	# Create Image cache directory
 	var err_img_cache = DirAccess.make_dir_recursive_absolute(_image_cache_abs_path)
 	if err_img_cache != OK and err_img_cache != ERR_ALREADY_EXISTS:
 		printerr("ERROR: Could not create image cache directory: ", _image_cache_abs_path, ", Code: ", err_img_cache)
 			
-	# --- Setup Top Bar Buttons (Styles & Toggle) ---
 	var section_btn_group = ButtonGroup.new()
 	
-	# Pressed/Selected Style (Purple Background, Purple Border)
 	var style_pressed = StyleBoxFlat.new()
-	style_pressed.bg_color = Color(0.627, 0.125, 0.941, 0.6) # Semi-transparent Purple
+	style_pressed.bg_color = Color(0.627, 0.125, 0.941, 0.6)
 	style_pressed.set_border_width_all(3)
-	style_pressed.border_color = Color(0.627, 0.125, 0.941, 1) # Solid Purple border
+	style_pressed.border_color = Color(0.627, 0.125, 0.941, 1)
 	
-	# Focus Style (Reuse existing focus style logic or create similar if needed, 
-	# but buttons already have overrides from scene. We just add 'pressed')
 	
 	var style_normal = StyleBoxEmpty.new()
 	
@@ -131,7 +118,7 @@ func _ready():
 			
 			_connect_section_signals(instance)
 			
-			instance.visible = (i == 0) # Mache nur die erste Sektion (Home) sichtbar
+			instance.visible = (i == 0)
 			section_view_container.add_child(instance)
 		else:
 			printerr("ERROR: Could not load scene for section: ", section_data.name)
@@ -152,7 +139,7 @@ func _ready():
 	load_popular_products()
 	load_trending_products()
 	
-	Input.joy_connection_changed.connect(_on_joy_connection_changed) # Beibehalten
+	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 
 	details_view.move_back_to_main_view.connect(_on_move_back_to_main_view)
 	details_view.image_load_requested.connect(_on_product_list_image_load_requested)
@@ -213,7 +200,6 @@ func _ready():
 	
 	_switch_to_section(0)
 	
-	# Clear focus initially so no sound plays and no interaction is possible
 	var current_focus = get_viewport().gui_get_focus_owner()
 	if current_focus:
 		current_focus.release_focus()
@@ -222,12 +208,10 @@ func _ready():
 	_fetch_installed_apps()
 	_update_footer_prompts()
 	
-	# Start transition to reveal UI smoothly
 	if GlobalBackgroundShader.has_method("transition_to_background"):
 		GlobalBackgroundShader.transition_to_background()
 		await GlobalBackgroundShader.transition_finished
 		
-	# Now that the transition is done, give focus to the home button silently
 	_suppress_focus_sound = true
 	home_button.grab_focus()
 	await get_tree().process_frame
@@ -273,9 +257,6 @@ func _apply_ui_sounds_setting(play: bool):
 		if is_instance_valid(p):
 			p.volume_db = vol
 
-# =============================================================================
-# INPUT HANDLING (Nur _unhandled_input)
-# =============================================================================
 
 func _apply_glyph_feedback(is_pressed: bool, direction: int):
 	var target_index = _current_section_index + direction
@@ -295,7 +276,6 @@ func _apply_glyph_feedback(is_pressed: bool, direction: int):
 		btn.pivot_offset = btn.size / 2.0
 
 func _on_focus_changed(control: Control):
-	# Disconnect from previous item if any
 	if is_instance_valid(_current_connected_item):
 		if _current_connected_item.has_signal("status_changed"):
 			if _current_connected_item.status_changed.is_connected(_update_footer_prompts):
@@ -306,7 +286,6 @@ func _on_focus_changed(control: Control):
 	
 	_current_connected_item = control
 	
-	# Connect to new item signals
 	if is_instance_valid(_current_connected_item):
 		if _current_connected_item.has_signal("status_changed"):
 			_current_connected_item.status_changed.connect(_update_footer_prompts)
@@ -319,7 +298,6 @@ func _on_focus_changed(control: Control):
 func _update_footer_prompts():
 	if not is_instance_valid(footer_bar): return
 	
-	# Small delay to allow UI state to update (e.g. Button text changes after press)
 	await get_tree().process_frame
 	
 	var actions = []
@@ -359,14 +337,12 @@ func _update_footer_prompts():
 			if _current_section_index != 0:
 				actions.append({"button": "B", "label": tr("LBL_GO_HOME")})
 		else:
-			# Get section-specific custom actions for A button
 			var custom_a = _get_custom_a_action(focus_owner)
 			actions.append(custom_a)
 			
 			actions.append({"button": "B", "label": tr("LBL_BACK_TO_TOP")})
 			actions.append({"button": "L1 / R1", "label": tr("LBL_SWITCH_TAB")})
 			
-			# Add pagination prompts if applicable
 			var pagination_prompts = _get_pagination_prompts(focus_owner)
 			actions.append_array(pagination_prompts)
 	
@@ -389,7 +365,6 @@ func _update_footer_prompts():
 func _get_custom_a_action(focus_owner: Control) -> Dictionary:
 	var section_name = _sections[_current_section_index].name
 	
-	# Detect specialized items by script path or class
 	var script_path = ""
 	if focus_owner.get_script() != null:
 		script_path = focus_owner.get_script().get_path()
@@ -437,7 +412,6 @@ func _get_pagination_prompts(focus_owner: Control) -> Array:
 	var prompts = []
 	var pl: ProductList = null
 	
-	# Find ProductList in ancestors
 	var current_node = focus_owner
 	while is_instance_valid(current_node):
 		if current_node is ProductList:
@@ -451,11 +425,8 @@ func _get_pagination_prompts(focus_owner: Control) -> Array:
 	return prompts
 
 func _input(event: InputEvent):
-	# Globally block Joypad inputs if current section is typing
-	# This prevents background focus navigation while using virtual keyboard
 	var current_section_node = _sections[_current_section_index].instance
 	if is_instance_valid(current_section_node) and current_section_node.has_method("is_typing") and current_section_node.is_typing():
-		# Allow exit (B) and confirm (A) actions to pass through to the section
 		if event.is_action("ui_cancel") or event.is_action("ui_accept"):
 			return
 
@@ -491,7 +462,6 @@ func _unhandled_input(event: InputEvent):
 		get_viewport().set_input_as_handled()
 		return
 
-	# Block global section switching if details view or flyout is open
 	if is_instance_valid(details_view) and details_view.visible:
 		if event.is_action_pressed("section_next") or event.is_action_pressed("section_previous"):
 			get_viewport().set_input_as_handled()
@@ -504,16 +474,16 @@ func _unhandled_input(event: InputEvent):
 
 	var new_section_index = _current_section_index
 	var switched = false
-	if event.is_action_pressed("section_next"): # R1 / RB
+	if event.is_action_pressed("section_next"):
 		new_section_index += 1
 		if new_section_index >= _sections.size():
-			new_section_index = 0 # Wrap around to the start
+			new_section_index = 0
 		switched = true
 		
-	elif event.is_action_pressed("section_previous"): # L1 / LB
+	elif event.is_action_pressed("section_previous"):
 		new_section_index -= 1
 		if new_section_index < 0:
-			new_section_index = _sections.size() - 1 # Wrap around to the end
+			new_section_index = _sections.size() - 1
 		switched = true
 	
 	if switched:
@@ -533,8 +503,8 @@ func _unhandled_input(event: InputEvent):
 
 		var action_string = ""
 		if event.is_action_pressed("ui_down"): action_string = "ui_down"
-		elif event.is_action_pressed("ui_left"): action_string = "ui_left" # Für Navigation innerhalb der Buttons
-		elif event.is_action_pressed("ui_right"): action_string = "ui_right" # Für Navigation innerhalb der Buttons
+		elif event.is_action_pressed("ui_left"): action_string = "ui_left"
+		elif event.is_action_pressed("ui_right"): action_string = "ui_right"
 
 		if action_string == "ui_down":
 			if is_instance_valid(_current_home_view_instance) and _current_home_view_instance.has_method("focus_first_product_in_popular_list"):
@@ -543,9 +513,6 @@ func _unhandled_input(event: InputEvent):
 		elif action_string == "ui_left" or action_string == "ui_right":
 			pass
 	
-# =============================================================================
-# HELPER FUNCTIONS
-# =============================================================================
 func _on_top_bar_button_focus_entered():
 	var focus_owner = get_viewport().gui_get_focus_owner()
 	print("Main DEBUG: Top Bar Button Focus Entered: ", focus_owner.name if is_instance_valid(focus_owner) else "unknown")
@@ -557,8 +524,7 @@ func _on_top_bar_button_focus_entered():
 		focus_sound.play()
 
 func load_popular_products():
-	# Get the instance of the home view from our sections array
-	var home_view_node = _sections[0].instance # Index 0 is "Home"
+	var home_view_node = _sections[0].instance
 	if is_instance_valid(home_view_node) and home_view_node.has_node("ContentScrollContainer/ListMargin/VBoxContainer/PopularProductList"):
 		var popular_list = home_view_node.get_node("ContentScrollContainer/ListMargin/VBoxContainer/PopularProductList")
 		_load_product_list("https://flathub.org/api/v2/collection/popular?page=1&per_page=10&locale=en", popular_list)
@@ -687,64 +653,49 @@ func _on_product_list_focus_exited_up():
 			
 			_current_home_view_instance.scroll_to_top()
 		else:
-			# Fallback, falls der global_scroll_container noch relevant ist oder als Notlösung
-			if is_instance_valid(global_scroll_container): # global_scroll_container ist der alte in main.tscn
+			if is_instance_valid(global_scroll_container):
 				global_scroll_container.scroll_vertical = 0
 				print("Main: Reset global scroll position to top (fallback).") 
 			
-# In main.gd
 
 func _on_move_to_details_view(app_id: String, installed: bool, app_name: String = ""):
 	var focused_control = get_viewport().gui_get_focus_owner()
-	_last_focused_product_box = null # Reset before attempting to set
+	_last_focused_product_box = null
 
 	if is_instance_valid(focused_control):
 		var current_section_node = _sections[_current_section_index].instance
 		if is_instance_valid(current_section_node) and current_section_node.is_ancestor_of(focused_control):
 			var candidate = focused_control
-			# Traverse up the scene tree from the focused_control
-			# until we either find a node of type ProductBox
-			# or we reach the current_section_node itself (meaning focused_control was not inside a ProductBox)
-			# or we have no parent left within the section.
 			while is_instance_valid(candidate):
-				if candidate is ProductBox: # This requires 'class_name ProductBox' in your product_box.gd
+				if candidate is ProductBox:
 					_last_focused_product_box = candidate
 					print("INFO Main: Stored last focused ProductBox: ", candidate.name if "name" in candidate else "Unnamed ProductBox")
-					break # Found it!
+					break
 				
-				# Stop if the parent is the section container itself or if there's no parent
 				var parent = candidate.get_parent()
 				if not is_instance_valid(parent) or parent == current_section_node:
-					# If we reached here, focused_control was not inside a ProductBox,
-					# or ProductBox itself was focused (and the 'is ProductBox' check above caught it).
-					# If the originally focused control is what we want to re-focus and it's not a ProductBox,
-					# we could store 'focused_control' directly, but it's usually better to focus its ProductBox container.
-					if _last_focused_product_box == null: # Only if we haven't found a ProductBox yet
+					if _last_focused_product_box == null:
 						print("WARN Main: Focused control was not a ProductBox or child of one. Storing direct focused_control for fallback: ", focused_control)
-						_last_focused_product_box = focused_control # Fallback to the actual focused item
+						_last_focused_product_box = focused_control
 					break 
 				candidate = parent
 	
 	if not is_instance_valid(_last_focused_product_box):
 		print("INFO Main: Could not determine a specific control to re-focus within the current section.")
 
-	# The rest of your function to switch to details_view
 	details_view.set_initial_state(app_id, installed, app_name)
 	details_view.load_details()
-	if is_instance_valid(select_sound): select_sound.play() # Check if sound player is valid
+	if is_instance_valid(select_sound): select_sound.play()
 	
-	# --- Transition Logic (simplified for now, focus on the problem) ---
-	# Your tweening logic for main_view and details_view
 	var tween = create_tween()
 	var main_view_height = main_view.size.y
-	# var target_y = main_view_height # This moves main_view down, was it intended to move up?
-	var target_y_main_out = -main_view_height # Example: move main_view up and out
+	var target_y_main_out = -main_view_height
 	
 	tween.tween_property(main_view, "position:y", target_y_main_out, transition_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	await tween.finished
-	main_view.visible = false # Hide after animation
+	main_view.visible = false
 
-	details_view.position.y = 0 # Ensure details_view is at its correct position
+	details_view.position.y = 0
 	details_view.visible = true
 	details_view.set_initial_focus()
 		
@@ -768,12 +719,9 @@ func _on_move_back_to_main_view():
 		var current_section_instance = _sections[_current_section_index].instance
 		if is_instance_valid(current_section_instance) and current_section_instance.has_method("focus_default_element"):
 			current_section_instance.focus_default_element()
-		elif is_instance_valid(home_button): # Absolute fallback
+		elif is_instance_valid(home_button):
 			home_button.grab_focus()
 	_last_focused_product_box = null 
-# =============================================================================
-# PRODUCT LOADING & CALLBACKS 
-# =============================================================================
 
 func _on_image_request_completed(result, response_code, headers, body: PackedByteArray, texture_rect: TextureRect, image_url: String, http_request_node: HTTPRequest):
 	if not is_instance_valid(texture_rect):
@@ -828,17 +776,12 @@ func _on_image_request_completed(result, response_code, headers, body: PackedByt
 		http_request_node.queue_free()
 				
 
-# =============================================================================
-# DATA LOADING (Mit File Cache Logik)
-# =============================================================================
 
 func _load_product_list(url: String, target_list: ProductList):
 	if not is_instance_valid(target_list):
 		printerr("ERROR Invalid target list, URL: ", url)
 		return
 
-	# --- File Cache Check ---
-	# Special handling for Search (POST request disguised as GET URL for internal consistency)
 	if url.begins_with("https://flathub.org/api/v2/search"):
 		_perform_search_post(url, target_list)
 		return
@@ -860,20 +803,19 @@ func _load_product_list(url: String, target_list: ProductList):
 				var current_time = Time.get_unix_time_from_system() 
 				var cache_age = current_time - timestamp
 
-				# Vergleiche mit der Dauer in Sekunden
 				if cache_age < CACHE_DURATION_SEC and api_data != null:
-					print("--> Cache HIT for %s (Age: %d sec)" % [target_list.title, cache_age]) # Ausgabe in Sekunden
+					print("--> Cache HIT for %s (Age: %d sec)" % [target_list.title, cache_age])
 					_process_product_list_data(api_data, target_list, url)
 					return
 				else:
-					print("--> Cache EXPIRED or invalid for %s (Age: %d sec)" % [target_list.title, cache_age]) # Ausgabe in Sekunden
+					print("--> Cache EXPIRED or invalid for %s (Age: %d sec)" % [target_list.title, cache_age])
 					DirAccess.remove_absolute(cache_filepath)
 			else:
 				print("--> Cache-File corrupt (No Dictionary) for %s: %s" % [target_list.title, cache_filepath.get_file()])
 				DirAccess.remove_absolute(cache_filepath)
 		else:
 			printerr("--> Error opening cahce file %s: %s" % [cache_filepath.get_file(), open_error])
-			if is_instance_valid(file): file.close() # Sicherstellen, dass Handle geschlossen wird
+			if is_instance_valid(file): file.close()
 	else:
 		print("-> Cache MISS for  %s" % target_list.title)
 
@@ -890,8 +832,6 @@ func _load_product_list(url: String, target_list: ProductList):
 func _perform_search_post(url: String, target_list: ProductList):
 	print("DEBUG: Performing POST search for URL: ", url)
 	
-	# 1. Parse Parameters from URL string
-	# URL format: https://flathub.org/api/v2/search?q=...&page=...&per_page=...
 	var query_string = ""
 	var page = 1
 	var per_page = 24
@@ -913,7 +853,6 @@ func _perform_search_post(url: String, target_list: ProductList):
 		printerr("ERROR: No query found in search URL: ", url)
 		return
 
-	# 2. Prepare POST Request
 	var api_url = "https://flathub.org/api/v2/search"
 	var headers = ["Content-Type: application/json"]
 	var body_data = {
@@ -945,8 +884,6 @@ func _on_search_request_completed(result, response_code, headers, body, http_req
 		var api_json = JSON.parse_string(response_string)
 		
 		if api_json != null:
-			# We don't cache search results effectively yet, or we could cache by the custom URL hash
-			# For now, just process data
 			_process_product_list_data(api_json, target_list, url)
 		else:
 			printerr("JSON parse error for Search Response.")
@@ -972,7 +909,7 @@ func _on_product_list_request_completed(result, response_code, headers, body, ht
 				"timestamp": Time.get_unix_time_from_system(),
 				"api_data": api_json
 			}
-			var json_string_to_cache = JSON.stringify(data_to_cache, "  ") # Mit Einrückung für Lesbarkeit
+			var json_string_to_cache = JSON.stringify(data_to_cache, "  ")
 			var cache_filepath = _get_api_cache_filepath(url)
 
 			var file = FileAccess.open(cache_filepath, FileAccess.WRITE)
@@ -1004,9 +941,6 @@ func _process_product_list_data(json_data, target_list: ProductList, url: String
 		print("Productlist '%s' updated." % target_list.title)
 	else: printerr("Unexpected data structure for list '%s'." % target_list.title)
 
-# =============================================================================
-# JOY CONNECTION CALLBACKS
-# =============================================================================
 
 func _check_connected_controllers():
 	var connected_joypads = Input.get_connected_joypads()
@@ -1021,7 +955,6 @@ func _on_joy_connection_changed(device_id: int, connected: bool):
 	print("-----------------------------------------")
 
 func _ensure_user_remote_exists():
-	# Prüfe ob flathub als user-remote existiert
 	var check_cmd = "LC_ALL=C flatpak remotes --user --columns=name"
 	var output = []
 	var exit_code = OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args(check_cmd), output)
@@ -1046,9 +979,6 @@ func _ensure_user_remote_exists():
 	else:
 		print("INFO: Flathub user-remote already exists.")
 
-# =============================================================================
-# INSTALLED APP HANDLING
-# =============================================================================
 
 func _fetch_installed_apps():
 	if _flatpak_thread != null:
@@ -1068,8 +998,6 @@ func _fetch_installed_apps():
 
 
 func _execute_flatpak_in_thread():
-	# Use sh -c to set LC_ALL=C for consistent output format (dots for decimals)
-	# and fetch application ID, name, size and installation scope.
 	var host_command = "LC_ALL=C flatpak list --app --columns=application,name,size,installation"
 	
 	var run_cmd = SystemUtils.get_host_sh_cmd()
@@ -1114,8 +1042,6 @@ func _process_flatpak_result(output: String, exit_code: int):
 			line = line.strip_edges()
 			if line.is_empty(): continue
 			
-			# Columns: application, name, size, installation
-			# separated by tabs usually, but let's be robust
 			var parts = line.split("\t")
 			if parts.size() >= 4:
 				var app_id = parts[0].strip_edges()
@@ -1130,10 +1056,6 @@ func _process_flatpak_result(output: String, exit_code: int):
 				}
 				count += 1
 			else:
-				# Fallback if split by tab fails (maybe spaces?)
-				# But spaces are dangerous because Name can have spaces.
-				# Given LC_ALL=C and standard flatpak list, tabs are expected.
-				# We log a warning if parsing fails.
 				printerr("WARN: Could not parse flatpak line: ", line)
 				
 		print("INFO: %d installed flatpaks found and processed." % count)
@@ -1155,7 +1077,6 @@ func _update_all_lists_install_status():
 			current_section_node.update_internal_list_install_status(_installed_flatpak_ids)
 			print("INFO Main: Called update_internal_list_install_status on: ", current_section_node.name)
 
-# Switches to the section at the given index with a carousel animation
 func _switch_to_section(target_index: int):
 	if _is_switching_section: return
 	if target_index < 0 or target_index >= _sections.size(): return
@@ -1168,27 +1089,18 @@ func _switch_to_section(target_index: int):
 	
 	var new_section_instance = _sections[target_index].instance
 	
-	# --- START: Corrected Animation Direction Logic ---
-	var direction = 1 # Default: "next" animation (new view from the right)
+	var direction = 1
 	
-	# Determine direction based on index change
 	if target_index < old_section_index:
-		# This is a normal "previous" press (e.g., from index 3 to 2)
 		direction = -1
 	
-	# Now, specifically handle the wrap-around cases to get the correct "feel"
 	if old_section_index == _sections.size() - 1 and target_index == 0:
-		# Case: Moving forward from the last section (e.g., Search) to the first (Home)
-		# This is a "next" action.
 		direction = 1
 	elif old_section_index == 0 and target_index == _sections.size() - 1:
-		# Case: Moving backward from the first section (Home) to the last (Search)
-		# This is a "previous" action.
 		direction = -1
 	
 	var container_width = section_view_container.size.x
 
-	# Prepare and show the new section off-screen
 	if is_instance_valid(new_section_instance):
 		new_section_instance.position.x = container_width * direction
 		new_section_instance.visible = true
@@ -1199,40 +1111,31 @@ func _switch_to_section(target_index: int):
 		_is_switching_section = false
 		return
 		
-	# Create and configure the tween for the animation
 	var tween = create_tween()
 	tween.set_parallel(true)
 	tween.set_trans(Tween.TRANS_SINE)
 	tween.set_ease(Tween.EASE_OUT)
 
-	# Animate the new section into view
 	tween.tween_property(new_section_instance, "position:x", 0.0, transition_time_section_change)
 
-	# Animate the old section out of view
 	if is_instance_valid(old_section_instance):
 		if old_section_instance.has_method("on_view_exiting"):
 			old_section_instance.on_view_exiting()
-		# Move it in the opposite direction
 		tween.tween_property(old_section_instance, "position:x", -container_width * direction, transition_time_section_change)
-		# Hide the old section after the animation completes
 		tween.chain().tween_callback(func(): old_section_instance.visible = false)
 	
-	# Update the current index *after* the direction has been calculated
 	_current_section_index = target_index
 	
-	# Update the top bar focus and re-enable switching after animation
 	await tween.finished
 	await _update_top_bar_button_focus()
 	_is_switching_section = false
 	
-# Called when a button in the top bar is pressed
 func _on_top_bar_button_pressed(target_index: int):
 	print("Main DEBUG: Top Bar Button Pressed for index: ", target_index, " (", _sections[target_index].name, ")")
 	if is_instance_valid(switch_sound) and _is_switching_section == false:
 		switch_sound.play()
 	_switch_to_section(target_index)
 
-# Helper to connect signals for any Section View (HomeView, CategoriesView, etc.)
 func _connect_section_signals(view_node: Control):
 	if not is_instance_valid(view_node): return
 
@@ -1252,7 +1155,6 @@ func _connect_section_signals(view_node: Control):
 		if not view_node.load_new_page_requested.is_connected(_load_product_list):
 			view_node.load_new_page_requested.connect(_load_product_list)
 
-# Helper to update focus and style on top bar buttons
 func _update_top_bar_button_focus():
 	_suppress_focus_sound = true
 	

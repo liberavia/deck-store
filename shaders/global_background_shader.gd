@@ -9,12 +9,10 @@ var foreground_layer: CanvasLayer
 var foreground_fog: ColorRect
 
 func _ready():
-	# Create the foreground layer for the startup transition
 	foreground_layer = CanvasLayer.new()
-	foreground_layer.layer = 100 # High layer to cover UI
+	foreground_layer.layer = 100
 	add_child(foreground_layer)
 	
-	# Duplicate the fog rect to put in foreground
 	foreground_fog = fog_background.duplicate()
 	foreground_layer.add_child(foreground_fog)
 
@@ -39,7 +37,6 @@ func transition_to_background(duration: float = 3.5):
 		emit_signal("transition_finished")
 	)
 
-	# Audio tween: fade out slowly right from the beginning (opposite to visuals)
 	if is_instance_valid(audio_player):
 		var audio_tween = create_tween()
 		audio_tween.tween_property(audio_player, "volume_db", -40.0, 3.5).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)

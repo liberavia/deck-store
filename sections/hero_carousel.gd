@@ -98,7 +98,6 @@ func _fetch_apps_data():
 		http.request(url)
 		active_requests += 1
 		
-	# Fix right margin clipping on ScrollContainer
 	var spacer = Control.new()
 	spacer.custom_minimum_size = Vector2(30, 0)
 	container.add_child(spacer)
@@ -242,7 +241,7 @@ func _create_empty_card(app_id: String) -> Button:
 	status_indicator.name = "StatusIndicator"
 	status_indicator.texture = load("res://assets/check_green.png")
 	status_indicator.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	status_indicator.layout_mode = 1 # 1 = LAYOUT_MODE_ANCHORS
+	status_indicator.layout_mode = 1
 	status_indicator.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	status_indicator.offset_left = -35.0
 	status_indicator.offset_right = -10.0

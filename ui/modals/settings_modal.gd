@@ -11,7 +11,6 @@ func _ready():
 	hide()
 	close_button.pressed.connect(close_modal)
 	
-	# Close when clicking outside
 	$ColorRect.gui_input.connect(func(event):
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			close_modal()
@@ -20,7 +19,6 @@ func _ready():
 	_populate_settings()
 
 func _populate_settings():
-	# Clear placeholder
 	for child in settings_container.get_children():
 		child.queue_free()
 		
@@ -41,7 +39,6 @@ func _create_check_setting(label_text: String, setting_key: String):
 	check.button_pressed = SettingsManager.get_setting(setting_key, true)
 	check.toggled.connect(func(toggled_on): SettingsManager.set_setting(setting_key, toggled_on))
 	
-	# Add sound feedback when toggled (if enabled)
 	check.focus_entered.connect(func(): if SettingsManager.get_setting("play_ui_sounds", true): get_node("/root/App/FocusSoundPlayer").play())
 	check.pressed.connect(func(): if SettingsManager.get_setting("play_ui_sounds", true): get_node("/root/App/ButtonSoundPlayer").play())
 	

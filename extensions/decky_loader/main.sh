@@ -1,14 +1,11 @@
 #!/bin/bash
-# Decky Loader Extension Script (Manual User-Mode Install)
 
-# Import base functions
 source "$(dirname "$0")/../deckstore_base.sh"
 
 OPERATION="$1"
 LOG_FILE="$2"
 EXTENSION_ID="decky_loader"
 
-# Base paths (on Host)
 DECKY_HOME="$HOME/homebrew"
 DECKY_SERVICES="$DECKY_HOME/services"
 DECKY_DIR="$DECKY_SERVICES/decky-loader"
@@ -27,7 +24,6 @@ check_host_access() {
 }
 
 get_latest_release_info() {
-    # Returns JSON string
     curl -s https://api.github.com/repos/SteamDeckHomebrew/decky-loader/releases/latest
 }
 
@@ -38,7 +34,6 @@ install_decky() {
     ds_send_progress 10 "Fetching latest release info..."
     RELEASE_JSON=$(get_latest_release_info)
     
-    # Parse URL and Version
     DOWNLOAD_URL=$(echo "$RELEASE_JSON" | jq -r '.assets[] | select(.name=="PluginLoader") | .browser_download_url')
     VERSION_TAG=$(echo "$RELEASE_JSON" | jq -r '.tag_name')
     
@@ -50,14 +45,12 @@ install_decky() {
     ds_log "Latest version: $VERSION_TAG"
     ds_send_progress 30 "Creating directories..."
     
-    # Create directories on host
     $DS_HOST_SPAWN mkdir -p "$DECKY_DIR"
     $DS_HOST_SPAWN mkdir -p "$DECKY_PLUGINS"
     $DS_HOST_SPAWN mkdir -p "$SYSTEMD_USER_DIR"
     
     ds_send_progress 50 "Downloading PluginLoader..."
     
-    # Download binary to host
     if ! $DS_HOST_SPAWN curl -L "$DOWNLOAD_URL" -o "$DECKY_DIR/PluginLoader"; then
         ds_log "ERROR: Download failed."
         exit 1
@@ -67,8 +60,6 @@ install_decky() {
     
     ds_send_progress 70 "Creating Systemd Service..."
     
-    # Create Service File Content
-    # Using 'cat' trick to write to host file
     SERVICE_CONTENT="[Unit]
 Description=Decky Loader
 Documentation=https://github.com/SteamDeckHomebrew/decky-loader
@@ -84,7 +75,6 @@ Environment=PluginLoader_VERSION=$VERSION_TAG
 [Install]
 WantedBy=default.target"
 
-    # We use base64 to safely transport the content through flatpak-spawn
     ENCODED_CONTENT=$(echo "$SERVICE_CONTENT" | base64 -w 0)
     $DS_HOST_SPAWN sh -c "echo '$ENCODED_CONTENT' | base64 -d > '$SERVICE_FILE'"
     
@@ -93,14 +83,11 @@ WantedBy=default.target"
     
     ds_send_progress 90 "Enabling Service..."
     
-    # Reload daemon and enable service
     $DS_HOST_SPAWN systemctl --user daemon-reload
     if $DS_HOST_SPAWN systemctl --user enable --now decky-loader; then
         ds_send_progress 100 "Installation completed."
         ds_log "SUCCESS: Decky Loader installed and started."
         
-        # Write version file locally for our check
-        # We can't easily write to host only, so we rely on 'version' command fetching from running process or file
     else
         ds_log "ERROR: Failed to enable systemd service."
         exit 1
@@ -117,8 +104,6 @@ case "$OPERATION" in
         if $DS_HOST_SPAWN systemctl --user is-active decky-loader > /dev/null 2>&1; then
             exit 0
         elif $DS_HOST_SPAWN test -f "$DECKY_DIR/PluginLoader"; then
-             # Binary exists but maybe not running? Return true as 'installed' but maybe issue warning?
-             # For ExtensionsManager, exit 0 means installed.
              exit 0
         else
              exit 1
@@ -135,10 +120,7 @@ case "$OPERATION" in
         $DS_HOST_SPAWN systemctl --user daemon-reload
         
         ds_send_progress 50 "Removing files..."
-        # Optional: Ask user if they want to keep plugins? For now we remove the loader binary but keep data?
-        # Standard uninstall usually removes everything. Let's be safe and remove loader binary.
         $DS_HOST_SPAWN rm "$DECKY_DIR/PluginLoader"
-        # We keep plugins folder to not delete user data accidentally
         
         ds_send_progress 100 "Uninstalled."
         ds_log "SUCCESS: Decky Loader uninstalled (Plugins kept in $DECKY_PLUGINS)."
@@ -146,19 +128,15 @@ case "$OPERATION" in
         
     "update")
          ds_log "Updating Decky Loader..."
-         # Update is same as install (overwrite binary)
          install_decky
          ;;
         
     "version")
-        # Extract version using host shell to resolve paths correctly
-        # We rely on $HOME resolving correctly on host side if we use sh -c
         VERSION=$($DS_HOST_SPAWN sh -c 'grep "Environment=PluginLoader_VERSION=" "$HOME/.config/systemd/user/decky-loader.service"' 2>/dev/null | sed -E 's/.*Environment=PluginLoader_VERSION=(.*)/\1/')
         
         if [ -z "$VERSION" ]; then
              echo "0.0.0" > "$LOG_FILE"
         else
-             # Remove 'v' prefix if present
              echo "${VERSION#v}" > "$LOG_FILE"
         fi
         ;;

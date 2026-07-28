@@ -6,7 +6,7 @@ extends Control
 @export var star_empty_texture: Texture2D
 
 @export var max_stars: int = 5
-@export var star_size: Vector2 = Vector2(24, 24) # Passen Sie dies an Ihre Texturgröße an
+@export var star_size: Vector2 = Vector2(24, 24)
 
 @onready var stars_container: HBoxContainer = $StarsContainer
 

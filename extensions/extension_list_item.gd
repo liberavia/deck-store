@@ -12,23 +12,19 @@ extends PanelContainer
 @onready var progress_label: Label = $MarginContainer/ExtensionContainer/ActionContainer/ProgressInfo/ProgressLabel
 @onready var progress_bar: ProgressBar = $MarginContainer/ExtensionContainer/ActionContainer/ProgressInfo/ProgressBar
 
-# --- Constants ---
-# Colors matching ActionButton.gd
-const COLOR_INSTALL = Color("#245322") # Greenish
-const COLOR_REMOVE = Color("#5c0001")  # Reddish
-const COLOR_BUSY = Color("#4a4a4a")    # Dark Gray
-const COLOR_NORMAL = Color("#626262")  # Gray
-const COLOR_UPDATE = Color("#005cc5")  # GitHub Blue-ish for Update
+const COLOR_INSTALL = Color("#245322")
+const COLOR_REMOVE = Color("#5c0001")
+const COLOR_BUSY = Color("#4a4a4a")
+const COLOR_NORMAL = Color("#626262")
+const COLOR_UPDATE = Color("#005cc5")
 const COLOR_PURPLE_BORDER = Color(0.627451, 0.12549, 0.941176, 1)
 
-# --- Internal State ---
 var _extension_id: String
 var _operation_in_progress: bool = false
 var _update_available: bool = false
 var _latest_version: String = ""
 var _pending_focus_grab: bool = false
 
-# Styleboxes for the button
 var stylebox_install: StyleBoxFlat
 var stylebox_remove: StyleBoxFlat
 var stylebox_busy: StyleBoxFlat
@@ -36,7 +32,6 @@ var stylebox_normal: StyleBoxFlat
 var stylebox_update: StyleBoxFlat
 var stylebox_focus: StyleBoxFlat
 
-# Audio
 var stream_focus = preload("res://assets/change.mp3")
 var stream_select = preload("res://assets/nextprev.wav")
 var audio_player: AudioStreamPlayer
@@ -102,7 +97,6 @@ func _setup_styles():
 	
 	stylebox_normal.bg_color = COLOR_NORMAL
 	
-	# Setup focus style
 	stylebox_focus = stylebox_normal.duplicate()
 	stylebox_focus.draw_center = false
 	stylebox_focus.border_width_left = 3
@@ -113,16 +107,14 @@ func _setup_styles():
 	
 	action_button.add_theme_stylebox_override("focus", stylebox_focus)
 	update_button.add_theme_stylebox_override("focus", stylebox_focus)
-	# Set update button normal style permanently
 	update_button.add_theme_stylebox_override("normal", stylebox_update)
 
 func _on_update_button_pressed():
 	if _operation_in_progress: return
 	
-	# Dependency check for update (might need new dependencies?)
 	var missing_deps = ExtensionsManager.get_missing_dependencies(_extension_id)
 	if not missing_deps.is_empty():
-		_show_dependency_popup("install", missing_deps) # Update is effectively install
+		_show_dependency_popup("install", missing_deps)
 		return
 	
 	print("INFO: Requesting update for ", _extension_id)
@@ -134,7 +126,6 @@ func _on_action_button_pressed():
 	
 	var current_text = action_button.text
 	if current_text == "Install":
-		# Check dependencies for Install
 		var missing_deps = ExtensionsManager.get_missing_dependencies(_extension_id)
 		if not missing_deps.is_empty():
 			_show_dependency_popup("install", missing_deps)
@@ -145,7 +136,6 @@ func _on_action_button_pressed():
 		ExtensionsManager.install_extension(_extension_id)
 			
 	elif current_text == "Uninstall":
-		# Check dependents for Uninstall
 		var dependents = ExtensionsManager.get_installed_dependents(_extension_id)
 		if not dependents.is_empty():
 			_show_dependency_popup("uninstall", dependents)
@@ -159,24 +149,20 @@ func _show_dependency_popup(mode: String, dependency_ids: Array):
 	var popup_scene = load("res://sections/dependency_popup.tscn")
 	var popup = popup_scene.instantiate()
 	
-	# Add directly to root to ensure it exists and is independent of UI structure
 	get_tree().root.add_child(popup)
 	
 	popup.setup(mode, name_label.text, dependency_ids)
 	
 	popup.confirmed.connect(func():
 		if mode == "install":
-			# Order: Dependencies first, then target
 			var install_list = dependency_ids.duplicate()
 			install_list.append(_extension_id)
 			print("INFO: Batch install confirmed: ", install_list)
 			
-			# Check if it's an update (already installed) or fresh install
 			var op = "update" if ExtensionsManager.get_extension_status(_extension_id) else "install"
 			ExtensionsManager.execute_transaction(install_list, op)
 			
 		elif mode == "uninstall":
-			# Order: Dependents first, then target
 			var remove_list = dependency_ids.duplicate()
 			remove_list.append(_extension_id)
 			print("INFO: Batch remove confirmed: ", remove_list)
@@ -205,7 +191,6 @@ func _on_operation_finished(extension_id: String, operation: String):
 		_pending_focus_grab = true
 		progress_bar.value = 100
 		
-		# If update finished, re-check status to hide update button if necessary
 		if operation == "update":
 			_update_available = not ExtensionsManager.get_update_status(_extension_id).is_empty()
 		
@@ -248,13 +233,11 @@ func set_data(extension_data: Dictionary):
 		else:
 			icon_texture.texture = null
 			
-	# Check if an update is already known for this extension
 	var known_update = ExtensionsManager.get_update_status(_extension_id)
 	if not known_update.is_empty():
 		_update_available = true
 		_latest_version = known_update
 	
-	# Initial status update
 	update_status(ExtensionsManager.get_extension_status(_extension_id))
 
 func update_status(is_installed: bool):
@@ -282,7 +265,6 @@ func update_status(is_installed: bool):
 		update_button.disabled = true
 		action_button.text = "..."
 		update_button.visible = false 
-		# If busy, hide update button to avoid confusion, focus on progress bar
 		action_button.add_theme_stylebox_override("normal", stylebox_busy)
 	else:
 		action_button.disabled = false

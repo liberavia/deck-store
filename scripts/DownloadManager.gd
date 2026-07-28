@@ -7,7 +7,6 @@ signal task_finished(operation_id, final_status, operation_type)
 
 const OUTPUT_DIR = "user://flatpak_logs"
 
-# Standardpfad für die Flatpak-Executable
 const DEFAULT_FLATPAK_EXE_PATH = "/usr/bin/flatpak"
 
 var task_queue: Array[Dictionary] = []
@@ -44,7 +43,6 @@ func queue_install(app_id: String, app_data: Dictionary = {}) -> String:
 	return _add_task("install", app_id, app_data)
 
 func queue_update(app_id: String, app_data: Dictionary = {}) -> String:
-	# Fetch the installation scope before adding to queue
 	if not app_data.has("installation"):
 		var main_app = get_node_or_null("/root/App")
 		if main_app and main_app.has_method("get_app_scope"):
@@ -55,9 +53,8 @@ func queue_update(app_id: String, app_data: Dictionary = {}) -> String:
 func queue_uninstall(app_id: String, app_data: Dictionary = {}) -> String:
 	print("INFO DownloadManager: Queueing Uninstall for ", app_id)
 
-	# Versuche, den Shortcut aus Steam zu entfernen, wenn die Deinstallation gestartet wird
 	if ProjectSettings.has_setting("autoload/SteamIntegration"):
-		var steam_integration_node = get_node_or_null("/root/SteamIntegration") # Sicherer Zugriff
+		var steam_integration_node = get_node_or_null("/root/SteamIntegration")
 		if is_instance_valid(steam_integration_node):
 			if steam_integration_node.has_method("remove_from_steam"):
 				print("INFO DownloadManager: Triggering SteamIntegration.remove_from_steam for ", app_id)
@@ -67,7 +64,6 @@ func queue_uninstall(app_id: String, app_data: Dictionary = {}) -> String:
 		else: printerr("DownloadManager: SteamIntegration Autoload node not found or invalid.")
 	else: printerr("DownloadManager: SteamIntegration Autoload setting not found.")
 
-	# Fetch the installation scope before adding to queue
 	if not app_data.has("installation"):
 		var main_app = get_node_or_null("/root/App")
 		if main_app and main_app.has_method("get_app_scope"):
@@ -89,7 +85,7 @@ func cancel_operation(operation_id: String):
 			for i in range(task_queue.size()):
 				if task_queue[i].operation_id == operation_id:
 					task_queue.remove_at(i)
-					running_tasks.erase(operation_id) # Entferne auch aus running_tasks, da es nie gestartet wurde
+					running_tasks.erase(operation_id)
 					emit_signal("task_finished", operation_id, "cancelled", op_type)
 					print("Cancelled queued task: ", operation_id)
 					return
@@ -101,7 +97,7 @@ func cancel_operation(operation_id: String):
 
 func get_task_status(app_id: String) -> Dictionary:
 	var task_keys = running_tasks.keys()
-	for i in range(task_keys.size() - 1, -1, -1): # Rückwärts iterieren ist sicherer, falls Elemente entfernt werden (hier nicht der Fall)
+	for i in range(task_keys.size() - 1, -1, -1):
 		var op_id = task_keys[i]
 		if running_tasks.has(op_id) and running_tasks[op_id].app_id == app_id:
 			return running_tasks[op_id].status_data
@@ -110,19 +106,17 @@ func get_task_status(app_id: String) -> Dictionary:
 
 func get_all_tasks() -> Array[Dictionary]:
 	var tasks_for_ui: Array[Dictionary] = []
-	# Aktuell laufenden Task zuerst hinzufügen, falls vorhanden
 	if current_task_processing and running_tasks.has(current_op_id):
 		tasks_for_ui.append(running_tasks[current_op_id])
-	# Dann die Tasks aus der Warteschlange hinzufügen (ohne den aktuell laufenden, falls er noch in der queue wäre)
 	for task_in_queue in task_queue:
-		if task_in_queue.operation_id != current_op_id: # Dopplungen vermeiden
+		if task_in_queue.operation_id != current_op_id:
 			tasks_for_ui.append(task_in_queue)
 	return tasks_for_ui
 
 func _add_task(op_type: String, app_id: String, app_data: Dictionary = {}) -> String:
 	var timestamp_sec = Time.get_unix_time_from_system()
-	var timestamp_usec = Time.get_ticks_usec() # Für höhere Eindeutigkeit
-	var random_num = randi() # Zusätzliche Zufälligkeit
+	var timestamp_usec = Time.get_ticks_usec()
+	var random_num = randi()
 	var operation_id = "%s-%s-%s" % [timestamp_sec, timestamp_usec, random_num]
 	
 	if (op_type == "install" or op_type == "update") and AppBlacklist.is_blacklisted(app_id):
@@ -134,8 +128,8 @@ func _add_task(op_type: String, app_id: String, app_data: Dictionary = {}) -> St
 	var initial_status_data = {
 		"status": "queued", "app_id": app_id, "operation_id": operation_id,
 		"progress": 0, "speed": null, "eta": null, "error": null,
-		"name": app_data.get("name", app_id), # Name aus app_data oder app_id als Fallback
-		"icon_url": app_data.get("icon_url", "") # Icon URL aus app_data
+		"name": app_data.get("name", app_id),
+		"icon_url": app_data.get("icon_url", "")
 	}
 	
 	var task_data = {
@@ -145,9 +139,9 @@ func _add_task(op_type: String, app_id: String, app_data: Dictionary = {}) -> St
 	}
 	
 	task_queue.append(task_data)
-	running_tasks[operation_id] = task_data # Task auch in running_tasks mit initialem Status aufnehmen
+	running_tasks[operation_id] = task_data
 	
-	if op_type != "uninstall": # Für Deinstallationen ggf. kein "task_added" Signal, oder anpassen
+	if op_type != "uninstall":
 		emit_signal("task_added", operation_id, app_id, op_type)
 		
 	print("Task added to queue: ", task_data)
@@ -169,28 +163,22 @@ func _execute_task(task_data: Dictionary):
 
 
 	task_data.output_file = current_output_file
-	# Update status_data for the task in running_tasks
 	var new_status_data = task_data.status_data.duplicate(true)
 	new_status_data.status = "preparing"
 	task_data.status_data = new_status_data
-	running_tasks[current_op_id] = task_data # Stelle sicher, dass running_tasks aktualisiert wird
+	running_tasks[current_op_id] = task_data
 	
 	emit_signal("task_updated", current_op_id, task_data.status_data)
 
 	var da := DirAccess.open(OUTPUT_DIR)
 	if da and FileAccess.file_exists(current_output_file):
-		da.remove(current_output_file.get_file()) # Entferne altes Logfile, falls vorhanden
+		da.remove(current_output_file.get_file())
 
 	var installation = task_data.get("app_data", {}).get("installation", "user")
 	var host_command = "flatpak"
 	var host_args = [task_data.operation_type, "--" + installation, "--assumeyes"]
 	
-	# Spezielle Behandlung für Flathub: Sicherstellen, dass wir den Remote-Namen angeben.
-	# Dies behebt Probleme auf Bazzite/SteamOS, wo Flathub möglicherweise ein System-Remote ist,
-	# wir aber als --user installieren wollen. Ohne Angabe des Remotes findet Flatpak 
-	# die App-Referenz möglicherweise nicht.
 	if task_data.operation_type == "install":
-		# Vorerst nehmen wir Flathub an, da dies die Hauptquelle für den DeckStore ist.
 		var remote = task_data.get("app_data", {}).get("remote", "flathub")
 		host_args.append(remote)
 		
@@ -198,12 +186,10 @@ func _execute_task(task_data: Dictionary):
 	
 	var global_log_path = ProjectSettings.globalize_path(current_output_file)
 	
-	# Baue den Shell-Befehl sicher zusammen, um Probleme mit Sonderzeichen in Pfaden/Argumenten zu vermeiden
-	var host_shell_command = "LC_ALL=C " + host_command # Setze Locale für konsistente Ausgabe
+	var host_shell_command = "LC_ALL=C " + host_command
 	for arg in host_args:
-		host_shell_command += " '%s'" % arg.replace("'", "'\\''") # Quote jedes Argument
+		host_shell_command += " '%s'" % arg.replace("'", "'\\''")
 	
-	# Leite stdout und stderr in dieselbe Logdatei um
 	host_shell_command += " > '%s' 2>&1" % global_log_path.replace("'", "'\\''")
 
 	var run_cmd = SystemUtils.get_host_sh_cmd()
@@ -214,68 +200,62 @@ func _execute_task(task_data: Dictionary):
 	print("  Arguments: ", spawn_args)
 	
 	var pid = OS.create_process(run_cmd, spawn_args)
-	if pid <= 0: # OS.create_process gibt bei Fehler 0 oder -1 zurück
+	if pid <= 0:
 		printerr("Failed to start process for ", task_data.app_id)
 		_finish_task(current_op_id, -1, false, "Failed to start process")
 		return
 		
 	current_pid = pid
 	task_data.pid = pid
-	running_tasks[current_op_id] = task_data # Stelle sicher, dass PID in running_tasks gespeichert wird
+	running_tasks[current_op_id] = task_data
 	print("Started flatpak-spawn process PID: ", current_pid, " for OpID: ", current_op_id)
 
 
 func _process(_delta):
 	if not current_task_processing or current_op_id.is_empty():
 		return
-	if not running_tasks.has(current_op_id): # Task könnte abgebrochen und entfernt worden sein
-		# printerr("DownloadManager _process: Current task %s not found in running_tasks." % current_op_id)
-		current_task_processing = false # Verhindere Endlosschleife, falls Task extern entfernt wurde
-		_check_start_next_task() # Versuche, den nächsten Task zu starten
+	if not running_tasks.has(current_op_id):
+		current_task_processing = false
+		_check_start_next_task()
 		return
 		
 	var task = running_tasks[current_op_id]
 	var process_is_running = OS.is_process_running(current_pid)
 	
 	var read_ok = _read_and_parse_log_update(task)
-	if not read_ok: # Fehler beim Lesen des Logs, Task wurde bereits beendet
+	if not read_ok:
 		return 
 		
 	if not process_is_running:
 		print("Process finished detected in _process (PID %d) AFTER final read attempt, calling finish..." % current_pid)
-		var final_exit_code = 0 # Annahme: Erfolg, wenn nicht als 'failed' markiert
+		var final_exit_code = 0
 		if task.status_data.get("status") == "failed":
-			final_exit_code = 1 # Setze Fehlercode, wenn Status 'failed' ist
+			final_exit_code = 1
 		_finish_task(current_op_id, final_exit_code)
 		return
 
 func _read_and_parse_log_update(task: Dictionary) -> bool:
-	if current_file_access == null: # Versuche, die Log-Datei zu öffnen
+	if current_file_access == null:
 		if FileAccess.file_exists(task.output_file):
 			current_file_access = FileAccess.open(task.output_file, FileAccess.READ)
 			if current_file_access == null:
 				var err = FileAccess.get_open_error()
 				printerr("Failed to open output file: ", task.output_file, " Error: ", err)
 				_finish_task(task.operation_id, -1, false, "Failed to open output file: %d" % err)
-				return false # Signalisiert, dass der Task beendet wurde
-			current_file_access.seek(last_read_pos) # Gehe zur letzten Leseposition
+				return false
+			current_file_access.seek(last_read_pos)
 		else:
-			# Log-Datei existiert (noch) nicht, warte
-			return true # Signalisiert, dass weitergelesen werden kann/soll
+			return true
 
-	# Überprüfe, ob FileAccess noch gültig ist (könnte durch Fehler ungültig geworden sein)
 	if not is_instance_valid(current_file_access) or not current_file_access.is_open():
-		# print("DEBUG: Log file access became invalid or closed unexpectedly.")
-		current_file_access = null # Zurücksetzen, damit es neu geöffnet werden kann
-		return true # Erlaube weiteren Verarbeitungszyklus
+		current_file_access = null
+		return true
 
 	var file_len = current_file_access.get_length()
 	if current_file_access.get_position() >= file_len and OS.is_process_running(task.pid):
-		# Am Ende der Datei, aber Prozess läuft noch, nichts Neues zu lesen
 		return true
 
 	var something_was_updated_in_this_cycle = false
-	# Wichtig: .duplicate(true) für tiefe Kopie, um nicht direkt task.status_data zu ändern
 	var status_data_in_progress = task.status_data.duplicate(true) 
 
 	while current_file_access.get_position() < file_len:
@@ -283,10 +263,9 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 		var current_read_pos = current_file_access.get_position()
 
 		if line.is_empty():
-			last_read_pos = current_read_pos # Aktualisiere Leseposition auch für leere Zeilen
+			last_read_pos = current_read_pos
 			continue
 
-		# print("DEBUG Log Line: ", line) # Für detailliertes Debugging einkommentieren
 
 		var line_status = null
 		var line_progress = -1
@@ -297,7 +276,6 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 		var line_error = null
 		var line_matched = false
 
-		# Parsing Logik für "install" und "update"
 		if task.operation_type == "install" or task.operation_type == "update":
 			var error_match = _regex_error.search(line)
 			if error_match:
@@ -310,7 +288,7 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 				if complete_match:
 					line_matched = true
 					line_status = "completed"
-					line_progress = 100 # Sicherstellen, dass bei Abschluss 100% erreicht wird
+					line_progress = 100
 					print("DEBUG: Matched completion: ", line)
 				else:
 					var progress_match = _regex_progress.search(line)
@@ -327,7 +305,6 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 						else:
 							line_progress = current_pct
 							
-						# Basis-Status bestimmen
 						if line_progress < 100:
 							line_status = "downloading"
 						else:
@@ -336,22 +313,16 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 						var speed_match = _regex_speed.search(line)
 						if speed_match:
 							line_speed = speed_match.get_string(1).replace("?", "").strip_edges()
-							# Wenn wir eine Geschwindigkeit haben, laden wir aktiv etwas herunter
-							# Aber nur wenn wir nicht schon bei 100% Gesamtfortschritt sind (Puffer für Endphasen)
 							if line_progress < 100:
 								line_status = "downloading"
 
 						var eta_match = _regex_eta.search(line)
 						if eta_match:
 							line_eta = eta_match.get_string(1).strip_edges()
-							# Ein ETA allein sollte den Status nicht auf 'downloading' zurückwerfen, 
-							# wenn wir bereits bei 100% sind (oft Restwert in der Flatpak-Ausgabe)
 						
-						# Konsistenzprüfung: Wenn 100% erreicht, ist es primär 'installing'
 						if line_progress >= 100:
 							line_status = "installing"
 		
-		# Parsing Logik für "uninstall"
 		elif task.operation_type == "uninstall":
 			var error_match = _regex_error.search(line)
 			if error_match:
@@ -364,15 +335,14 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 				if complete_match and complete_match.get_string(1) == "Uninstall":
 					line_matched = true
 					line_status = "completed"
-					line_progress = 100 # Sicherstellen, dass bei Abschluss 100% erreicht wird
+					line_progress = 100
 					print("DEBUG: Matched Uninstall complete")
 				else:
-					if _regex_uninstalling.search(line): # Einfache Prüfung auf "Uninstalling…"
+					if _regex_uninstalling.search(line):
 						line_matched = true
 						line_status = "removing"
 						print("DEBUG: Matched Uninstalling…")
 		
-		# Wenn ein relevanter Teil der Zeile gematcht wurde
 		if line_matched:
 			var changed_locally = false
 			if line_status != null and status_data_in_progress.get("status") != line_status:
@@ -399,7 +369,6 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 				status_data_in_progress.total_idx = line_total_idx
 				changed_locally = true
 
-			# Speed und ETA nur anzeigen, wenn Status "downloading" ist
 			if status_data_in_progress.status != "downloading":
 				if status_data_in_progress.get("speed") != null: 
 					status_data_in_progress.speed = null
@@ -408,7 +377,6 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 					status_data_in_progress.eta = null
 					changed_locally = true
 			
-			# Index-Info nur anzeigen wenn relevant
 			if not ["downloading", "installing"].has(status_data_in_progress.status):
 				if status_data_in_progress.has("current_idx"):
 					status_data_in_progress.erase("current_idx")
@@ -420,29 +388,27 @@ func _read_and_parse_log_update(task: Dictionary) -> bool:
 			if changed_locally:
 				something_was_updated_in_this_cycle = true
 				
-		last_read_pos = current_read_pos # Aktualisiere die Leseposition
+		last_read_pos = current_read_pos
 
-	# Wenn es in diesem Zyklus Aktualisierungen gab und der Task noch existiert
 	if something_was_updated_in_this_cycle and running_tasks.has(task.operation_id):
-		# Nur aktualisieren und Signal senden, wenn sich tatsächlich etwas geändert hat
 		if task.status_data != status_data_in_progress: 
 			running_tasks[task.operation_id].status_data = status_data_in_progress 
 			print("INFO: Emitting task_updated (changes detected): ", status_data_in_progress)
 			emit_signal("task_updated", task.operation_id, status_data_in_progress)
 
-	return true # Signalisiert, dass das Lesen normal verlief
+	return true
 
 func _finish_task(op_id: String, exit_code: int, cancelled: bool = false, error_msg: String = ""):
 	if not running_tasks.has(op_id):
 		printerr("DownloadManager _finish_task: Task %s nicht mehr in running_tasks. Wurde möglicherweise bereits beendet." % op_id)
-		if op_id == current_op_id: # Wenn es der aktuelle Task war, trotzdem aufräumen
+		if op_id == current_op_id:
 			current_task_processing = false
 			current_op_id = ""
 			current_pid = -1
 			if is_instance_valid(current_file_access) and current_file_access.is_open():
 				current_file_access.close()
 			current_file_access = null
-			_check_start_next_task() # Versuche, den nächsten Task zu starten
+			_check_start_next_task()
 		return
 
 	var was_current = (op_id == current_op_id)
@@ -450,77 +416,68 @@ func _finish_task(op_id: String, exit_code: int, cancelled: bool = false, error_
 
 	if was_current and is_instance_valid(current_file_access) and current_file_access.is_open():
 		current_file_access.close()
-		current_file_access = null # Wichtig, damit es für den nächsten Task neu geöffnet wird
+		current_file_access = null
 
 	var task = running_tasks[op_id]
-	var final_status_data = task.status_data.duplicate(true) # Kopie für finale Änderungen
+	var final_status_data = task.status_data.duplicate(true)
 	var op_type = task.get("operation_type", "unknown")
-	var final_status = final_status_data.get("status", "unknown") # Nimm den aktuellen Status als Basis
+	var final_status = final_status_data.get("status", "unknown")
 
 	if cancelled:
 		final_status = "cancelled"
-	elif not error_msg.is_empty(): # Wenn eine explizite Fehlermeldung übergeben wurde
+	elif not error_msg.is_empty():
 		final_status = "failed"
 		final_status_data.error = error_msg
-	elif exit_code != 0: # Wenn der Prozess mit einem Fehlercode beendet wurde
+	elif exit_code != 0:
 		final_status = "failed"
-		# Behalte existierende Fehlermeldung (z.B. von Regex), sonst generische Meldung
 		final_status_data.error = final_status_data.error if final_status_data.error else "Process exited with code: %d" % exit_code
-	elif final_status != "failed": # Wenn kein Fehler vorliegt und Status nicht schon "failed" ist
-		final_status = "completed" # Setze auf "completed", wenn alles gut ging
+	elif final_status != "failed":
+		final_status = "completed"
 
 	final_status_data.status = final_status
-	# Bei Abschluss oder Fehler, setze Fortschritt auf 100% und lösche Speed/ETA
 	if final_status == "completed" or final_status == "failed":
 		final_status_data.progress = 100
-		final_status_data.erase("speed") # Entferne Schlüssel, wenn nicht mehr relevant
+		final_status_data.erase("speed")
 		final_status_data.erase("eta")
 
-	running_tasks[op_id].status_data = final_status_data # Aktualisiere den Task in der Hauptliste
-	emit_signal("task_updated", op_id, final_status_data) # Sende letztes Update
-	emit_signal("task_finished", op_id, final_status, op_type) # Sende finales Signal
+	running_tasks[op_id].status_data = final_status_data
+	emit_signal("task_updated", op_id, final_status_data)
+	emit_signal("task_finished", op_id, final_status, op_type)
 
-	# Steam-Integration nach erfolgreicher Installation
 	if final_status == "completed" and op_type == "install":
-		var app_id = task.app_id # Dies ist die Flatpak App ID
+		var app_id = task.app_id
 		var app_name = final_status_data.get("name")
 		
-		# POST-INSTALL ACTIONS
 		_apply_post_install_actions(app_id)
 		var icon_url = final_status_data.get("icon_url", "")
 
 		print("DEBUG DownloadManager: Task completed, attempting Steam integration. AppName='%s', AppID (Flatpak)='%s'" % [app_name, app_id])
 
 		var icon_cache_path = _get_cached_icon_path_for_app(app_id, icon_url)
-		var global_icon_path_abs = "" # Muss ein absoluter Pfad sein
+		var global_icon_path_abs = ""
 		if not icon_cache_path.is_empty():
 			global_icon_path_abs = ProjectSettings.globalize_path(icon_cache_path)
 			if not FileAccess.file_exists(global_icon_path_abs):
 				printerr("WARN DownloadManager: Globalized icon path does not exist: ", global_icon_path_abs)
-				global_icon_path_abs = "" # Ungültig setzen, wenn nicht gefunden
+				global_icon_path_abs = ""
 			else:
 				print("INFO DownloadManager: Found cached icon at (absolute): ", global_icon_path_abs)
 		else:
 			print("WARN DownloadManager: No cached icon found for ", app_id, ". Proceeding without specific icon for Steam.")
-			# Optional: Fallback-Icon verwenden oder leer lassen, wenn kein Icon kritisch ist.
-			# Für SteamIntegration.add_to_steam ist ein Icon-Pfad jetzt aber erforderlich.
-			# Wenn kein Icon vorhanden ist, sollte add_to_steam nicht aufgerufen werden oder einen Fehler werfen.
 
-		# Sicherstellen, dass SteamIntegration vorhanden ist und die Methode existiert
 		if ProjectSettings.has_setting("autoload/SteamIntegration"):
 			var steam_integration_node = get_node_or_null("/root/SteamIntegration")
 			if is_instance_valid(steam_integration_node):
-				if op_type == "install": # Nur für Installationen
+				if op_type == "install":
 					if not app_name or app_name == app_id: 
 						printerr("DownloadManager ERROR: Cannot add to Steam: App name is missing or same as app_id for ", app_id)
-					elif global_icon_path_abs.is_empty(): # Prüfen, ob ein gültiger Icon-Pfad vorhanden ist
+					elif global_icon_path_abs.is_empty():
 						printerr("DownloadManager ERROR: Cannot add to Steam: Icon path is missing for ", app_id)
 					elif not SettingsManager.get_setting("auto_add_to_steam", true):
 						print("INFO DownloadManager: Skipping automatic 'Add to Steam' (Setting disabled) for ", app_id)
 					elif steam_integration_node.has_method("add_to_steam"):
-						# Definiere exe_path und launch_params für Flatpak
 						var flatpak_exe = DEFAULT_FLATPAK_EXE_PATH
-						var flatpak_params = "run %s" % app_id # z.B. "run com.discordapp.Discord"
+						var flatpak_params = "run %s" % app_id
 						
 						print("INFO DownloadManager: Calling SteamIntegration.add_to_steam with:")
 						print("  appid_tag: ", app_id)
@@ -529,17 +486,14 @@ func _finish_task(op_id: String, exit_code: int, cancelled: bool = false, error_
 						print("  launch_params: ", flatpak_params)
 						print("  icon_path_abs: ", global_icon_path_abs)
 						
-						# Aufruf mit allen 5 erforderlichen Argumenten
 						steam_integration_node.add_to_steam(app_id, app_name, flatpak_exe, flatpak_params, global_icon_path_abs)
 					else:
 						printerr("DownloadManager ERROR: SteamIntegration node missing 'add_to_steam' method!")
-				# Die remove_from_steam Logik wurde bereits in queue_uninstall verschoben.
 			else:
 				printerr("DownloadManager ERROR: SteamIntegration Autoload node not found or invalid.")
 		else:
 			printerr("DownloadManager: SteamIntegration Autoload setting not found!")
 			
-	# Logdatei entfernen, nachdem sie nicht mehr benötigt wird
 	var da := DirAccess.open(OUTPUT_DIR)
 	if da and FileAccess.file_exists(task.output_file):
 		print("INFO DownloadManager: Removing log file: ", task.output_file)
@@ -551,16 +505,15 @@ func _finish_task(op_id: String, exit_code: int, cancelled: bool = false, error_
 		else:
 			printerr("DownloadManager: Could not call refresh_installed_apps_list on Main node.")
 
-	# Aufräumen und nächsten Task starten, falls vorhanden
 	if was_current:
 		current_op_id = ""
 		current_pid = -1
 		current_output_file = ""
 		last_read_pos = 0
 		current_task_processing = false
-		running_tasks.erase(op_id) # Entferne den beendeten Task aus running_tasks
+		running_tasks.erase(op_id)
 		_check_start_next_task()
-	else: # Sollte nicht passieren, wenn Logik korrekt ist, aber als Sicherheitsnetz
+	else:
 		running_tasks.erase(op_id)
 
 
@@ -572,10 +525,9 @@ func _cleanup_old_logs():
 		while file_name != "":
 			if not dir.current_is_dir() and (file_name.begins_with("flatpak_output_") and file_name.ends_with(".log")):
 				print("Cleaning up old log: ", file_name)
-				var err = dir.remove(OUTPUT_DIR.path_join(file_name)) # Korrekter Pfad für remove
+				var err = dir.remove(OUTPUT_DIR.path_join(file_name))
 				if err != OK: printerr("Failed to remove old log file: ", file_name, " Error code: ", err)
 			file_name = dir.get_next()
-		# dir.list_dir_end() # Nicht unbedingt nötig, da DirAccess beim Verlassen des Scopes geschlossen wird
 	else:
 		printerr("Failed to open output directory for cleanup: ", OUTPUT_DIR, " Error: ", DirAccess.get_open_error())
 
@@ -584,23 +536,19 @@ func _get_cached_icon_path_for_app(app_id: String, icon_url: String) -> String:
 		print("WARN DownloadManager: No icon URL provided for ", app_id)
 		return ""
 
-	# Sicherer Zugriff auf Main Node und Cache-Verzeichnis
-	var main_node = get_node_or_null("/root/App") # Passe dies an, falls dein Hauptknoten anders heißt
+	var main_node = get_node_or_null("/root/App")
 	if not is_instance_valid(main_node):
 		printerr("DownloadManager ERROR: Cannot access main node '/root/App' (or it's invalid).")
 		return ""
 
 	var image_cache_dir: String = ""
-	# Versuche, das Cache-Verzeichnis auf verschiedene Weisen zu bekommen
 	if main_node.has_meta("IMAGE_CACHE_DIR"):
 		image_cache_dir = main_node.get_meta("IMAGE_CACHE_DIR")
 	elif main_node.has_method("get_image_cache_dir"):
 		image_cache_dir = main_node.get_image_cache_dir()
 	else:
-		# Fallback, falls nicht anders definiert (anpassen, falls nötig)
 		image_cache_dir = "user://image_cache" 
 		printerr("DownloadManager WARN: Cannot determine IMAGE_CACHE_DIR from main node. Using fallback: ", image_cache_dir)
-		# Stelle sicher, dass das Fallback-Verzeichnis existiert
 		var dir_access = DirAccess.open("user://")
 		if dir_access and not dir_access.dir_exists(image_cache_dir.replace("user://", "")):
 			dir_access.make_dir_recursive(image_cache_dir)
@@ -610,11 +558,10 @@ func _get_cached_icon_path_for_app(app_id: String, icon_url: String) -> String:
 	var path_png = image_cache_dir.path_join(url_hash + ".png")
 	var path_webp = image_cache_dir.path_join(url_hash + ".webp")
 
-	# Prüfe, ob die globalisierten Pfade existieren
 	if FileAccess.file_exists(ProjectSettings.globalize_path(path_png)):
-		return path_png # Gib den user:// Pfad zurück, Globalisierung erfolgt später
+		return path_png
 	elif FileAccess.file_exists(ProjectSettings.globalize_path(path_webp)):
-		return path_webp # Gib den user:// Pfad zurück
+		return path_webp
 	else:
 		print("WARN DownloadManager: Icon for ", app_id, " not found in cache (URL: ", icon_url, ", Searched PNG: ", path_png, ", Searched WEBP: ", path_webp,")")
 		return ""

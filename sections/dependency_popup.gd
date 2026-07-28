@@ -3,7 +3,6 @@ extends CanvasLayer
 signal confirmed
 signal cancelled
 
-# Pfade angepasst auf neue Struktur
 @onready var title_label: Label = $DependencyPopup/MarginContainer/VBoxContainer/TitleLabel
 @onready var message_label: Label = $DependencyPopup/MarginContainer/VBoxContainer/MessageLabel
 @onready var extensions_list: VBoxContainer = $DependencyPopup/MarginContainer/VBoxContainer/ScrollContainer/ExtensionsList
@@ -14,7 +13,6 @@ const EXTENSION_ICON_DIR = "res://extensions/icons/"
 
 var _previous_focus_owner: Control = null
 
-# Audio
 var stream_focus = preload("res://assets/change.mp3")
 var stream_select = preload("res://assets/nextprev.wav")
 var audio_player: AudioStreamPlayer
@@ -22,7 +20,6 @@ var audio_player: AudioStreamPlayer
 func _ready():
 	_setup_audio()
 	
-	# Store previous focus
 	_previous_focus_owner = get_viewport().gui_get_focus_owner()
 	
 	confirm_button.pressed.connect(func():
@@ -32,7 +29,7 @@ func _ready():
 		queue_free()
 	)
 	cancel_button.pressed.connect(func():
-		_play_select_sound() # Using select sound for cancel interaction too (common pattern), or could use back
+		_play_select_sound()
 		_restore_focus()
 		emit_signal("cancelled")
 		queue_free()
@@ -41,7 +38,6 @@ func _ready():
 	confirm_button.focus_entered.connect(_play_focus_sound)
 	cancel_button.focus_entered.connect(_play_focus_sound)
 	
-	# Grab focus deferred to ensure everything is ready
 	call_deferred("_grab_initial_focus")
 
 func _setup_audio():
@@ -73,7 +69,6 @@ func _input(event):
 		queue_free()
 		get_viewport().set_input_as_handled()
 
-# Mode: "install" or "uninstall"
 func setup(mode: String, target_extension_name: String, dependency_ids: Array):
 	_clear_list()
 	
@@ -104,7 +99,6 @@ func _add_extension_item(extension_id: String):
 	var hbox = HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 15)
 	
-	# Icon
 	var icon_rect = TextureRect.new()
 	icon_rect.custom_minimum_size = Vector2(32, 32)
 	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -120,7 +114,6 @@ func _add_extension_item(extension_id: String):
 	
 	hbox.add_child(icon_rect)
 	
-	# Name
 	var name_lbl = Label.new()
 	name_lbl.text = data.get("name", extension_id)
 	name_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER

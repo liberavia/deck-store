@@ -1,9 +1,8 @@
-# OdrsRatingsCache.gd
 extends Node
 
 const RATINGS_URL = "https://odrs.gnome.org/1.0/reviews/api/ratings"
 const CACHE_FILENAME = "user://cache/odrs/all_ratings_cache.json"
-const CACHE_DURATION_SEC = 60 * 60 * 24 * 7 # 1 Woche
+const CACHE_DURATION_SEC = 60 * 60 * 24 * 7
 
 var all_ratings_data: Dictionary = {}
 var http_request: HTTPRequest = null
@@ -51,7 +50,6 @@ func _fetch_all_ratings():
 	add_child(http_request) 
 	http_request.request_completed.connect(_on_request_completed)
 	
-	# http_request.set_timeout(30) # 30 Seconds
 
 	var error = http_request.request(RATINGS_URL)
 	if error != OK:
@@ -76,7 +74,7 @@ func _on_request_completed(result, response_code, headers, body):
 			}
 			var file = FileAccess.open(CACHE_FILENAME, FileAccess.WRITE)
 			if file:
-				file.store_string(JSON.stringify(cache_content, "\t")) # Mit Einrückung speichern (lesbarer)
+				file.store_string(JSON.stringify(cache_content, "\t"))
 				file.close()
 				print("ODRS Ratings: Saved data to cache.")
 			else:

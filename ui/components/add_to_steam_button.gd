@@ -1,4 +1,3 @@
-# AddToSteamButton.gd
 extends Button
 
 @export var app_id: String = ""
@@ -51,7 +50,6 @@ func set_app_info(p_app_id: String, p_app_name: String, p_icon_url: String):
 
 func _on_extension_status_updated(extension_id: String, is_installed: bool):
 	if extension_id == "steam_shortcut_manager_installer" and _awaiting_install_completion:
-		# Always re-enable button when operation cycle is complete
 		text = "Add to Steam"
 		disabled = false
 		_awaiting_install_completion = false
@@ -61,7 +59,6 @@ func _on_extension_status_updated(extension_id: String, is_installed: bool):
 
 
 func _on_pressed():
-	# 1. Check for Extension Dependency
 	if not ExtensionsManager.get_extension_status("steam_shortcut_manager_installer"):
 		print("AddToSteamButton: Extension missing. Showing dependency popup.")
 		var popup_scene = load("res://sections/dependency_popup.tscn")
