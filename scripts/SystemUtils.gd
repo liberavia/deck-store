@@ -13,9 +13,9 @@ func _ready():
 		_flatpak_cmd = "flatpak-spawn"
 		_flatpak_args_prefix = ["--host", "flatpak"]
 	else:
-		print("SystemUtils: Running natively. Using direct 'flatpak' command.")
-		_flatpak_cmd = "flatpak"
-		_flatpak_args_prefix = []
+		print("SystemUtils: Running natively (Steam). Stripping LD_LIBRARY_PATH via env.")
+		_flatpak_cmd = "env"
+		_flatpak_args_prefix = ["-u", "LD_LIBRARY_PATH", "-u", "LD_PRELOAD", "flatpak"]
 
 func execute_flatpak(args: PackedStringArray, read_stderr: bool = false) -> Dictionary:
 	var final_args = _flatpak_args_prefix.duplicate()
@@ -41,14 +41,14 @@ func execute_flatpak(args: PackedStringArray, read_stderr: bool = false) -> Dict
 func get_host_sh_cmd() -> String:
 	if _is_flatpak_container:
 		return "flatpak-spawn"
-	return "sh"
+	return "env"
 
 func get_host_sh_args(shell_command: String) -> PackedStringArray:
 	if _is_flatpak_container:
 		return PackedStringArray(["--host", "sh", "-c", shell_command])
-	return PackedStringArray(["-c", shell_command])
+	return PackedStringArray(["-u", "LD_LIBRARY_PATH", "-u", "LD_PRELOAD", "sh", "-c", shell_command])
 
 func get_flatpak_host_cmd_prefix() -> String:
 	if _is_flatpak_container:
 		return "flatpak-spawn --host "
-	return ""
+	return "env -u LD_LIBRARY_PATH -u LD_PRELOAD "
