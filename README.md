@@ -6,6 +6,8 @@
 
 DeckStore is a modern, open-source App-Store alternative built for SteamOS devices (like the Steam Deck). 
 
+![DeckStore Home Screen](marketing/home_screen.png)
+
 > **A quick note:** I'm developing DeckStore in my spare time as a personal passion project simply because I felt something like this was missing on my own Steam Deck, and I wanted to support the SteamOS ecosystem. It's currently a one-person endeavor, so development happens whenever I have free time. Feel free to use it, test it, and leave feedback, but please be patient with issues!
 
 ## Features
