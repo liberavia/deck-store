@@ -3,6 +3,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![CI Build](https://github.com/liberavia/deck-store/actions/workflows/build.yml/badge.svg)](https://github.com/liberavia/deck-store/actions/workflows/build.yml)
 [![Unit Tests](https://github.com/liberavia/deck-store/actions/workflows/test.yml/badge.svg)](https://github.com/liberavia/deck-store/actions/workflows/test.yml)
+[![Available on Steam](https://img.shields.io/badge/Available%20on-Steam-171a21.svg?logo=steam&logoColor=white)](https://store.steampowered.com/app/5023990)
 
 DeckStore is a modern, open-source App-Store alternative built for SteamOS devices (like the Steam Deck). 
 
