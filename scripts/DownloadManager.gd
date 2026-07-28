@@ -484,6 +484,9 @@ func _finish_task(op_id: String, exit_code: int, cancelled: bool = false, error_
 	if final_status == "completed" and op_type == "install":
 		var app_id = task.app_id # Dies ist die Flatpak App ID
 		var app_name = final_status_data.get("name")
+		
+		# POST-INSTALL ACTIONS
+		_apply_post_install_actions(app_id)
 		var icon_url = final_status_data.get("icon_url", "")
 
 		print("DEBUG DownloadManager: Task completed, attempting Steam integration. AppName='%s', AppID (Flatpak)='%s'" % [app_name, app_id])
@@ -615,3 +618,33 @@ func _get_cached_icon_path_for_app(app_id: String, icon_url: String) -> String:
 	else:
 		print("WARN DownloadManager: Icon for ", app_id, " not found in cache (URL: ", icon_url, ", Searched PNG: ", path_png, ", Searched WEBP: ", path_webp,")")
 		return ""
+
+func _apply_post_install_actions(app_id: String):
+	var actions_file_path = "res://post_install_actions.json"
+	if not FileAccess.file_exists(actions_file_path):
+		return
+		
+	var file = FileAccess.open(actions_file_path, FileAccess.READ)
+	if not file:
+		return
+		
+	var content = file.get_as_text()
+	file.close()
+	
+	var json = JSON.new()
+	var error = json.parse(content)
+	if error == OK:
+		var data = json.get_data()
+		if data is Dictionary and data.has(app_id):
+			print("INFO DownloadManager: Found post-install actions for ", app_id)
+			var actions = data[app_id]
+			for action in actions:
+				if action.get("type") == "flatpak_override":
+					var args = action.get("args", [])
+					if not args.is_empty():
+						var flatpak_args = PackedStringArray(["override"])
+						flatpak_args.append_array(args)
+						flatpak_args.append(app_id)
+						print("INFO DownloadManager: Executing post-install override: flatpak ", flatpak_args)
+						var result = SystemUtils.execute_flatpak(flatpak_args)
+						print("INFO DownloadManager: Post-install action result: ", result)

@@ -1,0 +1,20 @@
+{
+	"org.vinegarhq.Sober": [
+		{
+			"type": "flatpak_override",
+			"args": ["--user", "--device=all"]
+		}
+	],
+	"com.obsproject.Studio": [
+		{
+			"type": "flatpak_override",
+			"args": ["--user", "--device=all"]
+		}
+	],
+	"net.lutris.Lutris": [
+		{
+			"type": "flatpak_override",
+			"args": ["--user", "--filesystem=/run/media"]
+		}
+	]
+}
