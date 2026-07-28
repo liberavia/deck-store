@@ -1,0 +1,8 @@
+{
+	"org.vinegarhq.Sober": [
+		{
+			"type": "flatpak_override",
+			"args": ["--user", "--device=all"]
+		}
+	]
+}

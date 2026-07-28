@@ -97,6 +97,11 @@ func _fetch_apps_data():
 		http.request_completed.connect(self._on_request_completed.bind(http, app_id))
 		http.request(url)
 		active_requests += 1
+		
+	# Füge einen leeren Spacer am Ende ein, damit der rechte Rand im ScrollContainer nicht verschluckt wird
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(20, 0)
+	container.add_child(spacer)
 
 func _on_request_completed(result, response_code, headers, body, http_node, app_id):
 	http_node.queue_free()

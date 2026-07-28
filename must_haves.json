@@ -4,6 +4,7 @@
 		"com.heroicgameslauncher.hgl",
 		"net.lutris.Lutris",
 		"net.davidotek.pupgui2",
-		"com.discordapp.Discord"
+		"com.discordapp.Discord",
+		"com.github.tchx84.Flatseal"
 	]
 }
