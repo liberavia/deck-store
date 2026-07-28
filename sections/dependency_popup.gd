@@ -3,8 +3,8 @@ extends CanvasLayer
 signal confirmed
 signal cancelled
 
-@onready var title_label: Label = $DependencyPopup/MarginContainer/VBoxContainer/TitleLabel
-@onready var message_label: Label = $DependencyPopup/MarginContainer/VBoxContainer/MessageLabel
+@onready var title_label: Label = $DependencyPopup/MarginContainer/VBoxContainer/Title
+@onready var message_label: Label = $DependencyPopup/MarginContainer/VBoxContainer/Message
 @onready var extensions_list: VBoxContainer = $DependencyPopup/MarginContainer/VBoxContainer/ScrollContainer/ExtensionsList
 @onready var confirm_button: Button = $DependencyPopup/MarginContainer/VBoxContainer/HBoxContainer/ConfirmButton
 @onready var cancel_button: Button = $DependencyPopup/MarginContainer/VBoxContainer/HBoxContainer/CancelButton

@@ -206,7 +206,8 @@ func _execute_operation_script_in_thread(extension_data: Dictionary, operation: 
 	if FileAccess.file_exists(log_file_path):
 		DirAccess.remove_absolute(log_file_path)
 
-	var exit_code = OS.execute("sh", [script_path, operation, log_file_path], [], true, false)
+	var cmd_string = "\"%s\" \"%s\" \"%s\"" % [script_path, operation, log_file_path]
+	var exit_code = OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args(cmd_string), [], true, false)
 	
 	if FileAccess.file_exists(log_file_path):
 		var file = FileAccess.open(log_file_path, FileAccess.READ)
@@ -345,7 +346,8 @@ func _execute_check_script_in_thread(extension_data: Dictionary):
 	if FileAccess.file_exists(log_file_path):
 		DirAccess.remove_absolute(log_file_path)
 		
-	var exit_code = OS.execute("sh", [script_path, "check", log_file_path], [], true, false)
+	var cmd_string = "\"%s\" check \"%s\"" % [script_path, log_file_path]
+	var exit_code = OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args(cmd_string), [], true, false)
 	
 	if FileAccess.file_exists(log_file_path):
 		DirAccess.remove_absolute(log_file_path)
@@ -443,7 +445,8 @@ func _on_github_release_request_completed(extension_data: Dictionary, result: in
 	
 	_version_thread = Thread.new()
 	var callable_func = func():
-		var exit_code = OS.execute("sh", [script_path, "version", log_file_path], [], true, false)
+		var cmd_string = "\"%s\" version \"%s\"" % [script_path, log_file_path]
+		var exit_code = OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args(cmd_string), [], true, false)
 		call_deferred("_process_version_check_result", extension_id, latest_version, log_file_path, exit_code)
 	
 	_version_thread.start(callable_func)
