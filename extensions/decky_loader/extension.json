@@ -1,11 +1,12 @@
 {
 	"id": "decky_loader",
 	"name": "Decky Loader",
-	"description": "A plugin loader for the Steam Deck.",
+	"description": "Official system-level plugin loader for the Steam Deck (compatible with Junk-Store, PowerTools, and existing Decky installations).",
 	"author": "SteamDeckHomebrew",
-	"version": "1.0.0",
+	"version": "2.0.0",
 	"icon": "decky_icon.png",
 	"script_name": "main.sh",
 	"repository_url": "https://github.com/SteamDeckHomebrew/decky-loader",
+	"requires_sudo": true,
 	"dependencies": []
 }

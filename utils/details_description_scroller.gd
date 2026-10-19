@@ -25,7 +25,7 @@ func _on_focus_entered_sound():
 		_focus_sound_player.play()
 
 func _input(event: InputEvent) -> void:
-	if not self.has_focus():
+	if not self.has_focus() or ControllerManager.is_input_blocked():
 		return
 	
 	if event.is_action_pressed("ui_page_down"):

@@ -118,6 +118,10 @@ func _setup_connections():
 		product_list.load_new_page.connect(func(url, list): emit_signal("load_new_page_requested", url, list))
 		product_list.products_loaded.connect(_on_products_loaded)
 
+	if Engine.has_singleton("Steam") and Steam.has_signal("floating_gamepad_text_input_dismissed"):
+		if not Steam.floating_gamepad_text_input_dismissed.is_connected(_on_floating_keyboard_dismissed):
+			Steam.floating_gamepad_text_input_dismissed.connect(_on_floating_keyboard_dismissed)
+
 func _on_products_loaded():
 	if is_instance_valid(product_list) and is_visible_in_tree():
 		await get_tree().create_timer(0.05).timeout
@@ -125,9 +129,6 @@ func _on_products_loaded():
 			product_list.focus_first_product()
 		elif is_instance_valid(search_input):
 			search_input.grab_focus()
-
-	if Engine.has_singleton("Steam") and Steam.has_signal("floating_gamepad_text_input_dismissed"):
-		Steam.floating_gamepad_text_input_dismissed.connect(_on_floating_keyboard_dismissed)
 
 func _on_floating_keyboard_dismissed():
 	print("SearchView: Steam floating keyboard dismissed callback received")
@@ -167,17 +168,25 @@ func _set_typing_active(active: bool):
 			if Engine.has_singleton("Steam") and Steam.has_method("dismissFloatingGamepadTextInput"):
 				Steam.dismissFloatingGamepadTextInput()
 			DisplayServer.virtual_keyboard_hide()
+		if ControllerManager.has_method("_update_input_block_state"):
+			ControllerManager._update_input_block_state()
 
 func _show_virtual_keyboard():
 	print("SearchView: Requesting Virtual Keyboard...")
-	if Engine.has_singleton("Steam") and get_node_or_null("/root/SteamIntegration") and get_node("/root/SteamIntegration").is_steam_initialized:
-		var rect = search_input.get_global_rect()
-		Steam.showFloatingGamepadTextInput(Steam.FLOATING_GAMEPAD_TEXT_INPUT_MODE_SINGLE_LINE, int(rect.position.x), int(rect.position.y), int(rect.size.x), int(rect.size.y))
+	var rect = search_input.get_global_rect() if is_instance_valid(search_input) else Rect2()
+	var current_text = search_input.text if is_instance_valid(search_input) else ""
+	var steam_int = get_node_or_null("/root/SteamIntegration")
+	if is_instance_valid(steam_int) and steam_int.has_method("open_virtual_keyboard"):
+		steam_int.open_virtual_keyboard(rect, current_text)
 	else:
-		DisplayServer.virtual_keyboard_show(search_input.text)
+		DisplayServer.virtual_keyboard_show(current_text)
 
 func _unhandled_input(event: InputEvent):
 	if not is_visible_in_tree():
+		return
+
+	if ControllerManager.is_input_blocked() and (event is InputEventJoypadButton or event is InputEventJoypadMotion):
+		get_viewport().set_input_as_handled()
 		return
 
 	if _cooldown_active:

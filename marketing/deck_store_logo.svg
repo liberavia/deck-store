@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" width="800" height="200">
+  <defs>
+    <!-- Lilafarbener Schimmer (Glow) Effekt -->
+    <filter id="purple-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#8b5cf6" flood-opacity="0.8" result="glow1"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#a855f7" flood-opacity="1.0" result="glow2"/>
+      <feMerge>
+        <feMergeNode in="glow1"/>
+        <feMergeNode in="glow2"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Skalierbarer Text mit Umrandung und Glow -->
+  <text x="50%" y="55%" 
+        dominant-baseline="middle" 
+        text-anchor="middle" 
+        font-family="Montserrat, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+        font-size="110" 
+        font-weight="800"
+        letter-spacing="2"
+        fill="#ffffff" 
+        stroke="#1a1a1a" 
+        stroke-width="4" 
+        filter="url(#purple-glow)">
+    Deck Store
+  </text>
+</svg>

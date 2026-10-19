@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Install DeckStore
+Comment=One-Click Installer for DeckStore (installs and adds to Steam)
+Exec=bash -c 'DIR="$(dirname "$(realpath "%k" 2>/dev/null || echo ".")")"; if [ -f "$DIR/install.sh" ]; then bash "$DIR/install.sh"; elif [ -f "$DIR/installer/install.sh" ]; then bash "$DIR/installer/install.sh"; else curl -fsSL https://github.com/liberavia/deck-store/releases/latest/download/install.sh | bash || curl -fsSL https://raw.githubusercontent.com/liberavia/deck-store/main/installer/install.sh | bash; fi'
+Icon=system-software-install
+Terminal=false
+Type=Application
+Categories=Utility;Game;
+StartupNotify=true

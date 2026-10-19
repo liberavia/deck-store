@@ -34,6 +34,18 @@ func _ready():
 	_load_extensions()
 	check_all_extensions_status()
 
+func _exit_tree():
+	_check_queue.clear()
+	_update_check_queue.clear()
+	_transaction_queue.clear()
+	if _check_thread != null and _check_thread.is_started():
+		_check_thread.wait_to_finish()
+	if _version_thread != null and _version_thread.is_started():
+		_version_thread.wait_to_finish()
+	if _operation_thread != null and _operation_thread.is_started():
+		_operation_thread.wait_to_finish()
+	_cleanup_askpass()
+
 func _setup_paths():
 	var home = OS.get_environment("HOME")
 	if home.is_empty():
@@ -132,7 +144,21 @@ func execute_transaction(ids: Array, operation: String):
 	
 	if ids.is_empty():
 		return
+
+	var sudo_ext_name = ""
+	for id in ids:
+		var ext_data = get_extension_data(id)
+		if ext_data.get("requires_sudo", false):
+			sudo_ext_name = ext_data.get("name", id)
+			break
+
+	if not sudo_ext_name.is_empty() and not _can_sudo_without_password():
+		_prompt_sudo_and_start_transaction(ids, operation, sudo_ext_name)
+		return
 		
+	_start_transaction_internal(ids, operation)
+
+func _start_transaction_internal(ids: Array, operation: String):
 	print("INFO ExtensionManager: Starting transaction '", operation, "' for: ", ids)
 	_transaction_queue.clear()
 	for id in ids:
@@ -140,6 +166,76 @@ func execute_transaction(ids: Array, operation: String):
 	
 	_transaction_active = true
 	_process_next_transaction_item()
+
+func _can_sudo_without_password() -> bool:
+	var askpass_path = _get_askpass_path()
+	if FileAccess.file_exists(askpass_path):
+		var test_cmd = "env SUDO_ASKPASS='%s' sudo -A -k true >/dev/null 2>&1" % askpass_path
+		if OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args(test_cmd), [], true, false) == 0:
+			return true
+	var exit_code = OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args("sudo -n true >/dev/null 2>&1"), [], true, false)
+	return exit_code == 0
+
+func _get_askpass_path() -> String:
+	var home = OS.get_environment("HOME")
+	if home.is_empty():
+		home = "/home/deck"
+	return home.path_join(".deck-store/tmp/.ds_askpass.sh")
+
+func has_user_password_set() -> bool:
+	var out = []
+	var exit_code = OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args("passwd -S 2>/dev/null | awk '{print $2}'"), out, true, false)
+	if exit_code == 0 and out.size() > 0:
+		var status = str(out[0]).strip_edges()
+		if status == "NP" or status == "L":
+			return false
+	return true
+
+func set_initial_user_password(password: String) -> bool:
+	var escaped_pwd = password.replace("'", "'\\''")
+	var cmd = "printf '%s\\n%s\\n' '%s' '%s' | passwd >/dev/null 2>&1" % [escaped_pwd, escaped_pwd]
+	var exit_code = OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args(cmd), [], true, false)
+	return exit_code == 0
+
+func verify_sudo_password(password: String) -> bool:
+	var askpass_path = _get_askpass_path()
+	DirAccess.make_dir_recursive_absolute(askpass_path.get_base_dir())
+	var f = FileAccess.open(askpass_path, FileAccess.WRITE)
+	if not f:
+		return false
+	var escaped_pwd = password.replace("'", "'\\''")
+	f.store_string("#!/bin/sh\necho '%s'\n" % escaped_pwd)
+	f.close()
+	OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args("chmod 700 '%s'" % askpass_path), [], true, false)
+	var test_cmd = "env SUDO_ASKPASS='%s' sudo -A -k true >/dev/null 2>&1" % askpass_path
+	var exit_code = OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args(test_cmd), [], true, false)
+	if exit_code != 0:
+		_cleanup_askpass()
+		return false
+	return true
+
+func _cleanup_askpass():
+	var askpass_path = _get_askpass_path()
+	if FileAccess.file_exists(askpass_path):
+		DirAccess.remove_absolute(askpass_path)
+
+func _prompt_sudo_and_start_transaction(ids: Array, operation: String, ext_name: String):
+	var popup_scene = load("res://sections/sudo_prompt_popup.tscn")
+	if not popup_scene:
+		printerr("ExtensionsManager ERROR: Could not load sudo_prompt_popup.tscn")
+		for id in ids:
+			emit_signal("extension_operation_finished", id, operation)
+		return
+	var popup = popup_scene.instantiate()
+	get_tree().root.add_child(popup)
+	popup.setup(ext_name, not has_user_password_set())
+	popup.confirmed.connect(func(_pwd):
+		_start_transaction_internal(ids, operation)
+	)
+	popup.cancelled.connect(func():
+		for id in ids:
+			emit_signal("extension_operation_finished", id, operation)
+	)
 
 func install_extension(extension_id: String):
 	execute_transaction([extension_id], "install")
@@ -155,6 +251,7 @@ func update_extension(extension_id: String):
 func _process_next_transaction_item():
 	if _transaction_queue.is_empty():
 		_transaction_active = false
+		_cleanup_askpass()
 		print("INFO ExtensionManager: Transaction completed.")
 		return
 
@@ -260,6 +357,7 @@ func _process_operation_result(extension_data: Dictionary, operation: String, ex
 			print("ERROR ExtensionManager: Transaction aborted due to failure in step: ", extension_id)
 			_transaction_active = false
 			_transaction_queue.clear()
+			_cleanup_askpass()
 		else:
 			_process_next_transaction_item()
 
@@ -521,5 +619,17 @@ func _get_executable_script_path(internal_path: String, script_name: String) -> 
 		if f_target:
 			f_target.store_string(target_content)
 			f_target.close()
+
+	for ext in _extensions_data:
+		if ext.get("internal_path") == internal_path:
+			var icon_name = ext.get("icon", "")
+			if not icon_name.is_empty():
+				var icon_res_path = internal_path.path_join(icon_name)
+				var icon_user_path = ProjectSettings.globalize_path(tmp_ext_dir.path_join(icon_name))
+				if not FileAccess.file_exists(icon_user_path) and ResourceLoader.exists(icon_res_path):
+					var tex = load(icon_res_path) as Texture2D
+					if tex and tex.get_image():
+						tex.get_image().save_png(icon_user_path)
+			break
 			
 	return ProjectSettings.globalize_path(target_user)
