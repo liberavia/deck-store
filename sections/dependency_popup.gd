@@ -63,6 +63,7 @@ func _restore_focus():
 		_previous_focus_owner.grab_focus()
 
 func _input(event):
+	if ControllerManager.is_input_blocked(): return
 	if event.is_action_pressed("ui_cancel"):
 		_restore_focus()
 		emit_signal("cancelled")

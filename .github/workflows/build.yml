@@ -32,6 +32,10 @@ jobs:
           cp -r marketing build/linux/marketing
           # Include Steam AppID for native execution outside Steam sandbox
           cp steam_appid.txt build/linux/
+          # Include launch wrapper and version tag for self-updater
+          echo "${GITHUB_REF_NAME}" > build/linux/version.txt
+          cp installer/launch.sh build/linux/launch.sh
+          chmod +x build/linux/launch.sh build/linux/deck-store.x86_64
           
       - name: Upload Artifacts
         uses: actions/upload-artifact@v5
@@ -55,6 +59,7 @@ jobs:
           
       - name: Zip Release
         run: |
+          chmod +x linux-build/deck-store.x86_64 linux-build/launch.sh
           cd linux-build
           zip -r ../deck-store-linux.zip .
           cd ..
@@ -64,7 +69,10 @@ jobs:
         with:
           files: |
             deck-store-linux.zip
+            installer/install.sh
+            installer/Install-DeckStore.desktop
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

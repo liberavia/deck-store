@@ -1,0 +1,12 @@
+{
+	"id": "emudeck",
+	"name": "EmuDeck",
+	"description": "All-in-one emulator configurator and manager for SteamOS and Linux (AppImage).",
+	"author": "EmuDeck",
+	"version": "2.7.1",
+	"icon": "emudeck_icon.png",
+	"script_name": "main.sh",
+	"repository_url": "https://github.com/EmuDeck/emudeck-electron",
+	"requires_sudo": false,
+	"dependencies": ["steam_shortcut_manager_installer"]
+}

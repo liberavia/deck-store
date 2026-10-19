@@ -56,7 +56,7 @@ func _update_glyph():
 	self.texture = load(path)
 
 func _input(event: InputEvent):
-	if not visible or not is_visible_in_tree(): return
+	if not visible or not is_visible_in_tree() or ControllerManager.is_input_blocked(): return
 	
 	if event is InputEventJoypadButton:
 		var btn_name = _get_button_name_from_index(event.button_index)

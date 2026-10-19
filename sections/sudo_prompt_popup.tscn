@@ -1,0 +1,103 @@
+[gd_scene load_steps=3 format=3 uid="uid://sudo_prompt_popup_scene"]
+
+[ext_resource type="Script" path="res://sections/sudo_prompt_popup.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.1, 0.1, 0.12, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.627, 0.125, 0.941, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_size = 10
+
+[node name="SudoPopupLayer" type="CanvasLayer"]
+layer = 100
+script = ExtResource("1_script")
+
+[node name="BackgroundDim" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.75)
+
+[node name="SudoPopup" type="PanelContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -270.0
+offset_top = -170.0
+offset_right = 270.0
+offset_bottom = 170.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="MarginContainer" type="MarginContainer" parent="SudoPopup"]
+layout_mode = 2
+theme_override_constants/margin_left = 25
+theme_override_constants/margin_top = 25
+theme_override_constants/margin_right = 25
+theme_override_constants/margin_bottom = 25
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SudoPopup/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="Title" type="Label" parent="SudoPopup/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Administrator Access Required"
+horizontal_alignment = 1
+
+[node name="Message" type="Label" parent="SudoPopup/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "This extension requires system privileges (sudo)."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="PasswordInput" type="LineEdit" parent="SudoPopup/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+placeholder_text = "Press A to enter sudo password..."
+secret = true
+alignment = 1
+
+[node name="ErrorLabel" type="Label" parent="SudoPopup/MarginContainer/VBoxContainer"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.35, 0.35, 1)
+theme_override_font_sizes/font_size = 16
+text = "Invalid password."
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="SudoPopup/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="SudoPopup/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="CancelButton" type="Button" parent="SudoPopup/MarginContainer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(180, 45)
+layout_mode = 2
+focus_neighbor_top = NodePath("../../PasswordInput")
+focus_neighbor_right = NodePath("../ConfirmButton")
+text = "BTN_CANCEL"
+
+[node name="ConfirmButton" type="Button" parent="SudoPopup/MarginContainer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(180, 45)
+layout_mode = 2
+focus_neighbor_left = NodePath("../CancelButton")
+focus_neighbor_top = NodePath("../../PasswordInput")
+text = "BTN_CONFIRM"

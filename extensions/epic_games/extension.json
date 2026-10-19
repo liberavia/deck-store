@@ -1,0 +1,12 @@
+{
+	"id": "epic_games",
+	"name": "Epic Games Launcher",
+	"description": "Official native Epic Games Launcher for Linux (AppImage Preview).",
+	"author": "Epic Games",
+	"version": "0.97.0",
+	"icon": "epic_games_icon.png",
+	"script_name": "main.sh",
+	"repository_url": "",
+	"requires_sudo": false,
+	"dependencies": ["steam_shortcut_manager_installer"]
+}

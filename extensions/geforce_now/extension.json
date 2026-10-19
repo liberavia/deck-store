@@ -1,0 +1,12 @@
+{
+	"id": "geforce_now",
+	"name": "NVIDIA GeForce NOW",
+	"description": "Official native NVIDIA GeForce NOW cloud gaming client (installed via NVIDIA's dedicated Flatpak repository).",
+	"author": "NVIDIA",
+	"version": "1.0.0",
+	"icon": "geforce_now_icon.png",
+	"script_name": "main.sh",
+	"repository_url": "",
+	"requires_sudo": false,
+	"dependencies": ["steam_shortcut_manager_installer"]
+}

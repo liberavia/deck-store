@@ -65,6 +65,7 @@ func _create_action_item(button_str: String, label_text: String) -> HBoxContaine
 	return hbox
 
 func _input(event: InputEvent):
+	if ControllerManager.is_input_blocked(): return
 	if event is InputEventJoypadButton:
 		var btn_name = _get_button_name_from_index(event.button_index)
 		if btn_name != "":

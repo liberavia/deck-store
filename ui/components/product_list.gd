@@ -396,7 +396,7 @@ func focus_first_product():
 
 
 func _input(event: InputEvent):
-	if not is_visible_in_tree():
+	if not is_visible_in_tree() or ControllerManager.is_input_blocked():
 		return
 
 	var focused_control = get_viewport().gui_get_focus_owner()

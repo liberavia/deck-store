@@ -1,6 +1,7 @@
 extends Node
 
 signal shortcut_action_completed(action: String, appid_tag: String, success: bool)
+signal overlay_toggled(active: bool)
 
 
 var _shortcut_thread: Thread = null
@@ -20,11 +21,35 @@ func _initialize_steam():
 		print("Steamworks Initialized: ", INIT)
 		if INIT["status"] == 0:
 			is_steam_initialized = true
-			if Steam.has_method("inputInit"):
-				var input_init_success = Steam.inputInit(false)
-				print("Steam Input Initialized: ", input_init_success)
+			if Steam.has_signal("overlay_toggled") and not Steam.overlay_toggled.is_connected(_on_steam_overlay_toggled):
+				Steam.overlay_toggled.connect(_on_steam_overlay_toggled)
 	else:
 		print("GodotSteam singleton not found!")
+
+func _on_steam_overlay_toggled(active: bool, _user_initiated: bool = false, _app_id: int = 0):
+	print("SteamIntegration: Steam Overlay toggled: ", active)
+	emit_signal("overlay_toggled", active)
+	if Engine.has_singleton("ControllerManager") or get_node_or_null("/root/ControllerManager"):
+		var cm = get_node_or_null("/root/ControllerManager")
+		if cm and cm.has_method("set_overlay_active"):
+			cm.set_overlay_active(active)
+
+func open_virtual_keyboard(target_rect: Rect2 = Rect2(), current_text: String = "") -> bool:
+	if is_steam_initialized and Engine.has_singleton("Steam") and Steam.has_method("showFloatingGamepadTextInput"):
+		var shown = Steam.showFloatingGamepadTextInput(
+			Steam.FLOATING_GAMEPAD_TEXT_INPUT_MODE_SINGLE_LINE,
+			int(target_rect.position.x),
+			int(target_rect.position.y),
+			int(target_rect.size.x),
+			int(target_rect.size.y)
+		)
+		if shown:
+			return true
+	var cmd = SystemUtils.get_host_sh_cmd()
+	var args = SystemUtils.get_host_sh_args("steam -ifrunning steam://open/keyboard >/dev/null 2>&1 &")
+	OS.create_process(cmd, args)
+	DisplayServer.virtual_keyboard_show(current_text)
+	return true
 
 func _process(_delta):
 	if is_steam_initialized and Engine.has_singleton("Steam"):

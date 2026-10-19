@@ -197,6 +197,12 @@ func _ready():
 		var steam_int = get_node_or_null("/root/SteamIntegration")
 		if steam_int and steam_int.has_signal("shortcut_action_completed"):
 			steam_int.shortcut_action_completed.connect(_on_shortcut_action_completed)
+
+	if get_node_or_null("/root/SelfUpdateManager"):
+		var sum = get_node("/root/SelfUpdateManager")
+		sum.update_available.connect(func(ver, _notes):
+			_show_toast("DeckStore Update %s available in Settings!" % ver, true)
+		)
 	
 	_switch_to_section(0)
 	
@@ -424,7 +430,15 @@ func _get_pagination_prompts(focus_owner: Control) -> Array:
 			
 	return prompts
 
+func is_any_section_typing() -> bool:
+	var current_section_node = _sections[_current_section_index].instance
+	return is_instance_valid(current_section_node) and current_section_node.has_method("is_typing") and current_section_node.is_typing()
+
 func _input(event: InputEvent):
+	if ControllerManager.is_input_blocked():
+		if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+			get_viewport().set_input_as_handled()
+			return
 	var current_section_node = _sections[_current_section_index].instance
 	if is_instance_valid(current_section_node) and current_section_node.has_method("is_typing") and current_section_node.is_typing():
 		if event.is_action("ui_cancel") or event.is_action("ui_accept"):
@@ -435,6 +449,10 @@ func _input(event: InputEvent):
 			return
 
 func _unhandled_input(event: InputEvent):
+	if ControllerManager.is_input_blocked():
+		if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+			get_viewport().set_input_as_handled()
+			return
 	if event.is_action_pressed("open_settings"):
 		if is_instance_valid(_settings_modal_instance):
 			if _settings_modal_instance.visible:
