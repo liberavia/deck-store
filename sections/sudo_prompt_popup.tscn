@@ -33,10 +33,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -270.0
-offset_top = -170.0
-offset_right = 270.0
-offset_bottom = 170.0
+offset_left = -280.0
+offset_top = -195.0
+offset_right = 280.0
+offset_bottom = 195.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
@@ -50,7 +50,7 @@ theme_override_constants/margin_bottom = 25
 
 [node name="VBoxContainer" type="VBoxContainer" parent="SudoPopup/MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 15
+theme_override_constants/separation = 14
 
 [node name="Title" type="Label" parent="SudoPopup/MarginContainer/VBoxContainer"]
 layout_mode = 2
@@ -69,6 +69,14 @@ autowrap_mode = 3
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 placeholder_text = "Press A to enter sudo password..."
+secret = true
+alignment = 1
+
+[node name="ConfirmPasswordInput" type="LineEdit" parent="SudoPopup/MarginContainer/VBoxContainer"]
+visible = false
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+placeholder_text = "Press A to confirm new password..."
 secret = true
 alignment = 1
 
@@ -91,7 +99,6 @@ alignment = 1
 [node name="CancelButton" type="Button" parent="SudoPopup/MarginContainer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(180, 45)
 layout_mode = 2
-focus_neighbor_top = NodePath("../../PasswordInput")
 focus_neighbor_right = NodePath("../ConfirmButton")
 text = "BTN_CANCEL"
 
@@ -99,5 +106,4 @@ text = "BTN_CANCEL"
 custom_minimum_size = Vector2(180, 45)
 layout_mode = 2
 focus_neighbor_left = NodePath("../CancelButton")
-focus_neighbor_top = NodePath("../../PasswordInput")
 text = "BTN_CONFIRM"

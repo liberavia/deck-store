@@ -182,6 +182,21 @@ func _get_askpass_path() -> String:
 		home = "/home/deck"
 	return home.path_join(".deck-store/tmp/.ds_askpass.sh")
 
+func has_user_password_set() -> bool:
+	var out = []
+	var exit_code = OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args("passwd -S 2>/dev/null | awk '{print $2}'"), out, true, false)
+	if exit_code == 0 and out.size() > 0:
+		var status = str(out[0]).strip_edges()
+		if status == "NP" or status == "L":
+			return false
+	return true
+
+func set_initial_user_password(password: String) -> bool:
+	var escaped_pwd = password.replace("'", "'\\''")
+	var cmd = "printf '%s\\n%s\\n' '%s' '%s' | passwd >/dev/null 2>&1" % [escaped_pwd, escaped_pwd]
+	var exit_code = OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args(cmd), [], true, false)
+	return exit_code == 0
+
 func verify_sudo_password(password: String) -> bool:
 	var askpass_path = _get_askpass_path()
 	DirAccess.make_dir_recursive_absolute(askpass_path.get_base_dir())
@@ -213,7 +228,7 @@ func _prompt_sudo_and_start_transaction(ids: Array, operation: String, ext_name:
 		return
 	var popup = popup_scene.instantiate()
 	get_tree().root.add_child(popup)
-	popup.setup(ext_name)
+	popup.setup(ext_name, not has_user_password_set())
 	popup.confirmed.connect(func(_pwd):
 		_start_transaction_internal(ids, operation)
 	)
