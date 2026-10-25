@@ -15,6 +15,16 @@ func _initialize_steam():
 	if OS.has_feature("editor"):
 		print("SteamIntegration: Running in editor. Skipping Steam initialization to prevent sandbox crashes.")
 		return
+
+	var exe_dir = OS.get_executable_path().get_base_dir()
+	var appid_file = exe_dir.path_join("steam_appid.txt")
+	if FileAccess.file_exists(appid_file):
+		DirAccess.remove_absolute(appid_file)
+
+	var env_app_id = OS.get_environment("SteamAppId").strip_edges()
+	if env_app_id.is_empty() or env_app_id == "0" or env_app_id == "5023990":
+		print("SteamIntegration: Running as Non-Steam Shortcut (SteamAppId=", env_app_id, "). Skipping steamInitEx to preserve shortcut tracking in Steam/Gamescope.")
+		return
 		
 	if Engine.has_singleton("Steam"):
 		var INIT: Dictionary = Steam.steamInitEx()

@@ -106,6 +106,10 @@ func _setup_connections():
 		
 		search_input.text_submitted.connect(_on_search_submitted)
 		search_input.focus_entered.connect(_on_search_input_focus_entered)
+		search_input.focus_exited.connect(func():
+			if _typing_active:
+				_set_typing_active(false)
+		)
 	
 	if is_instance_valid(search_button):
 		search_button.pressed.connect(func(): _on_search_submitted(search_input.text))
@@ -124,7 +128,11 @@ func _setup_connections():
 
 func _on_products_loaded():
 	if is_instance_valid(product_list) and is_visible_in_tree():
+		if _typing_active:
+			return
 		await get_tree().create_timer(0.05).timeout
+		if _typing_active:
+			return
 		if product_list.has_method("has_products") and product_list.has_products():
 			product_list.focus_first_product()
 		elif is_instance_valid(search_input):
@@ -168,6 +176,11 @@ func _set_typing_active(active: bool):
 			if Engine.has_singleton("Steam") and Steam.has_method("dismissFloatingGamepadTextInput"):
 				Steam.dismissFloatingGamepadTextInput()
 			DisplayServer.virtual_keyboard_hide()
+			var win = get_window()
+			if is_instance_valid(win):
+				win.grab_focus()
+			if ControllerManager.has_method("_on_window_focus_entered"):
+				ControllerManager._on_window_focus_entered()
 		if ControllerManager.has_method("_update_input_block_state"):
 			ControllerManager._update_input_block_state()
 
@@ -223,16 +236,23 @@ func _unhandled_input(event: InputEvent):
 				return
 			
 	if _typing_active:
-		if event.is_action_pressed("ui_cancel"):
+		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("go_back"):
 			print("SearchView: Exiting typing mode via ui_cancel")
 			_set_typing_active(false)
+			if is_instance_valid(search_input):
+				search_input.grab_focus()
 			if _select_sound_player: _select_sound_player.play()
 			get_viewport().set_input_as_handled()
 			return
 
-		if event.is_action_pressed("section_next") or event.is_action_pressed("section_previous"):
-			print("SearchView DEBUG: Blocking section switch during typing: ", event.as_text())
+		if event.is_action_pressed("ui_down") and is_instance_valid(product_list) and product_list.visible and product_list.has_method("has_products") and product_list.has_products():
+			_set_typing_active(false)
+			product_list.focus_first_product()
 			get_viewport().set_input_as_handled()
+			return
+
+		if event.is_action_pressed("section_next") or event.is_action_pressed("section_previous"):
+			_set_typing_active(false)
 			return
 
 		if event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right") or \
@@ -268,8 +288,10 @@ func _unhandled_input(event: InputEvent):
 					_reset_debounce_timer()
 				get_viewport().set_input_as_handled()
 
-func _input(_event: InputEvent):
-	pass
+func _input(event: InputEvent):
+	if _typing_active and event is InputEventMouseButton and event.pressed:
+		if is_instance_valid(search_input) and not search_input.get_global_rect().has_point(event.global_position):
+			_set_typing_active(false)
 
 func _on_search_submitted(text: String):
 	_set_typing_active(false)

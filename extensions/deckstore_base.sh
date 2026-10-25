@@ -104,23 +104,29 @@ ds_add_steam_shortcut() {
 
     if $DS_FLATPAK_CMD info io.github.liberavia.steamshortcutmanager &> /dev/null; then
         $DS_FLATPAK_CMD run io.github.liberavia.steamshortcutmanager \
-            --action add \
-            --appid_tag "$appid_tag" \
-            --name "$app_name" \
-            --exe "$exe_path" \
-            --params "$launch_params" \
-            --icon "$icon_path" && return 0
+            --action="remove" \
+            --appid_tag="$appid_tag" &> /dev/null || true
+        if $DS_FLATPAK_CMD run io.github.liberavia.steamshortcutmanager \
+            --action="add" \
+            --appid_tag="$appid_tag" \
+            --name="$app_name" \
+            --exe="$exe_path" \
+            --params="$launch_params" \
+            --icon="$icon_path"; then
+            return 0
+        fi
     fi
 
-    $DS_HOST_SPAWN python3 - "$app_name" "$exe_path" "$launch_params" "$icon_path" << 'PYEOF'
-import sys, os, glob, struct, zlib
+    $DS_HOST_SPAWN python3 - "$appid_tag" "$app_name" "$exe_path" "$launch_params" "$icon_path" << 'PYEOF'
+import sys, os, glob, struct, zlib, shutil, re
 
-app_name, exe_raw, params, icon_path = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+appid_tag, app_name, exe_raw, params, icon_path = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]
 exe_path = f'"{exe_raw}"'
 start_dir = f'"{os.path.dirname(exe_raw)}"'
 crc = zlib.crc32((exe_path + app_name).encode("utf-8")) & 0xffffffff
 shortcut_id = crc | 0x80000000
 signed_id = struct.unpack("<i", struct.pack("<I", shortcut_id))[0]
+tag_str = f"SSM_{appid_tag}"
 
 home = os.path.expanduser("~")
 udirs = glob.glob(os.path.join(home, ".steam/steam/userdata/*")) + glob.glob(os.path.join(home, ".local/share/Steam/userdata/*"))
@@ -133,6 +139,13 @@ for u in udirs:
         continue
     seen.add(cfg)
     os.makedirs(cfg, exist_ok=True)
+    grid_dir = os.path.join(cfg, "grid")
+    os.makedirs(grid_dir, exist_ok=True)
+
+    if icon_path and os.path.isfile(icon_path):
+        for suffix in [f"{shortcut_id}p.png", f"{shortcut_id}.png", f"{shortcut_id}_hero.png", f"{shortcut_id}_logo.png", f"{shortcut_id}_icon.png"]:
+            shutil.copyfile(icon_path, os.path.join(grid_dir, suffix))
+
     vdf = os.path.join(cfg, "shortcuts.vdf")
     data = b"\x00shortcuts\x00\x08\x08"
     if os.path.isfile(vdf):
@@ -140,8 +153,9 @@ for u in udirs:
             raw = f.read()
         if raw.startswith(b"\x00shortcuts\x00") and raw.endswith(b"\x08\x08"):
             data = raw
-    if exe_raw.encode("utf-8") not in data and app_name.encode("utf-8") not in data:
-        idx = data.count(b"\x00AppName\x00")
+    if exe_raw.encode("utf-8") not in data and tag_str.encode("utf-8") not in data:
+        existing_indices = [int(m.group(1)) for m in re.finditer(rb"\x00(\d+)\x00\x02appid\x00", data)]
+        idx = (max(existing_indices) + 1) if existing_indices else 0
         entry = (
             b"\x00" + str(idx).encode("utf-8") + b"\x00"
             + b"\x02appid\x00" + struct.pack("<i", signed_id)
@@ -155,7 +169,7 @@ for u in udirs:
             + b"\x02AllowDesktopConfig\x00\x01\x00\x00\x00"
             + b"\x02AllowOverlay\x00\x01\x00\x00\x00"
             + b"\x02OpenVR\x00\x00\x00\x00\x00"
-            + b"\x00tags\x00\x08\x08"
+            + b"\x00tags\x00\x010\x00" + tag_str.encode("utf-8") + b"\x00\x08\x08"
         )
         with open(vdf, "wb") as f:
             f.write(data[:-2] + entry + b"\x08\x08")
@@ -166,8 +180,8 @@ ds_remove_steam_shortcut() {
     local appid_tag="$1"
     if $DS_FLATPAK_CMD info io.github.liberavia.steamshortcutmanager &> /dev/null; then
         $DS_FLATPAK_CMD run io.github.liberavia.steamshortcutmanager \
-            --action remove \
-            --appid_tag "$appid_tag" || true
+            --action="remove" \
+            --appid_tag="$appid_tag" || true
     fi
 }
 

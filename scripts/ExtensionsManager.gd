@@ -184,11 +184,12 @@ func _get_askpass_path() -> String:
 
 func has_user_password_set() -> bool:
 	var out = []
-	var exit_code = OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args("passwd -S 2>/dev/null | awk '{print $2}'"), out, true, false)
+	var exit_code = OS.execute(SystemUtils.get_host_sh_cmd(), SystemUtils.get_host_sh_args("passwd -S 2>/dev/null | awk '{print $2}'"), out, false, false)
 	if exit_code == 0 and out.size() > 0:
-		var status = str(out[0]).strip_edges()
-		if status == "NP" or status == "L":
-			return false
+		for line in str(out[0]).split("\n"):
+			var token = line.strip_edges()
+			if token == "NP" or token == "L":
+				return false
 	return true
 
 func set_initial_user_password(password: String) -> bool:
@@ -349,6 +350,12 @@ func _process_operation_result(extension_data: Dictionary, operation: String, ex
 	if operation == "update" and exit_code == 0:
 		if _extensions_update_available.has(extension_id):
 			_extensions_update_available.erase(extension_id)
+
+	if (operation == "install" or operation == "update") and exit_code == 0:
+		if extension_id in ["emudeck", "geforce_now", "epic_games"]:
+			var steam_int = get_node_or_null("/root/SteamIntegration")
+			if is_instance_valid(steam_int) and steam_int.has_signal("shortcut_action_completed"):
+				steam_int.emit_signal("shortcut_action_completed", "add", extension_id, true)
 			
 	emit_signal("extension_operation_finished", extension_id, operation)
 	
@@ -620,16 +627,40 @@ func _get_executable_script_path(internal_path: String, script_name: String) -> 
 			f_target.store_string(target_content)
 			f_target.close()
 
+	var home = OS.get_environment("HOME")
+	var host_ext_dir = home.path_join(".deck-store/extensions") if not home.is_empty() else ""
+	if not host_ext_dir.is_empty() and not DirAccess.dir_exists_absolute(host_ext_dir):
+		DirAccess.make_dir_recursive_absolute(host_ext_dir)
+
 	for ext in _extensions_data:
 		if ext.get("internal_path") == internal_path:
 			var icon_name = ext.get("icon", "")
 			if not icon_name.is_empty():
 				var icon_res_path = internal_path.path_join(icon_name)
 				var icon_user_path = ProjectSettings.globalize_path(tmp_ext_dir.path_join(icon_name))
-				if not FileAccess.file_exists(icon_user_path) and ResourceLoader.exists(icon_res_path):
+				var host_icon_path = host_ext_dir.path_join(icon_name) if not host_ext_dir.is_empty() else ""
+				if FileAccess.file_exists(icon_res_path):
+					var raw_bytes = FileAccess.get_file_as_bytes(icon_res_path)
+					if raw_bytes.size() > 0:
+						var f_icon = FileAccess.open(icon_user_path, FileAccess.WRITE)
+						if f_icon:
+							f_icon.store_buffer(raw_bytes)
+							f_icon.close()
+						if not host_icon_path.is_empty():
+							var f_host = FileAccess.open(host_icon_path, FileAccess.WRITE)
+							if f_host:
+								f_host.store_buffer(raw_bytes)
+								f_host.close()
+				elif ResourceLoader.exists(icon_res_path):
 					var tex = load(icon_res_path) as Texture2D
-					if tex and tex.get_image():
-						tex.get_image().save_png(icon_user_path)
+					if tex:
+						var img = tex.get_image()
+						if img:
+							if img.is_compressed():
+								img.decompress()
+							img.save_png(icon_user_path)
+							if not host_icon_path.is_empty():
+								img.save_png(host_icon_path)
 			break
 			
 	return ProjectSettings.globalize_path(target_user)
