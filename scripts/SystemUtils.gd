@@ -6,6 +6,16 @@ var _flatpak_cmd: String = "flatpak"
 var _flatpak_args_prefix: PackedStringArray = []
 
 func _ready():
+	if OS.has_environment("LD_PRELOAD"):
+		var preload_val = OS.get_environment("LD_PRELOAD")
+		if "ubuntu12_32" in preload_val:
+			var parts = preload_val.split(":", false)
+			var filtered = PackedStringArray()
+			for p in parts:
+				if not "ubuntu12_32" in p:
+					filtered.append(p)
+			OS.set_environment("LD_PRELOAD", ":".join(filtered))
+
 	var is_pressure_vessel = OS.has_environment("container") and OS.get_environment("container") == "pressure-vessel"
 	_is_flatpak_container = FileAccess.file_exists("/.flatpak-info") or is_pressure_vessel
 	

@@ -40,6 +40,9 @@ func _notification(what: int):
 			_on_window_focus_entered()
 
 func _on_window_focus_exited():
+	var app = get_node_or_null("/root/App")
+	if is_instance_valid(app) and app.has_method("is_any_section_typing") and app.is_any_section_typing():
+		return
 	if _has_window_focus:
 		_has_window_focus = false
 		if is_instance_valid(_focus_cooldown_timer):
@@ -49,8 +52,9 @@ func _on_window_focus_exited():
 		_update_input_block_state()
 
 func _on_window_focus_entered():
-	if not _has_window_focus:
+	if not _has_window_focus or _is_overlay_active:
 		_has_window_focus = true
+		_is_overlay_active = false
 		_focus_cooldown_active = true
 		if is_instance_valid(_focus_cooldown_timer):
 			_focus_cooldown_timer.start()
@@ -65,6 +69,7 @@ func set_overlay_active(active: bool):
 	if _is_overlay_active != active:
 		_is_overlay_active = active
 		if not active:
+			_has_window_focus = true
 			_focus_cooldown_active = true
 			if is_instance_valid(_focus_cooldown_timer):
 				_focus_cooldown_timer.start()
@@ -77,25 +82,35 @@ func _update_input_block_state():
 	var blocked = is_input_blocked()
 	var vp = get_viewport()
 	if is_instance_valid(vp):
-		var app = get_node_or_null("/root/App")
-		var is_typing_now = false
-		if is_instance_valid(app) and app.has_method("is_any_section_typing"):
-			is_typing_now = app.is_any_section_typing()
-		vp.gui_disable_input = blocked and not is_typing_now
+		vp.gui_disable_input = false
 	emit_signal("input_block_state_changed", blocked)
 
 func _input(event: InputEvent):
-	if is_input_blocked():
-		if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+	if (event is InputEventMouseButton and event.pressed) or (event is InputEventKey and event.pressed):
+		if not _has_window_focus or _is_overlay_active:
+			_has_window_focus = true
+			_is_overlay_active = false
+			_focus_cooldown_active = false
+			_update_input_block_state()
+		return
+
+	if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+		if not _has_window_focus:
+			var win = get_window()
+			var app = get_node_or_null("/root/App")
+			var is_typing_now = is_instance_valid(app) and app.has_method("is_any_section_typing") and app.is_any_section_typing()
+			if (is_instance_valid(win) and win.has_focus()) or is_typing_now:
+				_has_window_focus = true
+				_update_input_block_state()
+
+		if is_input_blocked():
 			get_viewport().set_input_as_handled()
 			return
-	if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+
 		var device_id = event.device
 		if device_id != last_device_id:
 			last_device_id = device_id
 			_detect_type(device_id)
-	elif event is InputEventKey or event is InputEventMouseButton:
-		pass
 
 func _detect_type(device_id: int):
 	var new_type = ControllerType.XBOX

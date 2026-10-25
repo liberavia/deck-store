@@ -42,6 +42,19 @@ install_epic() {
     ds_send_progress 85 "Adding Epic Games Launcher to Steam..."
     ds_add_steam_shortcut "com.epicgames.LauncherLinux" "Epic Games Launcher" "$APPIMAGE_PATH" "--no-sandbox" "$ICON_PATH" || true
 
+    $DS_HOST_SPAWN mkdir -p "$HOME/.local/share/applications"
+    cat << EOF > "$HOME/.local/share/applications/epic-games-launcher.desktop"
+[Desktop Entry]
+Name=Epic Games Launcher
+Comment=Native Epic Games Launcher for Linux
+Exec="$APPIMAGE_PATH" --no-sandbox
+Icon=$ICON_PATH
+Terminal=false
+Type=Application
+Categories=Game;
+EOF
+    chmod +x "$HOME/.local/share/applications/epic-games-launcher.desktop" 2>/dev/null || true
+
     ds_send_progress 100 "Epic Games Launcher installed."
     ds_log "SUCCESS: Epic Games Launcher ($DETECTED_VER) installed at $APPIMAGE_PATH."
 }
@@ -60,7 +73,7 @@ case "$ACTION" in
     remove)
         ds_send_progress 30 "Removing Epic Games Launcher..."
         ds_remove_steam_shortcut "com.epicgames.LauncherLinux" || true
-        $DS_HOST_SPAWN rm -f "$APPIMAGE_PATH" "$VERSION_FILE"
+        $DS_HOST_SPAWN rm -f "$APPIMAGE_PATH" "$VERSION_FILE" "$HOME/.local/share/applications/epic-games-launcher.desktop"
         ds_send_progress 100 "Removed."
         ds_log "SUCCESS: Epic Games Launcher removed."
         ;;

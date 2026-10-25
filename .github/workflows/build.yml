@@ -30,8 +30,6 @@ jobs:
           godot --headless --export-release "Linux" build/linux/deck-store.x86_64
           # Include marketing images in the release zip
           cp -r marketing build/linux/marketing
-          # Include Steam AppID for native execution outside Steam sandbox
-          cp steam_appid.txt build/linux/
           # Include launch wrapper and version tag for self-updater
           echo "${GITHUB_REF_NAME}" > build/linux/version.txt
           cp installer/launch.sh build/linux/launch.sh

@@ -44,6 +44,19 @@ install_emudeck() {
     ds_send_progress 85 "Adding EmuDeck shortcut to Steam..."
     ds_add_steam_shortcut "io.github.emudeck.AppImage" "EmuDeck" "$APPIMAGE_PATH" "--no-sandbox" "$ICON_PATH" || true
 
+    $DS_HOST_SPAWN mkdir -p "$HOME/.local/share/applications"
+    cat << EOF > "$HOME/.local/share/applications/emudeck.desktop"
+[Desktop Entry]
+Name=EmuDeck
+Comment=Emulator Manager and Configuration Tool for SteamOS
+Exec="$APPIMAGE_PATH" --no-sandbox
+Icon=$ICON_PATH
+Terminal=false
+Type=Application
+Categories=Game;Emulator;
+EOF
+    chmod +x "$HOME/.local/share/applications/emudeck.desktop" 2>/dev/null || true
+
     ds_send_progress 100 "EmuDeck installed."
     ds_log "SUCCESS: EmuDeck (${LATEST_TAG}) installed at $APPIMAGE_PATH."
 }
@@ -62,7 +75,7 @@ case "$ACTION" in
     remove)
         ds_send_progress 30 "Removing EmuDeck AppImage and shortcut..."
         ds_remove_steam_shortcut "io.github.emudeck.AppImage" || true
-        $DS_HOST_SPAWN rm -f "$APPIMAGE_PATH" "$VERSION_FILE"
+        $DS_HOST_SPAWN rm -f "$APPIMAGE_PATH" "$VERSION_FILE" "$HOME/.local/share/applications/emudeck.desktop"
         ds_send_progress 100 "EmuDeck removed."
         ds_log "SUCCESS: EmuDeck removed."
         ;;

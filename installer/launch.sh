@@ -9,6 +9,7 @@ apply_staged_update() {
     if [ -d "$STAGED_DIR" ] && [ -f "$STAGED_DIR/deck-store.x86_64" ] && [ -f "$STAGED_DIR/deck-store.pck" ]; then
         echo "[DeckStore Launcher] Applying staged update from $STAGED_DIR..."
         cp -rf "$STAGED_DIR"/* "$SCRIPT_DIR"/
+        rm -f "$SCRIPT_DIR/steam_appid.txt"
         chmod +x "$SCRIPT_DIR/deck-store.x86_64"
         if [ -f "$SCRIPT_DIR/launch.sh" ]; then
             chmod +x "$SCRIPT_DIR/launch.sh"
@@ -21,8 +22,20 @@ apply_staged_update() {
 cd "$SCRIPT_DIR" || exit 1
 export DECKSTORE_WRAPPER_ACTIVE=1
 
+if [ -n "$LD_PRELOAD" ]; then
+    CLEAN_PRELOAD=""
+    IFS=':' read -ra ADDR <<< "$LD_PRELOAD"
+    for p in "${ADDR[@]}"; do
+        if [[ "$p" != *"ubuntu12_32"* ]]; then
+            CLEAN_PRELOAD="${CLEAN_PRELOAD:+$CLEAN_PRELOAD:}$p"
+        fi
+    done
+    export LD_PRELOAD="$CLEAN_PRELOAD"
+fi
+
 while true; do
     apply_staged_update
+    rm -f "$SCRIPT_DIR/steam_appid.txt"
 
     if [ ! -x "$BINARY_PATH" ]; then
         chmod +x "$BINARY_PATH" 2>/dev/null || true
